@@ -1,44 +1,27 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Users,
-  Plus,
   Search,
-  Edit,
-  Trash2,
+  Plus,
   Eye,
-  Download,
-  ArrowRightLeft,
-  Lock,
-  AlertCircle,
-  Loader2,
-  RefreshCw,
-  Trash
+  Trash2,
+  Trash,
+  Loader2
 } from 'lucide-react';
 import { db } from '@/config/firebase';
-import { collection, onSnapshot, addDoc, setDoc, doc, deleteDoc, getDocs } from 'firebase/firestore';
-import { showSuccess, showError } from '@/utils/toast';
-import { CentralDataService } from '@/services/centralDataService';
-import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
-import { verifyDeleteAdminPassword } from '@/services/deletePasswordService';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { showSuccess } from '@/utils/toast';
+import { formatLearnerDoc } from '@/services/learnerService';
 import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearnerService';
-import { getNormalizedLearners } from '@/utils/dataLoader';
 import AddLearnerModal from '@/components/learners/AddLearnerModal';
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 
 const LEARNER_ID_PREFIX = 'learner-';
 
-/**
- * Normalized deleted-record check. Compares the bare id, the `learner-` prefixed id
- * and the admission/assessment numbers so `17898...` and `learner-17898...`
- * resolve to the same record.
- */
 const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
   if (!item) return true;
   const id = String(item.id || item._id || '').trim();
@@ -63,20 +46,14 @@ export default function LearnersDirectory() {
   const [streamFilter, setStreamFilter] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Active table states kept in sync for immediate UI re-render
   const [learners, setLearners] = useState<any[]>([]);
   const [filteredLearners, setFilteredLearners] = useState<any[]>([]);
   const [displayedLearners, setDisplayedLearners] = useState<any[]>([]);
 
-  // Deletion auth state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<any | null>(null);
-  const [authPassword, setAuthPassword] = useState('');
-  const [authError, setAuthError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [showPass, setShowPass] = useState(false);
 
-  // Direct Real-Time Listener reacting to 'learners_updated' and Firestore snapshot
   useEffect(() => {
     const UNIFIED_KEY = 'munyaka_learners_v2';
     const DELETED_KEY = 'deleted_learner_ids';
@@ -93,6 +70,15 @@ export default function LearnersDirectory() {
         const unified = localStorage.getItem('munyaka_learners');
         if (unified) {
           const parsed = JSON.parse(unified);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
+            applyList(filtered);
+            return;
+          }
+        }
+        const unifiedV2 = localStorage.getItem(UNIFIED_KEY);
+        if (unifiedV2) {
+          const parsed = JSON.parse(unifiedV2);
           if (Array.isArray(parsed)) {
             const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
             applyList(filtered);
@@ -158,22 +144,21 @@ export default function LearnersDirectory() {
     return () => {
       if (unsubscribe) unsubscribe();
       window.removeEventListener('learners_updated', loadFromStorage);
-      window.removeEventListener('students-updated', loadFromStorage);
       window.removeEventListener('storage', loadFromStorage);
       window.removeEventListener('munyaka:data-changed', loadFromStorage);
     };
   }, []);
 
-  // Derive filtered learners whenever the source list or filters change
   useEffect(() => {
     const searchClean = searchTerm.toLowerCase().replace(/\s+/g, '').trim();
     const next = (learnersList || []).filter(learner => {
-      const name = (learner.name || learner.fullName || '').toLowerCase();
-      const adm = (learner.admissionNumber || learner.admissionNo || learner.admNo || '').toLowerCase();
-      const grade = (learner.grade || learner.gradeLevel || learner.class || '').toLowerCase();
+      const name = (learner.fullName || learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`).toLowerCase();
+      const adm = (learner.admissionNumber || learner.admissionNo || learner.admNo || learner.id || '').toLowerCase();
+      const identifier = (learner.identifierValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '').toLowerCase();
+      const grade = (learner.gradeLevel || learner.grade || '').toLowerCase();
       const stream = (learner.stream || '').toLowerCase();
 
-      const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean);
+      const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean) || identifier.includes(searchClean);
       const gradeMatch = gradeFilter === 'all' || grade.includes(gradeFilter.toLowerCase());
       const streamMatch = streamFilter === 'all' || stream === streamFilter.toLowerCase();
 
@@ -193,17 +178,14 @@ export default function LearnersDirectory() {
     setGradeFilter(addedGrade);
   };
 
-  // Force immediate UI table re-render: synchronize filtered learners state upon deletion
   const handleDeleteLearner = async (learnerToDelete: any) => {
     if (!learnerToDelete) return;
 
-    // Normalize identifiers: `17898...` and `learner-17898...` are the same learner
     const sourceId = learnerToDelete.id || learnerToDelete._id || learnerToDelete.learnerId || '';
     const targetRawId = toRawLearnerId(sourceId);
     const targetPrefixedId = targetRawId ? LEARNER_ID_PREFIX + targetRawId : '';
-    const targetAdm = String(learnerToDelete.admissionNo || learnerToDelete.admissionNumber || '').trim();
+    const targetAdm = String(learnerToDelete.admissionNo || learnerToDelete.admissionNumber || learner.admissionNumber || '').trim();
 
-    // 1. Run Storage Purge Service with a normalized target (raw + prefixed ids)
     if (typeof purgeLearnerPermanently === 'function') {
       await purgeLearnerPermanently({
         ...learnerToDelete,
@@ -214,11 +196,10 @@ export default function LearnersDirectory() {
       });
     }
 
-    // 2. Direct Filter Function (prefix-insensitive)
     const isNotTarget = (item: any) => {
       const itemSourceId = item.id || item._id || item.learnerId || '';
       const itemRawId = toRawLearnerId(itemSourceId);
-      const itemAdm = String(item.admissionNo || item.admissionNumber || '').trim();
+      const itemAdm = String(item.admissionNo || item.admissionNumber || item.admissionNumber || '').trim();
 
       const matches =
         (targetRawId && itemRawId === targetRawId) ||
@@ -228,25 +209,14 @@ export default function LearnersDirectory() {
       return !matches;
     };
 
-    // 3. Mutate ALL Active Table States
-    if (typeof setLearnersList === 'function') {
-      setLearnersList((prev: any[]) => prev.filter(isNotTarget));
-    }
-    if (typeof setLearners === 'function') {
-      setLearners((prev: any[]) => prev.filter(isNotTarget));
-    }
-    if (typeof setFilteredLearners === 'function') {
-      setFilteredLearners((prev: any[]) => prev.filter(isNotTarget));
-    }
-    if (typeof setDisplayedLearners === 'function') {
-      setDisplayedLearners((prev: any[]) => prev.filter(isNotTarget));
-    }
+    setLearnersList((prev: any[]) => prev.filter(isNotTarget));
+    setLearners((prev: any[]) => prev.filter(isNotTarget));
+    setFilteredLearners((prev: any[]) => prev.filter(isNotTarget));
+    setDisplayedLearners((prev: any[]) => prev.filter(isNotTarget));
   };
 
   const requestDelete = (learner: any) => {
     setPendingDelete(learner);
-    setAuthPassword('');
-    setAuthError('');
     setIsAuthOpen(true);
   };
 
@@ -255,17 +225,11 @@ export default function LearnersDirectory() {
     await new Promise(r => setTimeout(r, 200));
 
     if (pendingDelete) {
-      const learnerToDelete = pendingDelete;
-      // Executes the permanent central purge (dual Firestore doc-id delete)
-      // and forces an immediate UI table re-render across all local states
-      await handleDeleteLearner(learnerToDelete);
-
+      await handleDeleteLearner(pendingDelete);
       showSuccess("Learner deleted successfully.");
     }
     setIsAuthOpen(false);
     setPendingDelete(null);
-    setAuthPassword('');
-    setAuthError('');
     setIsVerifying(false);
   };
 
@@ -279,15 +243,10 @@ export default function LearnersDirectory() {
         'cached_learners',
         'munyaka_master_learner_list'
       ];
-      // 1. Completely remove all legacy and active keys from localStorage
       for (const k of keysToPurge) {
         localStorage.removeItem(k);
       }
-
-      // 2. Initialize the single master key as an empty array
-      localStorage.setItem('munyaka_learners', JSON.stringify([]));
-
-      // 3. Force reload or reset React state to empty
+      localStorage.setItem('munyaka_learners_v2', JSON.stringify([]));
       window.location.reload();
     }
   };
@@ -295,7 +254,7 @@ export default function LearnersDirectory() {
   const gradesList = useMemo(() => {
     const set = new Set<string>();
     (learnersList || []).forEach(l => {
-      const g = l.grade || l.gradeLevel || l.class;
+      const g = l.gradeLevel || l.grade;
       if (g) set.add(g);
     });
     return Array.from(set).sort();
@@ -333,7 +292,7 @@ export default function LearnersDirectory() {
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <Input
-              placeholder="Search by name or admission no..."
+              placeholder="Search by name, adm no, or assessment no..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="pl-11 rounded-2xl h-12 bg-slate-50 border-none font-medium"
@@ -373,68 +332,66 @@ export default function LearnersDirectory() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-black uppercase text-slate-400 tracking-wider">
-                <th className="py-4 px-6">Learner Name</th>
-                <th className="py-4 px-6">Adm No</th>
-                <th className="p-3 text-left font-bold text-xs uppercase tracking-wider">
-                  ASSESSMENT / BIRTH CERT. NO.
-                </th>
-                <th className="py-4 px-6">Grade / Class</th>
-                <th className="py-4 px-6">Stream</th>
-                <th className="py-4 px-6">Parent Contact</th>
-                <th className="py-4 px-6 text-right">Actions</th>
+                <th className="p-3">ADMISSION NO.</th>
+                <th className="p-3">ASSESSMENT / BIRTH CERT. NO.</th>
+                <th className="p-3">FULL NAME</th>
+                <th className="p-3">GRADE & STREAM</th>
+                <th className="p-3">GENDER</th>
+                <th className="p-3">DOB</th>
+                <th className="p-3">PARENT / GUARDIAN</th>
+                <th className="p-3">PHONE NUMBER</th>
+                <th className="p-3 text-right">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {displayedLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-slate-400 font-medium">
-                    No learners found matching your criteria.
+                  <td colSpan={9} className="py-16 text-center text-slate-400 font-medium">
+                    No learners found. Register a new learner to get started.
                   </td>
                 </tr>
               ) : (
                 displayedLearners.map(learner => {
-                  const name = learner.name || learner.fullName || 'Unnamed Learner';
-                  const adm = learner.admissionNumber || learner.admissionNo || learner.admNo || '-';
-                  const grade = learner.grade || learner.gradeLevel || learner.class || '-';
-                  const stream = learner.stream || '-';
-                  const contact = learner.parentPhone || learner.guardianPhone || learner.phone || '-';
-                  const lId = learner.id || learner._id || adm;
+                  const lId = learner.id || learner._id || learner.admissionNumber || learner.admissionNo || 'learner';
 
                   return (
                     <tr key={lId} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 px-6 font-bold text-slate-900">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
-                            {name.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900">{name}</div>
-                            <div className="text-xs text-slate-400 font-medium">Gender: {learner.gender || 'Not specified'}</div>
-                          </div>
-                        </div>
+                      {/* Admission No */}
+                      <td className="p-3 font-medium whitespace-nowrap">
+                        {learner.admissionNumber || learner.admissionNo || learner.admNo || learner.id || '—'}
                       </td>
-                      <td className="py-4 px-6 font-mono font-medium text-slate-600">{adm}</td>
-                      {/* Assessment No / Birth Certificate No */}
-                      <td className="p-3">
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {learner.identifierValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '—'}
-                          </span>
-                          {learner.identifierType && (
-                            <span className="text-[10px] text-muted-foreground uppercase">
-                              {learner.identifierType}
-                            </span>
-                          )}
-                        </div>
+
+                      {/* Identifier (Assessment / Birth Cert No) */}
+                      <td className="p-3 whitespace-nowrap font-mono text-sm">
+                        {learner.identifierValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '—'}
                       </td>
-                      <td className="py-4 px-6 font-bold text-slate-700">{grade}</td>
-                      <td className="py-4 px-6">
-                        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">
-                          {stream}
+
+                      {/* Full Name */}
+                      <td className="p-3 font-semibold text-foreground whitespace-nowrap">
+                        {learner.fullName || learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`.trim() || '—'}
+                      </td>
+
+                      {/* Grade & Stream */}
+                      <td className="p-3 whitespace-nowrap">
+                        <span className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded-md text-xs font-medium">
+                          {learner.gradeLevel || learner.grade || ''} {learner.stream ? `(${learner.stream})` : ''}
                         </span>
                       </td>
-                      <td className="py-4 px-6 font-medium text-slate-600">{contact}</td>
-                      <td className="py-4 px-6 text-right">
+
+                      {/* Gender */}
+                      <td className="p-3 whitespace-nowrap">{learner.gender || learner.sex || '—'}</td>
+
+                      {/* DOB */}
+                      <td className="p-3 whitespace-nowrap">{learner.dateOfBirth || learner.dob || '—'}</td>
+
+                      {/* Parent / Guardian */}
+                      <td className="p-3 whitespace-nowrap">{learner.parentName || learner.parentGuardian || '—'}</td>
+
+                      {/* Phone Number */}
+                      <td className="p-3 whitespace-nowrap">{learner.phoneNumber || learner.phone || '—'}</td>
+
+                      {/* Actions */}
+                      <td className="p-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
@@ -477,7 +434,7 @@ export default function LearnersDirectory() {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         title="Confirm Deletion"
-        description={`Are you sure you want to permanently delete ${pendingDelete?.name || 'this learner'}? This action cannot be undone.`}
+        description={`Are you sure you want to permanently delete ${pendingDelete?.fullName || pendingDelete?.name || 'this learner'}? This action cannot be undone.`}
         footer={
           <>
             <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold flex-1">
@@ -495,7 +452,7 @@ export default function LearnersDirectory() {
         }
       >
         <div className="py-2 text-sm text-slate-600 font-medium">
-          This record will be purged immediately from local storage, legacy caches, and Firestore.
+          This record will be purged immediately from local storage and Firestore.
         </div>
       </Modal>
     </div>

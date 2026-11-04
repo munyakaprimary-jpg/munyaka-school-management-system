@@ -2,7 +2,6 @@ import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 
 export const initializeMasterStore = () => {
   try {
-    // Force reset on development boot if flag not set for this seed version
     const SEED_VERSION_KEY = 'munyaka_seed_version_v3_clean';
     if (!localStorage.getItem(SEED_VERSION_KEY)) {
       localStorage.removeItem('munyaka_learners_v2');
@@ -11,16 +10,12 @@ export const initializeMasterStore = () => {
 
     const existingLearners = localStorage.getItem('munyaka_learners_v2');
     if (!existingLearners) {
-      const cleanLearners = (INITIAL_SEED_DATA.learners || []).map((l: any) => ({
-        ...l,
-        id: l.id && String(l.id).startsWith('learner-') ? String(l.id) : `learner-${l.id || l.admNo || Math.random().toString(36).slice(2, 9)}`
-      }));
-      localStorage.setItem('munyaka_learners_v2', JSON.stringify(cleanLearners));
+      localStorage.setItem('munyaka_learners_v2', JSON.stringify([]));
     }
     
     const existingStaff = localStorage.getItem('munyaka_users_v1');
     if (!existingStaff) {
-      localStorage.setItem('munyaka_users_v1', JSON.stringify(INITIAL_SEED_DATA.staff || []));
+      localStorage.setItem('munyaka_users_v1', JSON.stringify([]));
     }
   } catch (e) {
     console.error("Error initializing master store:", e);
@@ -36,9 +31,9 @@ export const getNormalizedLearners = () => {
       learners = JSON.parse(raw);
     }
     
-    if (!Array.isArray(learners) || learners.length === 0) {
-      learners = INITIAL_SEED_DATA.learners || [];
-      localStorage.setItem('munyaka_learners_v2', JSON.stringify(learners));
+    if (!Array.isArray(learners)) {
+      learners = [];
+      localStorage.setItem('munyaka_learners_v2', JSON.stringify([]));
     }
 
     const rawDeleted = localStorage.getItem('deleted_learner_ids');
@@ -56,7 +51,7 @@ export const getNormalizedLearners = () => {
     return Array.from(uniqueLearnersMap.values());
   } catch (e) {
     console.error("Error reading learners:", e);
-    return INITIAL_SEED_DATA.learners || [];
+    return [];
   }
 };
 
@@ -92,10 +87,6 @@ export const getActiveStaff = () => {
           break;
         }
       }
-    }
-    if (users.length === 0) {
-      // Fallback to initial seed staff if localStorage is empty
-      // We can import or read from initialSeedData if available, or return empty array
     }
     return users;
   } catch {
