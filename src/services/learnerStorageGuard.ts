@@ -59,7 +59,7 @@ export const registerLearnerGuarded = async (newLearnerData: any) => {
       }
     }
 
-  // F. Dispatch global event to force instant refresh
+  // F. Dispatch global event to force instant refresh on LearnersDirectory
   window.dispatchEvent(new Event('learners_updated'));
   window.dispatchEvent(new Event('students-updated'));
   window.dispatchEvent(new Event('storage'));
