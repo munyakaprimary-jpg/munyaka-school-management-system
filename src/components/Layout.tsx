@@ -78,7 +78,7 @@ export const SyncButton: React.FC = () => {
     const checkPendingItems = () => {
       try {
         const pendingQueue = JSON.parse(localStorage.getItem('munyaka_pending_sync') || '[]');
-        setPendingCount(pendingQueue.length > 0 ? pendingQueue.length : 1);
+        setPendingCount(pendingQueue.length);
       } catch {
         setPendingCount(1);
       }
