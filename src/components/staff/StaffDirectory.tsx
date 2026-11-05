@@ -7,43 +7,44 @@ export interface StaffDirectoryProps {
 export function StaffDirectory({ staffList: externalStaffList = [] }: StaffDirectoryProps) {
   const [staffList, setStaffList] = useState<any[]>(() => {
     try {
-      // Check primary key, backup key, and global storage fallback
-      const primary = localStorage.getItem('munyaka_staff');
-      if (primary) {
-        const parsed = JSON.parse(primary);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-
-      const backup = localStorage.getItem('munyaka_staff_backup');
-      if (backup) {
-        const parsedBackup = JSON.parse(backup);
-        if (Array.isArray(parsedBackup) && parsedBackup.length > 0) return parsedBackup;
-      }
-
-      const directory = localStorage.getItem('munyaka_staff_directory');
-      if (directory) {
-        const parsedDir = JSON.parse(directory);
-        if (Array.isArray(parsedDir) && parsedDir.length > 0) return parsedDir;
+      const keys = ['munyaka_staff', 'munyaka_staff_backup', 'staff_list', 'staff', 'munyaka_staff_directory', 'munyaka_staff_db'];
+      for (const key of keys) {
+        const val = localStorage.getItem(key);
+        if (val) {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log(`Recovered ${parsed.length} staff records from ${key}`);
+            return parsed;
+          }
+        }
       }
     } catch (e) {
-      console.error('Error loading staff table data:', e);
+      console.error('Storage recovery error:', e);
     }
     return externalStaffList.length > 0 ? externalStaffList : [];
   });
 
-  // Safe Event Listeners that ignore empty payloads
+  // Live sync listener that protects against empty payloads
   useEffect(() => {
-    const handleUpdate = (e: any) => {
-      const data = e?.detail || JSON.parse(localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_backup') || localStorage.getItem('munyaka_staff_directory') || '[]');
-      if (Array.isArray(data) && data.length > 0) {
-        setStaffList(data);
+    const syncStaff = () => {
+      try {
+        const primary = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_backup') || localStorage.getItem('munyaka_staff_directory');
+        if (primary) {
+          const parsed = JSON.parse(primary);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setStaffList(parsed);
+          }
+        }
+      } catch (e) {
+        console.error('Sync error:', e);
       }
     };
-    window.addEventListener('staff-updated', handleUpdate);
-    window.addEventListener('storage', handleUpdate);
+
+    window.addEventListener('staff-updated', syncStaff);
+    window.addEventListener('storage', syncStaff);
     return () => {
-      window.removeEventListener('staff-updated', handleUpdate);
-      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('staff-updated', syncStaff);
+      window.removeEventListener('storage', syncStaff);
     };
   }, []);
   return (
