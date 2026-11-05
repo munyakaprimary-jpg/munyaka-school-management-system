@@ -111,7 +111,7 @@ export default function AddLearnerModal({
       const parentName = formData.guardian.trim() || '—';
 
       const newLearnerData = {
-        id: `learner_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        id: admissionNumber,
         admissionNumber,
         admissionNo: admissionNumber,
         identifierValue,
@@ -149,8 +149,10 @@ export default function AddLearnerModal({
       const existingLearnersStore = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
       const newStoreList = [newLearnerData, ...existingLearnersStore];
       localStorage.setItem('munyaka_learners', JSON.stringify(newStoreList));
+      localStorage.setItem('munyaka_learners_backup', JSON.stringify(newStoreList));
       window.dispatchEvent(new CustomEvent('learners-updated', { detail: newStoreList }));
       window.dispatchEvent(new CustomEvent('sync-queue-updated', { detail: newStoreList }));
+      window.dispatchEvent(new CustomEvent('storage'));
 
       addPendingSyncItem({
         id: newLearnerData.id,
