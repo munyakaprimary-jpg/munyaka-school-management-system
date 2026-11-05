@@ -120,9 +120,14 @@ export function AddStaffModal({ isOpen, onClose, onStaffAdded }: AddStaffModalPr
 
     try {
       // Unified Storage Writing across all recognized keys
-      const existingRaw = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_backup') || localStorage.getItem('staff_list') || '[]';
-      const existingArray = JSON.parse(existingRaw);
-      const updatedStaffArray = Array.isArray(existingArray) ? [...existingArray, newStaffMember] : [newStaffMember];
+      const existingRaw = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff_db') || localStorage.getItem('munyaka_staff_backup') || localStorage.getItem('staff_list') || '[]';
+      let existingArray = [];
+      try {
+        existingArray = JSON.parse(existingRaw);
+      } catch (err) {
+        existingArray = [];
+      }
+      const updatedStaffArray = Array.isArray(existingArray) ? [newStaffMember, ...existingArray] : [newStaffMember];
 
       const saveStaffRecord = (newList: any[]) => {
         // Write to primary and all fallback keys simultaneously
