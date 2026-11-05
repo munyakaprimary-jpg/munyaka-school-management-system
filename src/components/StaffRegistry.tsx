@@ -22,6 +22,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MOCK_STAFF } from '../lib/mock-data';
+import { addPendingSyncItem } from '@/utils/storage';
 const defaultCbcLearningAreas: any[] = [];
 import { useGradesAndStreams } from '../hooks/useGradesStreams';
 import { mapRoleLabelToRbacKey } from '../constants/roles';
@@ -381,13 +382,21 @@ export default function StaffRegistry() {
   }
 
   const handleDeleteStaff = (id: string) => {
-    if (confirm("Are you sure you want to remove this staff member from the system? This action cannot be undone.")) {
-      const updated = staffList.filter(s => s.id !== id);
-      setStaffList(updated);
-      localStorage.setItem('munyaka_staff', JSON.stringify(updated));
-      toast.success("Staff member removed successfully");
-    }
-  };
+      if (confirm("Are you sure you want to remove this staff member from the system? This action cannot be undone.")) {
+        const removed = staffList.find(s => s.id === id);
+        const updated = staffList.filter(s => s.id !== id);
+        setStaffList(updated);
+        localStorage.setItem('munyaka_staff', JSON.stringify(updated));
+        toast.success("Staff member removed successfully");
+  
+        addPendingSyncItem({
+          id,
+          type: 'staff',
+          action: 'delete',
+          payload: removed || { id },
+        });
+      }
+    };
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -544,6 +553,14 @@ export default function StaffRegistry() {
     }
 
     saveStaffToStorage(updatedList);
+
+    addPendingSyncItem({
+      id: staffRecord.id,
+      type: 'staff',
+      action: editingStaff ? 'update' : 'create',
+      payload: staffRecord,
+    });
+
     setIsModalOpen(false);
   };
 
