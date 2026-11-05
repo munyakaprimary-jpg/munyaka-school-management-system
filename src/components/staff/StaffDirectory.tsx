@@ -7,36 +7,22 @@ export interface StaffDirectoryProps {
 export function StaffDirectory({ staffList: externalStaffList = [] }: StaffDirectoryProps) {
   const [staffList, setStaffList] = useState<any[]>(() => {
     try {
-      const possibleKeys = ['munyaka_staff', 'munyaka_staff_backup', 'staff_list', 'staff', 'teachers', 'munyaka_staff_directory', 'munyaka_staff_db'];
-      for (const key of possibleKeys) {
-        const storedData = localStorage.getItem(key);
-        if (storedData) {
-          const parsed = JSON.parse(storedData);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            console.log(`Successfully recovered ${parsed.length} staff records from key: ${key}`);
-            return parsed;
-          }
-        }
+      const stored = localStorage.getItem('munyaka_staff');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {
-      console.error('Error reading staff storage:', e);
+      console.error('Error loading staff:', e);
     }
     return externalStaffList.length > 0 ? externalStaffList : [];
   });
 
-  // Real-Time Sync Effect in Directory
   useEffect(() => {
-    const handleSync = () => {
-      const possibleKeys = ['munyaka_staff', 'munyaka_staff_backup', 'staff_list', 'staff', 'teachers', 'munyaka_staff_directory', 'munyaka_staff_db'];
-      for (const key of possibleKeys) {
-        const stored = localStorage.getItem(key);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setStaffList(parsed);
-            break;
-          }
-        }
+    const handleSync = (e: any) => {
+      const data = e?.detail || JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
+      if (Array.isArray(data)) {
+        setStaffList(data);
       }
     };
 
