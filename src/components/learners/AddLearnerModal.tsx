@@ -40,6 +40,15 @@ export default function AddLearnerModal({
   onClose,
   onLearnerAdded,
 }: AddLearnerModalProps) {
+  const [existingLearners, setExistingLearners] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const data = getLearners();
+      setExistingLearners(Array.isArray(data) ? data : []);
+    }
+  }, [isOpen]);
+
   const [formData, setFormData] = useState({
     fullName: '',
     admissionNo: '',

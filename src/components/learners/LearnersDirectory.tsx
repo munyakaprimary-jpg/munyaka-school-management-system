@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import AddLearnerModal from '@/components/learners/AddLearnerModal';
-import { AdminPinModal } from '@/components/learners/AdminPinModal';
+import AdminPinModal from '@/components/learners/AdminPinModal';
 import { STORAGE_KEYS } from '@/utils/storageKeys';
 
 const AVAILABLE_GRADES = [
@@ -22,6 +22,20 @@ const AVAILABLE_GRADES = [
 ];
 
 const AVAILABLE_STREAMS = ['East', 'West', 'North', 'South', 'Red', 'Blue', 'Green', 'Gold'];
+
+const formatLearnerDoc = (learner: any) => {
+  if (!learner) return {};
+  return {
+    ...learner,
+    fullName: learner.fullName || learner.name || learner.studentName || 'Unknown Learner',
+    admissionNo: learner.admissionNo || learner.admissionNumber || learner.admNo || learner.id || '',
+    gradeLevel: learner.gradeLevel || learner.grade || 'Grade 4',
+    stream: learner.stream || 'Blue',
+    gender: learner.gender || 'Not Specified',
+    guardian: learner.guardian || learner.parentName || '—',
+    phone: learner.phone || '+254',
+  };
+};
 
 export default function LearnersDirectory() {
   const navigate = useNavigate();
