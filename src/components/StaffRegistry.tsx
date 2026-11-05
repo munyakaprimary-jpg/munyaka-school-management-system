@@ -149,14 +149,13 @@ export default function StaffRegistry() {
     const seenIds = new Set<string>();
     const sanitized: StaffMember[] = loadedStaff
       .filter((staff: any) => {
-        const sid = String(staff?.id || staff?.staffId || staff?.staff_id || '');
-        return sid.startsWith('MUN-');
+        const sid = String(staff?.id || staff?.staffId || staff?.staff_id || staff?.accessCode || staff?.code || '');
+        return Boolean(sid);
       })
       .map((staff) => {
-        let id = String(staff.id || staff.staffId || staff.staff_id || '');
+        let id = String(staff.id || staff.staffId || staff.staff_id || staff.accessCode || staff.code || '');
         if (!id.startsWith('MUN-')) {
-          const num = staff.tscNumber || staff.tsc_no || Math.floor(1000 + Math.random() * 9000);
-          id = `MUN-${num}`;
+          id = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
         }
         if (seenIds.has(id)) {
           id = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
