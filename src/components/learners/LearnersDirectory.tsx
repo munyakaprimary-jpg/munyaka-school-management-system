@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import AddLearnerModal from '@/components/learners/AddLearnerModal';
 import { AdminPinModal } from '@/components/learners/AdminPinModal';
-import { formatLearnerDoc } from '@/services/learnerService';
+import { STORAGE_KEYS } from '@/utils/storageKeys';
 
 const AVAILABLE_GRADES = [
   'Playgroup', 'PP1', 'PP2', 
@@ -29,7 +29,7 @@ export default function LearnersDirectory() {
 
   const [learners, setLearners] = useState<any[]>(() => {
     try {
-      const stored = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+      const stored = localStorage.getItem(STORAGE_KEYS.LEARNERS) || localStorage.getItem(STORAGE_KEYS.LEARNERS_BACKUP);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
