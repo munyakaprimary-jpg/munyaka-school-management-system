@@ -45,19 +45,13 @@ export default function LearnersDirectory() {
 
   const [learnersList, setLearnersList] = useState<any[]>(() => {
     try {
-      const keysToTry = ['munyaka_learners', 'munyaka_students', 'learners', 'students', 'munyaka_learners_backup'];
-      for (const key of keysToTry) {
-        const data = localStorage.getItem(key);
-        if (data) {
-          const parsed = JSON.parse(data);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            console.log(`Loaded ${parsed.length} records from storage key: ${key}`);
-            return parsed;
-          }
-        }
+      const stored = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {
-      console.error('Error loading learners/students:', e);
+      console.error('Error loading learners:', e);
     }
     return [];
   });
@@ -86,34 +80,22 @@ export default function LearnersDirectory() {
   };
 
   useEffect(() => {
-    const loadLearners = () => {
+    const reloadData = () => {
       try {
-        const deletedIds = new Set<string>(JSON.parse(localStorage.getItem('deleted_learner_ids') || '[]'));
-        
-        let parsed: any[] = [];
-        const keysToTry = ['munyaka_learners', 'munyaka_students', 'learners', 'students', 'munyaka_learners_backup'];
-        for (const key of keysToTry) {
-          const data = localStorage.getItem(key);
-          if (data) {
-            const temp = JSON.parse(data);
-            if (Array.isArray(temp) && temp.length > 0) {
-              parsed = temp;
-              break;
-            }
+        const stored = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const formatted = parsed.map(formatLearnerDoc);
+            setLearnersList(formatted);
+            setLearners(formatted);
+            setFilteredLearners(formatted);
+            setDisplayedLearners(formatted);
+            return;
           }
         }
-
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
-          const formatted = filtered.map(formatLearnerDoc);
-          setLearnersList(formatted);
-          setLearners(formatted);
-          setFilteredLearners(formatted);
-          setDisplayedLearners(formatted);
-          return;
-        }
       } catch (e) {
-        console.error('Error loading learners:', e);
+        console.error('Error reloading learners:', e);
       }
       setLearnersList([]);
       setLearners([]);
@@ -121,36 +103,16 @@ export default function LearnersDirectory() {
       setDisplayedLearners([]);
     };
 
-    loadLearners();
+    reloadData();
 
-    window.addEventListener('learners-updated', loadLearners);
-    window.addEventListener('students-updated', loadLearners);
-    window.addEventListener('learners_updated', loadLearners);
-    window.addEventListener('storage', loadLearners);
-    window.addEventListener('sync-queue-updated', loadLearners);
-    window.addEventListener('munyaka:data-changed', loadLearners);
-
-    let unsubscribe: (() => void) | undefined;
-    if (db) {
-      try {
-        unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
-          loadLearners();
-        }, (error) => {
-          console.warn("[Firestore Listener] Offline or sync error:", error);
-        });
-      } catch (e) {
-        console.warn("[Firestore Listener] Init error:", e);
-      }
-    }
+    window.addEventListener('learners-updated', reloadData);
+    window.addEventListener('students-updated', reloadData);
+    window.addEventListener('storage', reloadData);
 
     return () => {
-      if (unsubscribe) unsubscribe();
-      window.removeEventListener('learners-updated', loadLearners);
-      window.removeEventListener('students-updated', loadLearners);
-      window.removeEventListener('learners_updated', loadLearners);
-      window.removeEventListener('storage', loadLearners);
-      window.removeEventListener('sync-queue-updated', loadLearners);
-      window.removeEventListener('munyaka:data-changed', loadLearners);
+      window.removeEventListener('learners-updated', reloadData);
+      window.removeEventListener('students-updated', reloadData);
+      window.removeEventListener('storage', reloadData);
     };
   }, []);
 
