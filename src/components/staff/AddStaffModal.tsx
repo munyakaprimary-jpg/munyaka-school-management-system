@@ -119,22 +119,26 @@ export function AddStaffModal({ isOpen, onClose, onStaffAdded }: AddStaffModalPr
     };
 
     try {
-      // Retrieves the existing array from localStorage (using 'munyaka_staff'), pushes the new staff member, and saves it back (along with a backup key)
+      // Dual-Key Write Protection with immutable backup
       const storageKey = 'munyaka_staff';
-      const backupKey = 'munyaka_staff_directory';
-      const backupKeyDb = 'munyaka_staff_db';
+      const backupKey = 'munyaka_staff_backup';
+      const directoryKey = 'munyaka_staff_directory';
+      const dbKey = 'munyaka_staff_db';
 
-      const existingRaw = localStorage.getItem(storageKey);
+      const existingRaw = localStorage.getItem(storageKey) || localStorage.getItem(backupKey) || localStorage.getItem(directoryKey);
       const existingArray = existingRaw ? JSON.parse(existingRaw) : [];
       const updatedStaffArray = Array.isArray(existingArray) ? [...existingArray, newStaffMember] : [newStaffMember];
 
-      localStorage.setItem(storageKey, JSON.stringify(updatedStaffArray));
-      localStorage.setItem(backupKey, JSON.stringify(updatedStaffArray));
-      localStorage.setItem(backupKeyDb, JSON.stringify(updatedStaffArray));
+      const persistStaffData = (newList: any[]) => {
+        localStorage.setItem(storageKey, JSON.stringify(newList));
+        localStorage.setItem(backupKey, JSON.stringify(newList));
+        localStorage.setItem(directoryKey, JSON.stringify(newList));
+        localStorage.setItem(dbKey, JSON.stringify(newList));
+        window.dispatchEvent(new CustomEvent('staff-updated', { detail: newList }));
+        window.dispatchEvent(new Event('storage'));
+      };
 
-      // Dispatches custom events (window.dispatchEvent(new CustomEvent('staff-updated', { detail: updatedStaffArray }))) so the table updates immediately without requiring a page reload.
-      window.dispatchEvent(new CustomEvent('staff-updated', { detail: updatedStaffArray }));
-      window.dispatchEvent(new CustomEvent('storage'));
+      persistStaffData(updatedStaffArray);
 
       if (onStaffAdded) {
         onStaffAdded(newStaffMember);

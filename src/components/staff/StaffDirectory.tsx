@@ -7,36 +7,43 @@ export interface StaffDirectoryProps {
 export function StaffDirectory({ staffList: externalStaffList = [] }: StaffDirectoryProps) {
   const [staffList, setStaffList] = useState<any[]>(() => {
     try {
-      const saved = localStorage.getItem('munyaka_staff');
-      return saved ? JSON.parse(saved) : (externalStaffList.length > 0 ? externalStaffList : []);
+      // Check primary key, backup key, and global storage fallback
+      const primary = localStorage.getItem('munyaka_staff');
+      if (primary) {
+        const parsed = JSON.parse(primary);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+
+      const backup = localStorage.getItem('munyaka_staff_backup');
+      if (backup) {
+        const parsedBackup = JSON.parse(backup);
+        if (Array.isArray(parsedBackup) && parsedBackup.length > 0) return parsedBackup;
+      }
+
+      const directory = localStorage.getItem('munyaka_staff_directory');
+      if (directory) {
+        const parsedDir = JSON.parse(directory);
+        if (Array.isArray(parsedDir) && parsedDir.length > 0) return parsedDir;
+      }
     } catch (e) {
-      console.error('Error loading staff from storage:', e);
-      return [];
+      console.error('Error loading staff table data:', e);
     }
+    return externalStaffList.length > 0 ? externalStaffList : [];
   });
 
-  // Listen for live updates without losing state
+  // Safe Event Listeners that ignore empty payloads
   useEffect(() => {
-    const handleStaffUpdate = (event: any) => {
-      if (event.detail && Array.isArray(event.detail)) {
-        setStaffList(event.detail);
-      } else {
-        const saved = localStorage.getItem('munyaka_staff');
-        if (saved) {
-          try {
-            setStaffList(JSON.parse(saved));
-          } catch (err) {
-            console.error(err);
-          }
-        }
+    const handleUpdate = (e: any) => {
+      const data = e?.detail || JSON.parse(localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_backup') || localStorage.getItem('munyaka_staff_directory') || '[]');
+      if (Array.isArray(data) && data.length > 0) {
+        setStaffList(data);
       }
     };
-
-    window.addEventListener('staff-updated', handleStaffUpdate);
-    window.addEventListener('storage', handleStaffUpdate);
+    window.addEventListener('staff-updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
     return () => {
-      window.removeEventListener('staff-updated', handleStaffUpdate);
-      window.removeEventListener('storage', handleStaffUpdate);
+      window.removeEventListener('staff-updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
     };
   }, []);
   return (
