@@ -78,10 +78,8 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } catch {}
 
         const learnersList = deduplicateLearners((Array.isArray(parsedList) ? parsedList : []).map(formatLearnerDoc)).filter(l => {
-          const adm = String(l.admissionNumber || l.admissionNo || '').trim();
           const fn = String(l.fullName || l.name || '').trim();
-          if (adm === 'MUN-001-2026' || adm === 'A001') return false;
-          if (!fn || fn.toLowerCase() === 'unnamed learner' || fn.toLowerCase() === 'unnamed student') return false;
+          if (!fn) return false;
           return true;
         });
 
