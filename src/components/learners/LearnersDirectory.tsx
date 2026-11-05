@@ -142,17 +142,18 @@ export default function LearnersDirectory() {
   }, []);
 
   useEffect(() => {
-    const searchClean = searchTerm.toLowerCase().replace(/\s+/g, '').trim();
+    const searchClean = (searchTerm || '').toString().toLowerCase().replace(/\s+/g, '').trim();
     const next = (learnersList || []).filter(learner => {
-      const name = (learner.fullName || learner.name || learner.studentName || `${learner.firstName || ''} ${learner.lastName || ''}`).toLowerCase();
-      const adm = (learner.admissionNumber || learner.admissionNo || learner.admNo || learner.id || '').toLowerCase();
-      const identifier = (learner.identifierValue || learner.assessmentNo || learner.birthCertNo || '').toLowerCase();
-      const grade = (learner.gradeLevel || learner.grade || '').toLowerCase();
-      const stream = (learner.stream || '').toLowerCase();
+      if (!learner) return false;
+      const name = (learner.fullName || learner.name || learner.studentName || `${learner.firstName || ''} ${learner.lastName || ''}` || '').toString().toLowerCase();
+      const adm = (learner.admissionNumber || learner.admissionNo || learner.admNo || learner.id || '').toString().toLowerCase();
+      const identifier = (learner.identifierValue || learner.assessmentNo || learner.birthCertNo || '').toString().toLowerCase();
+      const grade = (learner.gradeLevel || learner.grade || '').toString().toLowerCase();
+      const stream = (learner.stream || '').toString().toLowerCase();
 
       const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean) || identifier.includes(searchClean);
-      const gradeMatch = gradeFilter === 'all' || grade.includes(gradeFilter.toLowerCase());
-      const streamMatch = streamFilter === 'all' || stream === streamFilter.toLowerCase();
+      const gradeMatch = gradeFilter === 'all' || grade.includes((gradeFilter || '').toString().toLowerCase());
+      const streamMatch = streamFilter === 'all' || stream === (streamFilter || '').toString().toLowerCase();
 
       return nameMatch && gradeMatch && streamMatch;
     });
