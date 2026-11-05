@@ -1,48 +1,51 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Search,
-  Plus,
-  Eye,
-  Trash2,
-  Trash,
-  Loader2
+import { 
+  Search, 
+  UserPlus, 
+  FileSpreadsheet, 
+  Download, 
+  Trash2, 
+  ShieldAlert, 
+  Filter, 
+  UserCheck, 
+  GraduationCap, 
+  BookOpen, 
+  Award,
+  AlertCircle,
+  CheckCircle2,
+  ChevronRight,
+  MoreVertical,
+  Printer
 } from 'lucide-react';
-import { db } from '@/config/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { showSuccess } from '@/utils/toast';
-import { formatLearnerDoc } from '@/services/learnerService';
-import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearnerService';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/components/ui/use-toast';
 import AddLearnerModal from '@/components/learners/AddLearnerModal';
-import Modal from '@/components/ui/Modal';
-import BackButton from '@/components/ui/BackButton';
-import { addPendingSyncItem } from '@/utils/storage';
+import { AdminPinModal } from '@/components/learners/AdminPinModal';
+import { formatLearnerDoc, LEARNER_ID_PREFIX } from '@/services/learnerService';
+import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearnerService';
+import { addPendingSyncItem } from '@/services/syncQueueService';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
-const LEARNER_ID_PREFIX = 'learner-';
+const AVAILABLE_GRADES = [
+  'Playgroup', 'PP1', 'PP2', 
+  'Grade 1', 'Grade 2', 'Grade 3', 
+  'Grade 4', 'Grade 5', 'Grade 6', 
+  'Grade 7', 'Grade 8', 'Grade 9'
+];
 
-const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
-  if (!item) return true;
-  const id = String(item.id || item._id || '').trim();
-  const rawId = toRawLearnerId(id);
-  const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
-  const assess = String(item.identifierValue || item.assessmentNo || item.assessmentNumber || item.birthCertNo || item.birthCertificateNo || '').trim();
-
-  if (id && deletedIds.has(id)) return true;
-  if (rawId && deletedIds.has(rawId)) return true;
-  if (rawId && deletedIds.has(LEARNER_ID_PREFIX + rawId)) return true;
-  if (adm && deletedIds.has(adm)) return true;
-  if (assess && deletedIds.has(assess)) return true;
-  return false;
-};
+const AVAILABLE_STREAMS = ['East', 'West', 'North', 'South', 'Red', 'Blue', 'Green', 'Gold'];
 
 export default function LearnersDirectory() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+
   const [learnersList, setLearnersList] = useState<any[]>(() => {
     try {
-      const keysToTry = ['munyaka_learners', 'munyaka_students', 'learners', 'students'];
+      const keysToTry = ['munyaka_learners', 'munyaka_students', 'learners', 'students', 'munyaka_learners_backup'];
       for (const key of keysToTry) {
         const data = localStorage.getItem(key);
         if (data) {
@@ -59,18 +62,28 @@ export default function LearnersDirectory() {
     return [];
   });
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [gradeFilter, setGradeFilter] = useState('all');
-  const [streamFilter, setStreamFilter] = useState('all');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
   const [learners, setLearners] = useState<any[]>([]);
   const [filteredLearners, setFilteredLearners] = useState<any[]>([]);
   const [displayedLearners, setDisplayedLearners] = useState<any[]>([]);
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [gradeFilter, setGradeFilter] = useState('all');
+  const [streamFilter, setStreamFilter] = useState('all');
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<any | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<any>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+
+  const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
+    if (!item) return true;
+    const rawId = toRawLearnerId(item.id || item._id || item.learnerId);
+    const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
+    if (rawId && deletedIds.has(rawId)) return true;
+    if (adm && deletedIds.has(adm)) return true;
+    if (item.isDeleted || item.deleted) return true;
+    return false;
+  };
 
   useEffect(() => {
     const loadLearners = () => {
@@ -226,199 +239,140 @@ export default function LearnersDirectory() {
 
     if (pendingDelete) {
       await handleDeleteLearner(pendingDelete);
-      showSuccess("Learner deleted successfully.");
+      toast({
+        title: "Success",
+        description: "Learner deleted successfully.",
+      });
     }
     setIsAuthOpen(false);
     setPendingDelete(null);
     setIsVerifying(false);
   };
 
-  const purgeAllLearnersDataCompletely = () => {
-    if (window.confirm("Are you sure you want to completely purge all learners data? This action cannot be undone.")) {
-      const keysToPurge = [
-        'munyaka_learners',
-        'munyaka_learners_v2',
-        'school_learners_data',
-        'munyaka_students',
-        'cached_learners',
-        'munyaka_master_learner_list'
-      ];
-      for (const k of keysToPurge) {
-        localStorage.removeItem(k);
-      }
-      localStorage.setItem('munyaka_learners', JSON.stringify([]));
-      window.location.reload();
-    }
-  };
-
-  const gradesList = useMemo(() => {
-    const set = new Set<string>();
-    (learnersList || []).forEach(l => {
-      const g = l.gradeLevel || l.grade;
-      if (g) set.add(g);
-    });
-    return Array.from(set).sort();
-  }, [learnersList]);
-
   return (
-    <div className="space-y-6 pb-16 animate-in fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm">
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-8 space-y-6">
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
         <div>
-          <BackButton />
-          <h1 className="text-2xl font-black text-slate-900 mt-2">Learners Directory</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Manage school enrollment, student records, and profiles</p>
+          <div className="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase tracking-wider mb-1">
+            <GraduationCap className="w-4 h-4" /> Student Management System
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Learners Directory</h1>
+          <p className="text-sm text-slate-500 font-medium">Manage student profiles, admission numbers, and grade allocations.</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <Button
-            onClick={purgeAllLearnersDataCompletely}
-            variant="destructive"
-            className="rounded-2xl font-bold bg-rose-600 hover:bg-rose-700 text-white h-12 px-5 shadow-lg shadow-rose-100 flex items-center gap-2"
-          >
-            <Trash size={18} /> Purge All Data
-          </Button>
+        <div className="flex items-center gap-3">
           <Button
             onClick={() => setIsAddModalOpen(true)}
-            className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-6 shadow-lg shadow-indigo-100"
+            className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200 px-5 py-6"
           >
-            <Plus size={18} className="mr-2" /> Register New Learner
+            <UserPlus className="w-5 h-5 mr-2" /> Register New Learner
           </Button>
         </div>
       </div>
 
-      {/* Filters & Search */}
-      <div className="bg-white p-6 rounded-3xl shadow-sm space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <Input
-              placeholder="Search by name, adm no, or assessment no..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-11 rounded-2xl h-12 bg-slate-50 border-none font-medium"
-            />
-          </div>
+      {/* Filters & Search Toolbar */}
+      <div className="bg-white p-4 sm:p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col lg:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full lg:w-96">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            placeholder="Search by name, adm no, or assessment no..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-11 rounded-2xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500 font-medium h-12"
+          />
+        </div>
 
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           <Select value={gradeFilter} onValueChange={setGradeFilter}>
-            <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-medium">
-              <SelectValue placeholder="All Grades" />
+            <SelectTrigger className="w-full sm:w-[180px] rounded-2xl border-slate-200 h-12 font-medium">
+              <SelectValue placeholder="Filter Grade" />
             </SelectTrigger>
             <SelectContent className="rounded-2xl">
               <SelectItem value="all">All Grades</SelectItem>
-              {gradesList.map(g => (
-                <SelectItem key={g} value={g}>{g}</SelectItem>
+              {AVAILABLE_GRADES.map(grade => (
+                <SelectItem key={grade} value={grade}>{grade}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
           <Select value={streamFilter} onValueChange={setStreamFilter}>
-            <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-medium">
-              <SelectValue placeholder="All Streams" />
+            <SelectTrigger className="w-full sm:w-[150px] rounded-2xl border-slate-200 h-12 font-medium">
+              <SelectValue placeholder="Filter Stream" />
             </SelectTrigger>
             <SelectContent className="rounded-2xl">
               <SelectItem value="all">All Streams</SelectItem>
-              <SelectItem value="North">North</SelectItem>
-              <SelectItem value="South">South</SelectItem>
-              <SelectItem value="East">East</SelectItem>
-              <SelectItem value="West">West</SelectItem>
+              {AVAILABLE_STREAMS.map(stream => (
+                <SelectItem key={stream} value={stream}>{stream}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {/* Clean Learner Directory Table Container */}
-      <div className="w-full overflow-x-auto rounded-lg border bg-card shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-muted/50 border-b text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="p-3">ADMISSION NO.</th>
-              <th className="p-3">ASSESSMENT / BIRTH CERT. NO.</th>
-              <th className="p-3">FULL NAME</th>
-              <th className="p-3">GRADE & STREAM</th>
-              <th className="p-3">GENDER</th>
-              <th className="p-3">DOB</th>
-              <th className="p-3">PARENT / GUARDIAN</th>
-              <th className="p-3">PHONE NUMBER</th>
-              <th className="p-3 text-right">ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {displayedLearners && displayedLearners.length > 0 ? (
-              displayedLearners.map((learner: any, index: number) => {
-                const lId = learner.id || learner.admissionNumber || learner.admissionNo || index;
-                return (
-                  <tr key={lId} className="hover:bg-muted/30 transition-colors">
-                    {/* Admission No */}
-                    <td className="p-3 font-medium whitespace-nowrap">
-                      {learner.admissionNumber || learner.admissionNo || learner.admNo || learner.id || '—'}
-                    </td>
+      {/* Directory Table */}
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Enrolled Students</h2>
+            <p className="text-xs text-slate-500 font-medium">Showing {displayedLearners.length} active records</p>
+          </div>
+        </div>
 
-                    {/* Assessment / Birth Cert No */}
-                    <td className="p-3 whitespace-nowrap font-mono text-xs">
-                      {learner.identifierValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '—'}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
+                <th className="py-4 px-6">Admission No</th>
+                <th className="py-4 px-6">Student Full Name</th>
+                <th className="py-4 px-6">Grade & Stream</th>
+                <th className="py-4 px-6">Assessment No</th>
+                <th className="py-4 px-6">Parent / Guardian</th>
+                <th className="py-4 px-6 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {displayedLearners.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-400 font-medium">
+                    No learners found matching your search criteria.
+                  </td>
+                </tr>
+              ) : (
+                displayedLearners.map((learner, idx) => (
+                  <tr key={learner.id || learner.admissionNo || idx} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-4 px-6 font-mono font-bold text-xs text-indigo-600">
+                      {learner.admissionNo || learner.admissionNumber || learner.admNo || '—'}
                     </td>
-
-                    {/* Full Name */}
-                    <td className="p-3 font-semibold text-gray-900 whitespace-nowrap">
-                      {learner.fullName || learner.name || learner.studentName || `${learner.firstName || ''} ${learner.lastName || ''}`.trim() || '—'}
+                    <td className="py-4 px-6 font-bold text-slate-900">
+                      {learner.fullName || learner.name || learner.studentName || '—'}
                     </td>
-
-                    {/* Grade & Stream */}
-                    <td className="p-3 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-slate-100 text-slate-800">
+                    <td className="py-4 px-6">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
                         {learner.gradeAndStream || `${learner.gradeLevel || learner.grade || ''} (${learner.stream || ''})`.trim() || '—'}
                       </span>
                     </td>
-
-                    {/* Gender */}
-                    <td className="p-3 whitespace-nowrap capitalize">{learner.gender || learner.sex || '—'}</td>
-
-                    {/* DOB */}
-                    <td className="p-3 whitespace-nowrap">{learner.dob || learner.dateOfBirth || '—'}</td>
-
-                    {/* Parent / Guardian */}
-                    <td className="p-3 whitespace-nowrap">
+                    <td className="py-4 px-6 font-mono text-xs text-slate-600">
+                      {learner.assessmentNo || learner.assessmentNumber || learner.identifierValue || '—'}
+                    </td>
+                    <td className="py-4 px-6 text-sm text-slate-700 font-medium">
                       {learner.parentGuardian || learner.parentName || learner.guardian || '—'}
                     </td>
-
-                    {/* Phone Number */}
-                    <td className="p-3 whitespace-nowrap">{learner.phoneNumber || learner.phone || learner.parentPhone || '—'}</td>
-
-                    {/* Actions */}
-                    <td className="p-3 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button
-                          className="h-8 w-8"
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => navigate(`/student/${learner.id || learner.admissionNumber || learner.admissionNo}`)}
-                          title="View Profile"
-                        >
-                          <Eye className="h-4 w-4"/>
-                        </Button>
-                        <Button
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => requestDelete(learner)}
-                          title="Delete Learner"
-                        >
-                          <Trash2 className="h-4 w-4"/>
-                        </Button>
-                      </div>
+                    <td className="py-4 px-6 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => requestDelete(learner)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </td>
                   </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={9} className="p-8 text-center text-muted-foreground">
-                  No learners found. Register a new learner to get started.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Add Learner Modal */}
@@ -428,32 +382,14 @@ export default function LearnersDirectory() {
         onLearnerAdded={handleLearnerAdded}
       />
 
-      {/* Confirmation Modal */}
-      <Modal
-        isOpen={isAuthOpen}
+      {/* Admin PIN Verification Modal for Deletion */}
+      <AdminPinModal
+        open={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
-        title="Confirm Deletion"
-        description={`Are you sure you want to permanently delete ${pendingDelete?.fullName || pendingDelete?.name || pendingDelete?.firstName || 'this learner'}? This action cannot be undone.`}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold flex-1">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleVerifyAuth}
-              disabled={isVerifying}
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-6 flex-1 shadow-lg shadow-red-100"
-            >
-              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
-              Confirm Delete
-            </Button>
-          </>
-        }
-      >
-        <div className="py-2 text-sm text-slate-600 font-medium">
-          This record will be purged immediately from local storage and Firestore.
-        </div>
-      </Modal>
+        onSuccess={handleVerifyAuth}
+        title="Admin Authorization Required"
+        description="Enter admin PIN to confirm deletion of this learner record."
+      />
     </div>
   );
 }
