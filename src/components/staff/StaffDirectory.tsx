@@ -7,44 +7,44 @@ export interface StaffDirectoryProps {
 export function StaffDirectory({ staffList: externalStaffList = [] }: StaffDirectoryProps) {
   const [staffList, setStaffList] = useState<any[]>(() => {
     try {
-      const keys = ['munyaka_staff', 'munyaka_staff_backup', 'staff_list', 'staff', 'munyaka_staff_directory', 'munyaka_staff_db'];
-      for (const key of keys) {
-        const val = localStorage.getItem(key);
-        if (val) {
-          const parsed = JSON.parse(val);
+      const possibleKeys = ['munyaka_staff', 'munyaka_staff_backup', 'staff_list', 'staff', 'teachers', 'munyaka_staff_directory', 'munyaka_staff_db'];
+      for (const key of possibleKeys) {
+        const storedData = localStorage.getItem(key);
+        if (storedData) {
+          const parsed = JSON.parse(storedData);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            console.log(`Recovered ${parsed.length} staff records from ${key}`);
+            console.log(`Successfully recovered ${parsed.length} staff records from key: ${key}`);
             return parsed;
           }
         }
       }
     } catch (e) {
-      console.error('Storage recovery error:', e);
+      console.error('Error reading staff storage:', e);
     }
     return externalStaffList.length > 0 ? externalStaffList : [];
   });
 
-  // Live sync listener that protects against empty payloads
+  // Real-Time Sync Effect in Directory
   useEffect(() => {
-    const syncStaff = () => {
-      try {
-        const primary = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_backup') || localStorage.getItem('munyaka_staff_directory');
-        if (primary) {
-          const parsed = JSON.parse(primary);
+    const handleSync = () => {
+      const possibleKeys = ['munyaka_staff', 'munyaka_staff_backup', 'staff_list', 'staff', 'teachers', 'munyaka_staff_directory', 'munyaka_staff_db'];
+      for (const key of possibleKeys) {
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          const parsed = JSON.parse(stored);
           if (Array.isArray(parsed) && parsed.length > 0) {
             setStaffList(parsed);
+            break;
           }
         }
-      } catch (e) {
-        console.error('Sync error:', e);
       }
     };
 
-    window.addEventListener('staff-updated', syncStaff);
-    window.addEventListener('storage', syncStaff);
+    window.addEventListener('staff-updated', handleSync);
+    window.addEventListener('storage', handleSync);
     return () => {
-      window.removeEventListener('staff-updated', syncStaff);
-      window.removeEventListener('storage', syncStaff);
+      window.removeEventListener('staff-updated', handleSync);
+      window.removeEventListener('storage', handleSync);
     };
   }, []);
   return (

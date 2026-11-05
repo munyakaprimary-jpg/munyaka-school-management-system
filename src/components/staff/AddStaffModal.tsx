@@ -119,26 +119,25 @@ export function AddStaffModal({ isOpen, onClose, onStaffAdded }: AddStaffModalPr
     };
 
     try {
-      // Dual-Key Write Protection with immutable backup
-      const storageKey = 'munyaka_staff';
-      const backupKey = 'munyaka_staff_backup';
-      const directoryKey = 'munyaka_staff_directory';
-      const dbKey = 'munyaka_staff_db';
-
-      const existingRaw = localStorage.getItem(storageKey) || localStorage.getItem(backupKey) || localStorage.getItem(directoryKey);
-      const existingArray = existingRaw ? JSON.parse(existingRaw) : [];
+      // Unified Storage Writing across all recognized keys
+      const existingRaw = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_backup') || localStorage.getItem('staff_list') || '[]';
+      const existingArray = JSON.parse(existingRaw);
       const updatedStaffArray = Array.isArray(existingArray) ? [...existingArray, newStaffMember] : [newStaffMember];
 
-      const persistStaffData = (newList: any[]) => {
-        localStorage.setItem(storageKey, JSON.stringify(newList));
-        localStorage.setItem(backupKey, JSON.stringify(newList));
-        localStorage.setItem(directoryKey, JSON.stringify(newList));
-        localStorage.setItem(dbKey, JSON.stringify(newList));
+      const saveStaffRecord = (newList: any[]) => {
+        // Write to primary and all fallback keys simultaneously
+        localStorage.setItem('munyaka_staff', JSON.stringify(newList));
+        localStorage.setItem('munyaka_staff_backup', JSON.stringify(newList));
+        localStorage.setItem('staff_list', JSON.stringify(newList));
+        localStorage.setItem('munyaka_staff_directory', JSON.stringify(newList));
+        localStorage.setItem('munyaka_staff_db', JSON.stringify(newList));
+        
+        // Dispatch custom update events
         window.dispatchEvent(new CustomEvent('staff-updated', { detail: newList }));
         window.dispatchEvent(new Event('storage'));
       };
 
-      persistStaffData(updatedStaffArray);
+      saveStaffRecord(updatedStaffArray);
 
       if (onStaffAdded) {
         onStaffAdded(newStaffMember);
