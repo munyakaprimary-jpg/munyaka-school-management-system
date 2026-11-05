@@ -514,43 +514,7 @@ const App = () => {
       runOneTimeLearnerPurge();
     }, []);
 
-  // One-time startup wipe for clean restart & staff/learner state reset
-    useEffect(() => {
-      try {
-        const WIPE_KEY = 'munyaka_clean_wipe_v4';
-        if (!localStorage.getItem(WIPE_KEY)) {
-          // Clear ALL learner-related keys
-          localStorage.removeItem('munyaka_learners');
-          localStorage.removeItem('munyaka_learners_v2');
-          localStorage.removeItem('munyaka_master_learner_list');
-          localStorage.removeItem('school_learners_data');
-          localStorage.removeItem('munyaka_central_db');
-          localStorage.removeItem('munyaka_app_learners_v1');
-          localStorage.removeItem('munyaka_students');
-          
-          // Clear ALL staff-related keys (covers both getStoredStaff and getActiveStaff)
-          localStorage.removeItem('munyaka_staff');
-          localStorage.removeItem('munyaka_staff_v2');
-          localStorage.removeItem('munyaka_staff_directory');
-          localStorage.removeItem('munyaka_staff_master');
-          localStorage.removeItem('munyaka_staff_db');
-          localStorage.removeItem('munyaka_staff_master_v1');
-          localStorage.removeItem('munyaka_master_staff_list');
-          localStorage.removeItem('school_staff_roster');
-          localStorage.removeItem('munyaka_app_staff_v1');
-          localStorage.removeItem('staff_members');
-          localStorage.removeItem('staff');
-          localStorage.removeItem('munyaka_users_v1');
-          
-          // Initialize empty arrays
-          localStorage.setItem('munyaka_learners', JSON.stringify([]));
-          localStorage.setItem('munyaka_staff', JSON.stringify([]));
-          localStorage.setItem(WIPE_KEY, 'true');
-        }
-      } catch (err) {
-        console.error('Error during clean restart wipe:', err);
-      }
-    }, []);
+  // Storage wipe disabled to preserve user records permanently.
   useEffect(() => {
     const bgColors: Record<string, string> = {
       amber: '#1a0f0a',
