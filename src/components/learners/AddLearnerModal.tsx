@@ -134,24 +134,31 @@ export default function AddLearnerModal({
       const updatedList = [newLearnerRecord, ...existingLearners];
       saveLearners(updatedList);
 
-      const existingLearnersStore = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
-      const newStoreList = [newLearnerRecord, ...existingLearnersStore];
+      const existingRaw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || '[]';
+      const existingLearnersStore = JSON.parse(existingRaw);
+      const newStoreList = Array.isArray(existingLearnersStore) ? [newLearnerRecord, ...existingLearnersStore] : [newLearnerRecord];
+
       localStorage.setItem('munyaka_learners', JSON.stringify(newStoreList));
+      localStorage.setItem('munyaka_students', JSON.stringify(newStoreList));
       localStorage.setItem('munyaka_learners_backup', JSON.stringify(newStoreList));
+      localStorage.setItem('learners', JSON.stringify(newStoreList));
+      localStorage.setItem('students', JSON.stringify(newStoreList));
+
       window.dispatchEvent(new CustomEvent('learners-updated', { detail: newStoreList }));
+      window.dispatchEvent(new CustomEvent('students-updated', { detail: newStoreList }));
       window.dispatchEvent(new CustomEvent('sync-queue-updated', { detail: newStoreList }));
-      window.dispatchEvent(new CustomEvent('storage'));
+      window.dispatchEvent(new Event('storage'));
 
       addPendingSyncItem({
-        id: newLearnerData.id,
+        id: newLearnerRecord.id,
         type: 'learner',
         action: 'create',
-        payload: newLearnerData,
+        payload: newLearnerRecord,
       });
 
       showSuccess("Learner successfully registered and saved to directory!");
       if (onLearnerAdded) {
-        onLearnerAdded(newLearnerData);
+        onLearnerAdded(newLearnerRecord);
       }
       onClose();
     } catch (err: any) {
