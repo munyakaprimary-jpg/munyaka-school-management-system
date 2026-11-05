@@ -329,14 +329,14 @@ export default function LearnersDirectory() {
                     </td>
 
                     {/* Full Name */}
-                    <td className="p-3 font-semibold text-foreground whitespace-nowrap">
+                    <td className="p-3 font-semibold text-gray-900 whitespace-nowrap">
                       {learner.fullName || learner.name || learner.studentName || `${learner.firstName || ''} ${learner.lastName || ''}`.trim() || '—'}
                     </td>
 
                     {/* Grade & Stream */}
                     <td className="p-3 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
-                        {learner.gradeLevel || learner.grade || ''} {learner.stream ? `(${learner.stream})` : ''}
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-slate-100 text-slate-800">
+                        {learner.gradeAndStream || `${learner.gradeLevel || learner.grade || ''} (${learner.stream || ''})`.trim() || '—'}
                       </span>
                     </td>
 
@@ -344,10 +344,12 @@ export default function LearnersDirectory() {
                     <td className="p-3 whitespace-nowrap capitalize">{learner.gender || learner.sex || '—'}</td>
 
                     {/* DOB */}
-                    <td className="p-3 whitespace-nowrap">{learner.dateOfBirth || learner.dob || '—'}</td>
+                    <td className="p-3 whitespace-nowrap">{learner.dob || learner.dateOfBirth || '—'}</td>
 
                     {/* Parent / Guardian */}
-                    <td className="p-3 whitespace-nowrap">{learner.parentName || learner.parentGuardian || learner.guardian || '—'}</td>
+                    <td className="p-3 whitespace-nowrap">
+                      {learner.parentGuardian || learner.parentName || learner.guardian || '—'}
+                    </td>
 
                     {/* Phone Number */}
                     <td className="p-3 whitespace-nowrap">{learner.phoneNumber || learner.phone || learner.parentPhone || '—'}</td>

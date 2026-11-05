@@ -99,55 +99,43 @@ export default function AddLearnerModal({
 
     setIsSaving(true);
     try {
-      const existingLearners = getLearners();
-      const generatedAdmNo = formData.admissionNo || generateCohortAdmissionNumber(formData.grade, existingLearners);
-
-      const admissionNumber = generatedAdmNo;
+      const selectedGrade = formData.grade;
+      const selectedStream = formData.stream;
+      const admissionNumber = formData.admissionNo || generateCohortAdmissionNumber(selectedGrade, existingLearners);
       const identifierValue = formData.identifierValue.trim() || '';
-      const regGrade = formData.grade;
-      const regStream = formData.stream;
       const gender = (formData as any).gender || 'Not Specified';
       const dateOfBirth = (formData as any).dateOfBirth || '';
       const parentName = formData.guardian.trim() || '—';
+      const phone = formData.phone.trim() || '+254';
 
-      const newLearnerData = {
-        id: admissionNumber,
-        admissionNumber,
+      const newLearnerRecord = {
+        id: admissionNumber || `MUN-${Date.now().toString().slice(-4)}`,
         admissionNo: admissionNumber,
-        identifierValue,
-        identifierType: formData.identifierType,
-        assessmentNo: formData.identifierType === 'assessment' ? identifierValue : undefined,
-        birthCertNo: formData.identifierType === 'birth_cert' ? identifierValue : undefined,
-        fullName,
+        admissionNumber: admissionNumber,
+        assessmentNo: identifierValue || '—',
+        assessmentNumber: identifierValue || '—',
+        fullName: fullName,
         name: fullName,
-        gradeLevel: regGrade,
-        grade: regGrade,
-        stream: regStream,
-        gender,
-        dateOfBirth,
-        parentName,
-        parentGuardian: parentName,
-        phoneNumber: phone,
-        phone,
-        location: formData.location.trim() || 'Eldoret',
-        payload: {
-          admissionNumber,
-          identifierValue,
-          fullName,
-          gradeLevel: regGrade,
-          stream: regStream,
-          gender,
-          dateOfBirth,
-          parentName,
-          phoneNumber: phone
-        }
+        gradeLevel: selectedGrade,
+        grade: selectedGrade,
+        stream: selectedStream,
+        gradeAndStream: `${selectedGrade} (${selectedStream})`,
+        gender: gender,
+        dob: dateOfBirth || '—',
+        dateOfBirth: dateOfBirth || '—',
+        parentGuardian: parentName || '—',
+        parentName: parentName || '—',
+        phoneNumber: phone || '—',
+        phone: phone || '—',
+        status: 'Active',
+        createdAt: new Date().toISOString()
       };
 
-      const updatedList = [newLearnerData, ...existingLearners];
+      const updatedList = [newLearnerRecord, ...existingLearners];
       saveLearners(updatedList);
 
       const existingLearnersStore = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
-      const newStoreList = [newLearnerData, ...existingLearnersStore];
+      const newStoreList = [newLearnerRecord, ...existingLearnersStore];
       localStorage.setItem('munyaka_learners', JSON.stringify(newStoreList));
       localStorage.setItem('munyaka_learners_backup', JSON.stringify(newStoreList));
       window.dispatchEvent(new CustomEvent('learners-updated', { detail: newStoreList }));
