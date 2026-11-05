@@ -608,8 +608,8 @@ const Login: React.FC = () => {
                       
                                               // Define explicit color text classes
                                               const colorMap: Record<string, string> = {
-                                                indigo: 'text-indigo-400 font-bold',
-                                                emerald: 'text-emerald-400 font-bold',
+                                                indigo: 'text-amber-400 font-bold',
+                                                emerald: 'text-amber-400 font-bold',
                                                 amber: 'text-amber-400 font-bold',
                                                 rose: 'text-rose-400 font-bold',
                                               };
