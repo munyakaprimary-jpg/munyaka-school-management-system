@@ -85,7 +85,11 @@ export const SyncButton: React.FC = () => {
     };
     checkPendingItems();
     window.addEventListener('storage', checkPendingItems);
-    return () => window.removeEventListener('storage', checkPendingItems);
+    window.addEventListener('sync-queue-updated', checkPendingItems);
+    return () => {
+      window.removeEventListener('storage', checkPendingItems);
+      window.removeEventListener('sync-queue-updated', checkPendingItems);
+    };
   }, []);
 
   const handleSync = async () => {

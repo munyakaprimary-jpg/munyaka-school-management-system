@@ -505,3 +505,45 @@ export function downloadDatabaseBackup(): void {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// ── Pending Sync Queue ──────────────────────────────────────────────────────
+// Tracks offline/outbox items waiting to be flushed by the Sync button.
+// The SyncButton badge reads from this same key.
+
+export const PENDING_SYNC_KEY = 'munyaka_pending_sync';
+
+export interface PendingSyncItem {
+  id: string;
+  type: 'learner' | 'staff' | 'attendance' | 'payment' | 'message';
+  action: 'create' | 'update' | 'delete';
+  payload: Record<string, any>;
+  createdAt: string;
+}
+
+export function getPendingSyncItems(): PendingSyncItem[] {
+  return lsRead<PendingSyncItem[]>(PENDING_SYNC_KEY, []);
+}
+
+export function addPendingSyncItem(item: Omit<PendingSyncItem, 'createdAt'>): PendingSyncItem {
+  const queue = getPendingSyncItems();
+  const next: PendingSyncItem = { ...item, createdAt: new Date().toISOString() };
+  // Replace existing entry for the same id if present, otherwise append.
+  const idx = queue.findIndex((q) => q.id === next.id);
+  if (idx !== -1) {
+    queue[idx] = next;
+  } else {
+    queue.push(next);
+  }
+  lsSet(PENDING_SYNC_KEY, queue);
+  return next;
+}
+
+export function removePendingSyncItem(id: string): void {
+  const queue = getPendingSyncItems();
+  const next = queue.filter((q) => q.id !== id);
+  lsSet(PENDING_SYNC_KEY, next);
+}
+
+export function clearPendingSyncQueue(): void {
+  lsSet(PENDING_SYNC_KEY, []);
+}

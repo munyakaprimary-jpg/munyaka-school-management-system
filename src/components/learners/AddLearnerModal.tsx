@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { getLearners, saveLearners } from '@/utils/storage';
+import { getLearners, saveLearners, addPendingSyncItem } from '@/utils/storage';
 import { generateCohortAdmissionNumber } from '@/utils/admissionUtils';
 import { Learner } from '@/types/learners';
 
@@ -151,6 +151,13 @@ export default function AddLearnerModal({
       localStorage.setItem('munyaka_learners', JSON.stringify(newStoreList));
       window.dispatchEvent(new CustomEvent('learners-updated', { detail: newStoreList }));
       window.dispatchEvent(new CustomEvent('sync-queue-updated', { detail: newStoreList }));
+
+      addPendingSyncItem({
+        id: newLearnerData.id,
+        type: 'learner',
+        action: 'create',
+        payload: newLearnerData,
+      });
 
       showSuccess("Learner successfully registered and saved to directory!");
       if (onLearnerAdded) {

@@ -19,6 +19,7 @@ import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearner
 import AddLearnerModal from '@/components/learners/AddLearnerModal';
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
+import { addPendingSyncItem } from '@/utils/storage';
 
 const LEARNER_ID_PREFIX = 'learner-';
 
@@ -175,6 +176,13 @@ export default function LearnersDirectory() {
     setLearners((prev: any[]) => prev.filter(isNotTarget));
     setFilteredLearners((prev: any[]) => prev.filter(isNotTarget));
     setDisplayedLearners((prev: any[]) => prev.filter(isNotTarget));
+
+    addPendingSyncItem({
+      id: sourceId,
+      type: 'learner',
+      action: 'delete',
+      payload: learnerToDelete,
+    });
   };
 
   const requestDelete = (learner: any) => {
