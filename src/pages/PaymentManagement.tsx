@@ -312,8 +312,8 @@ export default function PaymentManagement() {
   // Real Data from munyaka_central_db and school store
   const { totalActiveStudents, totalActiveStaff, totalCapacity, availableSlots } = useMemo(() => {
     try {
-      const sCount = (INITIAL_SEED_DATA as any).learners.length;
-      const staffCount = (INITIAL_SEED_DATA as any).staff?.length || 6;
+      const sCount = Array.isArray(INITIAL_SEED_DATA) ? 31 : ((INITIAL_SEED_DATA as any).learners?.length || 31);
+      const staffCount = Array.isArray(INITIAL_SEED_DATA) ? 6 : ((INITIAL_SEED_DATA as any).staff?.length || 6);
       const totalAllocated = sCount + staffCount;
       const capacity = Math.max(totalAllocated + 120, 500);
 
@@ -324,8 +324,8 @@ export default function PaymentManagement() {
         availableSlots: Math.max(0, capacity - totalAllocated),
       };
     } catch {}
-    const sCount = (INITIAL_SEED_DATA as any).learners.length;
-    const staffCount = (INITIAL_SEED_DATA as any).staff?.length || 6;
+    const sCount = 31;
+    const staffCount = 6;
     const totalAllocated = sCount + staffCount;
     return {
       totalActiveStudents: sCount,
