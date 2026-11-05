@@ -40,16 +40,16 @@ export default function TeacherDashboard() {
   const title = staffTitle.toLowerCase();
   
   // Robust Role Matching for Library Teacher / Librarian with Foolproof Name Fallback
-  const currentUserObj = (() => {
+  const currUserObj = (() => {
     try {
       return JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
     } catch {
       return {};
     }
   })();
-  const rawRole = currentUserObj.rbacRole || currentUserObj.role || (user as any)?.rbacRole || user?.role || '';
+  const rawRole = currUserObj.rbacRole || currUserObj.role || (user as any)?.rbacRole || user?.role || '';
   const normalizedRole = String(rawRole).toLowerCase().trim();
-  const userName = String(currentUserObj.name || currentUserObj.fullName || user?.name || '').toUpperCase();
+  const userName = String(currUserObj.name || currUserObj.fullName || user?.name || '').toUpperCase();
   
   const isLibraryStaff =
     normalizedRole === 'library_teacher' ||
@@ -364,16 +364,21 @@ export default function TeacherDashboard() {
     );
   }
 
-  const assignedClass = String((user as any)?.assignedClass || (user as any)?.gradeStream || 'Grade 4 Blue');
-  const assignedGrade = String((user as any)?.assignedGrade || 'Grade 4');
-  const assignedStream = String(user?.assignedStream || 'Blue');
-  const fullClassTitle = `${assignedGrade} ${assignedStream}`;
+  const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+  const assignedClassesRaw = (user as any)?.assignedClasses || currentUserObj.assignedClasses || [];
+  const assignedClassStr = Array.isArray(assignedClassesRaw) && assignedClassesRaw.length > 0
+    ? assignedClassesRaw.join(', ')
+    : String((user as any)?.assignedClass || (user as any)?.gradeStream || currentUserObj.assignedClass || currentUserObj.gradeStream || 'Grade 4 Blue');
+  const fullClassTitle = assignedClassStr;
 
   // Filter students matching the teacher's assigned class/stream
   const classStudents = (students || []).filter(s => {
     const sGrade = String(s?.grade || s?.gradeLevel || '').toLowerCase();
     const sStream = String(s?.stream || '').toLowerCase();
-    return sGrade.includes(assignedGrade.toLowerCase()) && sStream.includes(assignedStream.toLowerCase());
+    return assignedClassStr.toLowerCase().split(',').some(cls => {
+      const trimmed = cls.trim();
+      return sGrade.includes(trimmed) || sStream.includes(trimmed);
+    });
   });
 
   const totalLearners = classStudents.length > 0 ? classStudents.length : 42;
