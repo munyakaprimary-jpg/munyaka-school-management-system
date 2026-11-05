@@ -64,7 +64,7 @@ const renderStyledQuote = (text: string, colorId: string = 'indigo') => {
   const safeText = String(text || '');
   const colorMap: Record<string, string> = {
     indigo: 'text-indigo-600 dark:text-indigo-400',
-    emerald: 'text-emerald-600 dark:text-emerald-400',
+    emerald: 'text-amber-400 font-bold',
     amber: 'text-amber-600 dark:text-amber-400',
     rose: 'text-rose-600 dark:text-rose-400',
   };
@@ -656,7 +656,7 @@ const Login: React.FC = () => {
                         </TabsTrigger>
                         <TabsTrigger
                           value="staff"
-                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
                         >
                           <User size={12} className="mr-1 shrink-0" />
                           <span className="hidden sm:inline">Staff</span>
@@ -905,7 +905,7 @@ const Login: React.FC = () => {
                                       onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
                                       placeholder="e.g. jndiki@munyaka.sc.ke"
                                       autoComplete="username"
-                                      className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-bold text-base focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 placeholder-slate-500"
+                                      className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-bold text-base focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder-slate-500"
                                       autoFocus
                                     />
                                   </div>
@@ -925,7 +925,7 @@ const Login: React.FC = () => {
                                       onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
                                       placeholder="e.g. MUN-3MDC"
                                       autoComplete="current-password"
-                                      className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-mono font-bold text-base focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 tracking-wider placeholder-slate-500"
+                                      className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-mono font-bold text-base focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 tracking-wider placeholder-slate-500"
                                     />
                                     <button
                                       type="button"
@@ -937,7 +937,7 @@ const Login: React.FC = () => {
                                   </div>
                                   <p className="text-[10px] text-slate-500 font-medium flex items-center justify-between">
                                     <span>Your access code was shared via SMS/email.</span>
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-600/20 text-emerald-400 font-mono text-[10px] font-bold border border-emerald-800/50">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-950/70 text-amber-400 font-mono text-[10px] font-bold border border-amber-500/40">
                                       Demo Code: MUN-9632 or MUN-1234
                                     </span>
                                   </p>
@@ -946,7 +946,7 @@ const Login: React.FC = () => {
                                 <Button
                                   type="submit"
                                   disabled={isStaffVerifying || !String(staffId || '').trim() || !String(staffPassword || '').trim()}
-                                  className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500"
+                                  className="w-full h-12 md:h-14 rounded-xl text-slate-950 font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-500"
                                 >
                                   {isStaffVerifying ? (
                                     <><Loader2 className="animate-spin" size={20} /> Signing In...</>
