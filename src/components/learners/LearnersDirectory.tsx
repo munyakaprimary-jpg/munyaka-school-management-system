@@ -40,7 +40,24 @@ const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
 
 export default function LearnersDirectory() {
   const navigate = useNavigate();
-  const [learnersList, setLearnersList] = useState<any[]>([]);
+  const [learnersList, setLearnersList] = useState<any[]>(() => {
+    try {
+      const keysToTry = ['munyaka_learners', 'munyaka_students', 'learners', 'students'];
+      for (const key of keysToTry) {
+        const data = localStorage.getItem(key);
+        if (data) {
+          const parsed = JSON.parse(data);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log(`Loaded ${parsed.length} records from storage key: ${key}`);
+            return parsed;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error loading learners/students:', e);
+    }
+    return [];
+  });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
@@ -59,18 +76,28 @@ export default function LearnersDirectory() {
     const loadLearners = () => {
       try {
         const deletedIds = new Set<string>(JSON.parse(localStorage.getItem('deleted_learner_ids') || '[]'));
-        const saved = localStorage.getItem('munyaka_learners');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
-            const formatted = filtered.map(formatLearnerDoc);
-            setLearnersList(formatted);
-            setLearners(formatted);
-            setFilteredLearners(formatted);
-            setDisplayedLearners(formatted);
-            return;
+        
+        let parsed: any[] = [];
+        const keysToTry = ['munyaka_learners', 'munyaka_students', 'learners', 'students', 'munyaka_learners_backup'];
+        for (const key of keysToTry) {
+          const data = localStorage.getItem(key);
+          if (data) {
+            const temp = JSON.parse(data);
+            if (Array.isArray(temp) && temp.length > 0) {
+              parsed = temp;
+              break;
+            }
           }
+        }
+
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
+          const formatted = filtered.map(formatLearnerDoc);
+          setLearnersList(formatted);
+          setLearners(formatted);
+          setFilteredLearners(formatted);
+          setDisplayedLearners(formatted);
+          return;
         }
       } catch (e) {
         console.error('Error loading learners:', e);
@@ -84,6 +111,7 @@ export default function LearnersDirectory() {
     loadLearners();
 
     window.addEventListener('learners-updated', loadLearners);
+    window.addEventListener('students-updated', loadLearners);
     window.addEventListener('learners_updated', loadLearners);
     window.addEventListener('storage', loadLearners);
     window.addEventListener('sync-queue-updated', loadLearners);
@@ -105,6 +133,7 @@ export default function LearnersDirectory() {
     return () => {
       if (unsubscribe) unsubscribe();
       window.removeEventListener('learners-updated', loadLearners);
+      window.removeEventListener('students-updated', loadLearners);
       window.removeEventListener('learners_updated', loadLearners);
       window.removeEventListener('storage', loadLearners);
       window.removeEventListener('sync-queue-updated', loadLearners);
