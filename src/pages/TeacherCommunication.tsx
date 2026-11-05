@@ -31,6 +31,7 @@ import {
 import { CentralDataService } from '@/services/centralDataService';
 import { showSuccess, showError } from '@/utils/toast';
 import { useNotifications } from '@/components/ui/notification-provider';
+import { addPendingSyncItem } from '@/utils/storage';
 
 // Unified Storage Key as requested
 const COMMUNICATION_STORAGE_KEY = 'munyaka_school_communications';
@@ -153,22 +154,38 @@ const TeacherCommunication = () => {
     } catch {}
 
     // Also dispatch to munyaka_teacher_messages and trigger teacher_messages_updated as requested
-    try {
-      const existingTeacherMessages = JSON.parse(localStorage.getItem('munyaka_teacher_messages') || '[]');
-      const newTeacherMessage = {
-        id: `MSG-${Date.now()}`,
-        title: title.trim(),
-        content: content.trim(),
-        category: type === 'HOMEWORK' ? 'Homework' : type === 'FEE_CIRCULAR' ? 'Fee Notice' : type === 'TEACHER_DIRECT' ? 'Teacher Direct' : 'General Announcement',
-        targetGrade: targetAudience === 'SPECIFIC_GRADE' ? 'Grade 5' : 'ALL',
-        senderName: sender.trim() || 'Tr. Joseph / Administration',
-        timestamp: new Date().toISOString(),
-      };
-      localStorage.setItem('munyaka_teacher_messages', JSON.stringify([newTeacherMessage, ...existingTeacherMessages]));
-      window.dispatchEvent(new Event('teacher_messages_updated'));
-    } catch {}
-
-    showSuccess(`Successfully broadcasted "${title}" to ${targetAudience.replace('_', ' ')}!`);
+        try {
+          const existingTeacherMessages = JSON.parse(localStorage.getItem('munyaka_teacher_messages') || '[]');
+          const newTeacherMessage = {
+            id: `MSG-${Date.now()}`,
+            title: title.trim(),
+            content: content.trim(),
+            category: type === 'HOMEWORK' ? 'Homework' : type === 'FEE_CIRCULAR' ? 'Fee Notice' : type === 'TEACHER_DIRECT' ? 'Teacher Direct' : 'General Announcement',
+            targetGrade: targetAudience === 'SPECIFIC_GRADE' ? 'Grade 5' : 'ALL',
+            senderName: sender.trim() || 'Tr. Joseph / Administration',
+            timestamp: new Date().toISOString(),
+          };
+          localStorage.setItem('munyaka_teacher_messages', JSON.stringify([newTeacherMessage, ...existingTeacherMessages]));
+          window.dispatchEvent(new Event('teacher_messages_updated'));
+        } catch {}
+    
+        addPendingSyncItem({
+          id: `MSG-${Date.now()}`,
+          type: 'message',
+          action: 'create',
+          payload: {
+            id: `MSG-${Date.now()}`,
+            title: title.trim(),
+            content: content.trim(),
+            type,
+            targetAudience,
+            priority,
+            sender: sender.trim() || 'School Administration',
+            timestamp: new Date().toISOString(),
+          },
+        });
+    
+        showSuccess(`Successfully broadcasted "${title}" to ${targetAudience.replace('_', ' ')}!`);
     
     if (typeof addNotification === 'function') {
       addNotification({

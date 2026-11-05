@@ -5,7 +5,7 @@ import { isWithinGeofence } from '@/lib/geofence';
 import { showSuccess, showError } from '@/utils/toast';
 import { PreRegisteredStaff } from '@/types/staff-access';
 import { startOfWeek, addDays, format, isAfter } from 'date-fns';
-import { lsSet, lsRead } from '@/utils/storage';
+import { lsSet, lsRead, addPendingSyncItem } from '@/utils/storage';
 import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 
 const PERSONAL_STORAGE_PREFIX = 'munyaka_staff_attendance_';
@@ -152,9 +152,23 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
       }
     };
     setPersonalRecords(updatedPersonal);
-    lsSet(personalKey, updatedPersonal);
-
-    const currentMaster = { ...masterRegister };
+        lsSet(personalKey, updatedPersonal);
+    
+        addPendingSyncItem({
+          id: `ATT-${user.id}-${date}-${session}-${Date.now()}`,
+          type: 'attendance',
+          action: 'create',
+          payload: {
+            staffId: user.id,
+            staffName: user.name,
+            session,
+            status,
+            time: currentTimeStr,
+            date,
+          },
+        });
+    
+        const currentMaster = { ...masterRegister };
     const staffRecord = currentMaster[user.id] || {
       staffId: user.id,
       staffName: user.name,

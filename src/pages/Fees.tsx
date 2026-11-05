@@ -14,7 +14,7 @@ import { GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useFileDownload } from '@/utils/fileDownloader';
-import { notifyDataChanged, readStorage } from '@/utils/storage';
+import { notifyDataChanged, readStorage, addPendingSyncItem } from '@/utils/storage';
 import AdminAuthModal, { verifyAdminPassword } from "@/components/common/AdminAuthModal";
 
 // Dynamic data hooks
@@ -861,6 +861,22 @@ const Fees = () => {
     };
     const newAuditLogs = [auditEntry, ...auditLogs];
     setAuditLogs(newAuditLogs);
+
+    addPendingSyncItem({
+      id: `PAY-${tx.id}`,
+      type: 'payment',
+      action: 'create',
+      payload: {
+        transactionId: tx.id,
+        studentId: tx.studentId,
+        studentName,
+        amount: tx.amount,
+        method: tx.method,
+        ref: tx.ref,
+        date: tx.date,
+        category: tx.category,
+      },
+    });
 
     // Build receipt student record
     const receiptFee = calculatedFees.find(f => f.id === tx.studentId);
