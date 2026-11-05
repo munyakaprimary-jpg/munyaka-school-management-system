@@ -3,20 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Search, 
   UserPlus, 
-  FileSpreadsheet, 
-  Download, 
   Trash2, 
-  ShieldAlert, 
-  Filter, 
-  UserCheck, 
-  GraduationCap, 
-  BookOpen, 
-  Award,
-  AlertCircle,
-  CheckCircle2,
-  ChevronRight,
-  MoreVertical,
-  Printer
+  GraduationCap 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,11 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import AddLearnerModal from '@/components/learners/AddLearnerModal';
 import { AdminPinModal } from '@/components/learners/AdminPinModal';
-import { formatLearnerDoc, LEARNER_ID_PREFIX } from '@/services/learnerService';
-import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearnerService';
-import { addPendingSyncItem } from '@/services/syncQueueService';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { formatLearnerDoc } from '@/services/learnerService';
 
 const AVAILABLE_GRADES = [
   'Playgroup', 'PP1', 'PP2', 
@@ -43,23 +27,22 @@ export default function LearnersDirectory() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [learnersList, setLearnersList] = useState<any[]>(() => {
+  const [learners, setLearners] = useState<any[]>(() => {
     try {
       const stored = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(formatLearnerDoc);
+        }
       }
     } catch (e) {
-      console.error('Error loading learners:', e);
+      console.error('Error loading learners from storage:', e);
     }
     return [];
   });
 
-  const [learners, setLearners] = useState<any[]>([]);
-  const [filteredLearners, setFilteredLearners] = useState<any[]>([]);
-  const [displayedLearners, setDisplayedLearners] = useState<any[]>([]);
-  
+  const [filteredLearners, setFilteredLearners] = useState<any[]>(learners);
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
   const [streamFilter, setStreamFilter] = useState('all');
@@ -67,18 +50,8 @@ export default function LearnersDirectory() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<any>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
 
-  const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
-    if (!item) return true;
-    const rawId = toRawLearnerId(item.id || item._id || item.learnerId);
-    const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
-    if (rawId && deletedIds.has(rawId)) return true;
-    if (adm && deletedIds.has(adm)) return true;
-    if (item.isDeleted || item.deleted) return true;
-    return false;
-  };
-
+  // Live Sync Effect
   useEffect(() => {
     const reloadData = () => {
       try {
@@ -87,23 +60,15 @@ export default function LearnersDirectory() {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) {
             const formatted = parsed.map(formatLearnerDoc);
-            setLearnersList(formatted);
             setLearners(formatted);
-            setFilteredLearners(formatted);
-            setDisplayedLearners(formatted);
             return;
           }
         }
       } catch (e) {
         console.error('Error reloading learners:', e);
       }
-      setLearnersList([]);
       setLearners([]);
-      setFilteredLearners([]);
-      setDisplayedLearners([]);
     };
-
-    reloadData();
 
     window.addEventListener('learners-updated', reloadData);
     window.addEventListener('students-updated', reloadData);
@@ -116,12 +81,13 @@ export default function LearnersDirectory() {
     };
   }, []);
 
+  // Filter Effect
   useEffect(() => {
-    const searchClean = (searchTerm || '').toString().toLowerCase().replace(/\s+/g, '').trim();
-    const next = (learnersList || []).filter(learner => {
+    const searchClean = (searchTerm || '').toString().toLowerCase().trim();
+    const next = (learners || []).filter(learner => {
       if (!learner) return false;
-      const name = (learner.fullName || learner.name || learner.studentName || `${learner.firstName || ''} ${learner.lastName || ''}` || '').toString().toLowerCase();
-      const adm = (learner.admissionNumber || learner.admissionNo || learner.admNo || learner.id || '').toString().toLowerCase();
+      const name = (learner.fullName || learner.name || learner.studentName || '').toString().toLowerCase();
+      const adm = (learner.admissionNo || learner.admissionNumber || learner.admNo || learner.id || '').toString().toLowerCase();
       const identifier = (learner.identifierValue || learner.assessmentNo || learner.birthCertNo || '').toString().toLowerCase();
       const grade = (learner.gradeLevel || learner.grade || '').toString().toLowerCase();
       const stream = (learner.stream || '').toString().toLowerCase();
@@ -133,60 +99,38 @@ export default function LearnersDirectory() {
       return nameMatch && gradeMatch && streamMatch;
     });
     setFilteredLearners(next);
-    setDisplayedLearners(next);
-  }, [learnersList, searchTerm, gradeFilter, streamFilter]);
+  }, [learners, searchTerm, gradeFilter, streamFilter]);
 
   const handleLearnerAdded = (newLearner: any) => {
     const formatted = formatLearnerDoc(newLearner);
-    setLearnersList(prev => [formatted, ...prev]);
-    setLearners(prev => [formatted, ...prev]);
-    setFilteredLearners(prev => [formatted, ...prev]);
-    setDisplayedLearners(prev => [formatted, ...prev]);
-    const addedGrade = newLearner.gradeLevel || newLearner.grade || 'all';
-    setGradeFilter(addedGrade);
+    setLearners(prev => {
+      const updated = [formatted, ...prev];
+      localStorage.setItem('munyaka_learners', JSON.stringify(updated));
+      localStorage.setItem('munyaka_students', JSON.stringify(updated));
+      return updated;
+    });
+    toast({
+      title: "Learner Added",
+      description: `${formatted.fullName || 'Learner'} was successfully registered.`,
+    });
   };
 
-  const handleDeleteLearner = async (learnerToDelete: any) => {
+  const handleDeleteLearner = (learnerToDelete: any) => {
     if (!learnerToDelete) return;
+    const targetId = learnerToDelete.id || learnerToDelete.admissionNo || learnerToDelete.admissionNumber;
 
-    const sourceId = learnerToDelete.id || learnerToDelete._id || learnerToDelete.learnerId || '';
-    const targetRawId = toRawLearnerId(sourceId);
-    const targetPrefixedId = targetRawId ? LEARNER_ID_PREFIX + targetRawId : '';
-    const targetAdm = String(learnerToDelete.admissionNo || learnerToDelete.admissionNumber || learnerToDelete.admNo || '').trim();
+    setLearners(prev => {
+      const updated = prev.filter(l => (l.id !== targetId && l.admissionNo !== targetId && l.admissionNumber !== targetId));
+      localStorage.setItem('munyaka_learners', JSON.stringify(updated));
+      localStorage.setItem('munyaka_students', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('learners-updated', { detail: updated }));
+      window.dispatchEvent(new Event('storage'));
+      return updated;
+    });
 
-    if (typeof purgeLearnerPermanently === 'function') {
-      await purgeLearnerPermanently({
-        ...learnerToDelete,
-        id: targetRawId || String(sourceId).trim(),
-        _id: targetRawId || String(sourceId).trim(),
-        prefixedId: targetPrefixedId,
-        admissionNo: targetAdm,
-      });
-    }
-
-    const isNotTarget = (item: any) => {
-      const itemSourceId = item.id || item._id || item.learnerId || '';
-      const itemRawId = toRawLearnerId(itemSourceId);
-      const itemAdm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
-
-      const matches =
-        (targetRawId && itemRawId === targetRawId) ||
-        (targetPrefixedId && String(itemSourceId).trim() === targetPrefixedId) ||
-        (targetAdm && itemAdm === targetAdm);
-
-      return !matches;
-    };
-
-    setLearnersList((prev: any[]) => prev.filter(isNotTarget));
-    setLearners((prev: any[]) => prev.filter(isNotTarget));
-    setFilteredLearners((prev: any[]) => prev.filter(isNotTarget));
-    setDisplayedLearners((prev: any[]) => prev.filter(isNotTarget));
-
-    addPendingSyncItem({
-      id: sourceId,
-      type: 'learner',
-      action: 'delete',
-      payload: learnerToDelete,
+    toast({
+      title: "Learner Removed",
+      description: "Learner record deleted successfully.",
     });
   };
 
@@ -195,20 +139,12 @@ export default function LearnersDirectory() {
     setIsAuthOpen(true);
   };
 
-  const handleVerifyAuth = async () => {
-    setIsVerifying(true);
-    await new Promise(r => setTimeout(r, 200));
-
+  const handleVerifyAuth = () => {
     if (pendingDelete) {
-      await handleDeleteLearner(pendingDelete);
-      toast({
-        title: "Success",
-        description: "Learner deleted successfully.",
-      });
+      handleDeleteLearner(pendingDelete);
     }
     setIsAuthOpen(false);
     setPendingDelete(null);
-    setIsVerifying(false);
   };
 
   return (
@@ -222,7 +158,7 @@ export default function LearnersDirectory() {
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Learners Directory</h1>
           <p className="text-sm text-slate-500 font-medium">Manage student profiles, admission numbers, and grade allocations.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div>
           <Button
             onClick={() => setIsAddModalOpen(true)}
             className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200 px-5 py-6"
@@ -276,7 +212,7 @@ export default function LearnersDirectory() {
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Enrolled Students</h2>
-            <p className="text-xs text-slate-500 font-medium">Showing {displayedLearners.length} active records</p>
+            <p className="text-xs text-slate-500 font-medium">Showing {filteredLearners.length} active records</p>
           </div>
         </div>
 
@@ -293,14 +229,14 @@ export default function LearnersDirectory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {displayedLearners.length === 0 ? (
+              {filteredLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400 font-medium">
-                    No learners found matching your search criteria.
+                  <td colSpan={6} className="py-16 text-center text-slate-400 font-medium">
+                    No learners registered yet. Click "Register New Learner" above to add students.
                   </td>
                 </tr>
               ) : (
-                displayedLearners.map((learner, idx) => (
+                filteredLearners.map((learner, idx) => (
                   <tr key={learner.id || learner.admissionNo || idx} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-4 px-6 font-mono font-bold text-xs text-indigo-600">
                       {learner.admissionNo || learner.admissionNumber || learner.admNo || '—'}
