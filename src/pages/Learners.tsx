@@ -548,12 +548,6 @@ export default function Students() {
     } finally {
       setIsSaving(false);
     }
-      resetForm();
-    } catch (err) {
-      showError("Failed to save learner record.");
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   const requestDelete = (student: any) => {
