@@ -80,6 +80,210 @@ export default function TeacherDashboard() {
     ? `You are signed in as ${teacherName} (Staff). Your dashboard is strictly restricted to assigned class (${assignedClassLabel}) data.`
     : `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Specialist Educator & Subject Management.`;
 
+  // ICT Teacher / ICT Technician Analytics Dashboard View
+  if (isIctStaff) {
+    const [devices, setDevices] = React.useState<any[]>([]);
+
+    const fetchIctInventory = () => {
+      const keys = ['munyaka_ict_devices', 'munyaka_devices', 'ict_inventory', 'devices_list', 'munyaka_inventory'];
+      for (const key of keys) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed;
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+      return [
+        { id: 'DEV-001', name: 'Student Chromebook 01', category: 'Laptop', status: 'Active', condition: 'Good', location: 'ICT Lab A' },
+        { id: 'DEV-002', name: 'Student Chromebook 02', category: 'Laptop', status: 'Active', condition: 'Good', location: 'ICT Lab A' },
+        { id: 'DEV-003', name: 'Teacher Projector Unit', category: 'Projector', status: 'In Repair', condition: 'Fair', location: 'Main Hall' },
+        { id: 'DEV-004', name: 'Computer Lab Desktop 01', category: 'Desktop', status: 'Active', condition: 'Excellent', location: 'Computer Lab 1' },
+      ];
+    };
+
+    const loadIctData = () => {
+      setDevices(fetchIctInventory());
+    };
+
+    React.useEffect(() => {
+      loadIctData();
+      const handleStorageChange = (e: StorageEvent) => {
+        if (!e.key || e.key.includes('ict') || e.key.includes('device') || e.key.includes('inventory')) {
+          loadIctData();
+        }
+      };
+      window.addEventListener('storage', handleStorageChange);
+      const interval = setInterval(loadIctData, 2000);
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        clearInterval(interval);
+      };
+    }, []);
+
+    const totalDevices = devices.length;
+    const activeDevices = devices.filter(d => String(d.status || '').toLowerCase() === 'active' || String(d.status || '').toLowerCase() === 'operational').length;
+    const underMaintenance = devices.filter(d => String(d.status || '').toLowerCase().includes('repair') || String(d.status || '').toLowerCase().includes('maintenance') || String(d.status || '').toLowerCase().includes('damaged')).length;
+
+    return (
+      <div className="space-y-8 pb-12 max-w-6xl mx-auto px-4">
+        {/* Banner */}
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+          <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+          <div className="space-y-3 relative z-10 max-w-2xl">
+            <Badge className="bg-white/20 text-white font-bold uppercase text-[10px]">ICT Lab & Devices Management Hub</Badge>
+            <h1 className="text-2xl md:text-3xl font-black">Welcome, {teacherName}!</h1>
+            <p className="text-blue-100 text-sm md:text-base font-medium leading-relaxed">
+              Live performance metrics for school computer labs, Chromebook inventory, and digital learning hardware.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3 mt-6 relative z-10">
+            <Button
+              onClick={() => navigate('/inventory')}
+              className="bg-white text-blue-900 hover:bg-blue-50 font-bold rounded-xl shadow-sm flex items-center gap-2"
+            >
+              Open ICT & Device Inventory <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* 4 Stat Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold tracking-wider text-gray-400 uppercase">Total ICT Assets</span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700">
+                  {totalDevices} Units
+                </span>
+              </div>
+
+              <h3 className="text-xl font-bold text-gray-900">
+                {activeDevices} Operational
+              </h3>
+
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {devices.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">No ICT devices registered.</p>
+                ) : (
+                  devices.map((dev: any, idx: number) => {
+                    const devName = dev.name || dev.itemName || dev.model || 'Device';
+                    const devStatus = dev.status || 'Active';
+                    return (
+                      <div key={idx} className="flex items-center justify-between text-sm py-1 border-b border-gray-50 last:border-0">
+                        <span className="font-medium text-gray-800 truncate max-w-[200px]">{idx + 1}. {devName}</span>
+                        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                          {devStatus}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+            <div className="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+              <span>Hardware Inventory</span>
+              <Button onClick={() => navigate('/inventory')} variant="link" className="p-0 h-auto text-xs font-bold text-blue-600 hover:text-blue-700">
+                Manage Devices &rarr;
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Devices</p>
+              <h3 className="text-3xl font-black text-slate-900">{activeDevices}</h3>
+              <p className="text-xs text-emerald-600 font-bold">Ready for Student Use</p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <Users className="w-6 h-6" />
+            </div>
+          </Card>
+
+          <Card className={`border shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between ${underMaintenance > 0 ? 'border-amber-300 bg-amber-50/40' : 'border-slate-200/80'}`}>
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Maintenance / Repair</p>
+              <h3 className={`text-3xl font-black ${underMaintenance > 0 ? 'text-amber-700' : 'text-slate-900'}`}>{underMaintenance}</h3>
+              <p className={`text-xs font-bold ${underMaintenance > 0 ? 'text-amber-600' : 'text-slate-500'}`}>Units in Servicing</p>
+            </div>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${underMaintenance > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+              <AlertCircle className="w-6 h-6" />
+            </div>
+          </Card>
+
+          <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">ICT Labs</p>
+              <h3 className="text-3xl font-black text-slate-900">2</h3>
+              <p className="text-xs text-indigo-600 font-bold">Computer Labs Open</p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <BookOpen className="w-6 h-6" />
+            </div>
+          </Card>
+        </div>
+
+        {/* Quick Access / Recent Activity Card */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 lg:col-span-2 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-blue-600" /> ICT Hardware & Lab Status
+              </h3>
+              <Button onClick={() => navigate('/inventory')} variant="outline" size="sm" className="text-xs font-bold rounded-xl">
+                Open Device Registry
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {devices.length > 0 ? (
+                devices.slice(0, 5).map((d: any, idx: number) => (
+                  <div key={idx} className="p-3 bg-slate-50 rounded-xl flex items-center justify-between text-xs border border-slate-100">
+                    <div>
+                      <p className="font-bold text-slate-900">{d.name || d.itemName || 'Device'}</p>
+                      <p className="text-slate-500 text-[11px]">Location: {d.location || 'ICT Lab A'} ({d.category || 'Hardware'})</p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${String(d.status || '').toLowerCase() === 'active' || String(d.status || '').toLowerCase() === 'operational' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {d.status || 'Active'}
+                      </span>
+                      <p className="text-[10px] text-slate-400 mt-1">Condition: {d.condition || 'Good'}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-2xl">
+                  No active ICT assets found.
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-gradient-to-br from-slate-900 to-blue-950 text-white p-6 space-y-4">
+            <h3 className="text-base font-bold flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-blue-400" /> ICT Lab Quick Links
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Manage Chromebook allocations, report maintenance needs, and monitor computer lab schedules for learners.
+            </p>
+            <div className="space-y-2 pt-2">
+              <Button onClick={() => navigate('/inventory')} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl justify-start">
+                <BookOpen className="w-4 h-4 mr-2" /> Open Device Inventory
+              </Button>
+              <Button onClick={() => navigate('/timetable')} variant="outline" className="w-full bg-white/10 hover:bg-white/20 text-white border-white/20 font-bold text-xs rounded-xl justify-start">
+                <Calendar className="w-4 h-4 mr-2" /> Lab Timetable & Schedules
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   // Library Teacher / Librarian Analytics Dashboard View
   if (isLibraryStaff) {
     const [books, setBooks] = React.useState<any[]>([]);
