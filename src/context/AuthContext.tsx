@@ -120,23 +120,7 @@ const DEFAULT_SYSTEM_ADMIN = {
 };
 
 // Default test teacher account — staffId is used as the login username
-const DEFAULT_TEACHER = {
-  staffId: 'teacher1',
-  password: 'munyaka5239',
-  user: {
-    id: 'teacher-001',
-    name: 'Lawrence Mwangi',
-    email: 'lawrence.mwangi@munyaka.sc.ke',
-    phone: '+254 712 345 678',
-    role: 'teacher' as UserRole,
-    avatar: 'LM',
-    assignedClass: 'Grade 1',
-    assignedStream: 'Blue',
-    grade: 'Grade 1',
-    stream: 'Blue',
-    department: 'Academics'
-  }
-};
+const DEFAULT_TEACHER = null;
 
 const USERS_STORAGE_KEY = 'munyaka_users';
 
@@ -216,15 +200,9 @@ const initializeUsersStorage = () => {
     emailConfirmed: true
   };
 
-  // Ensure default test teacher account is generated & active
-  const teacherKey = String(DEFAULT_TEACHER.staffId || '').toLowerCase();
-  users[teacherKey] = {
-    ...DEFAULT_TEACHER.user,
-    password: DEFAULT_TEACHER.password,
-    alternativePasswords: [DEFAULT_TEACHER.password, 'munyaka5239'],
-    isActive: true,
-    emailConfirmed: true
-  };
+  // Default test teacher account disabled to eliminate hardcoded fallbacks
+  const teacherKey = '';
+  const teacherUserRecord = null;
 
   // Sync pre-registered staff as valid default loggable users.
   // initializeStaffMaster() seeds the master ledger on first run and migrates
