@@ -59,14 +59,23 @@ export default function TeacherDashboard() {
     title.includes('library') ||
     normalizedRole.includes('library') ||
     userName.includes('JANET GATHONI KUNGU');
-  
+
+  const isIctStaff =
+    normalizedRole === 'ict_teacher' ||
+    normalizedRole === 'ict_technician' ||
+    assignedDept.includes('ict') ||
+    title.includes('ict') ||
+    normalizedRole.includes('ict');
+
   const hasAssignedClass = Boolean((user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || currUserObj.assignedClass);
 
-  const isClassTeacher = hasAssignedClass && !isLibraryStaff;
-  const assignedClassLabel = currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || (isLibraryStaff ? 'Library & Media Center' : 'Specialist Department');
+  const isClassTeacher = hasAssignedClass && !isLibraryStaff && !isIctStaff;
+  const assignedClassLabel = currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || (isLibraryStaff ? 'Library & Media Center' : isIctStaff ? 'ICT Department' : 'Specialist Department');
   
   const welcomeSubtitle = isLibraryStaff
     ? `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Library & Resource Management.`
+    : isIctStaff
+    ? `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to ICT Lab & Digital Learning Management.`
     : isClassTeacher
     ? `You are signed in as ${teacherName} (Staff). Your dashboard is strictly restricted to assigned class (${assignedClassLabel}) data.`
     : `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Specialist Educator & Subject Management.`;
@@ -442,10 +451,10 @@ export default function TeacherDashboard() {
         <Card className="border-none shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              {isLibraryStaff ? 'Assigned Department / Role' : 'Assigned Class'}
+              {isLibraryStaff || isIctStaff ? 'Assigned Department / Role' : 'Assigned Class'}
             </p>
-            <h3 className="text-2xl font-black text-slate-900">{isLibraryStaff ? 'Library & Media Center' : fullClassTitle}</h3>
-            <p className="text-xs text-emerald-600 font-bold">{isLibraryStaff ? 'Library & Resource Management' : 'Active CBC Stream'}</p>
+            <h3 className="text-2xl font-black text-slate-900">{isLibraryStaff ? 'Library & Media Center' : isIctStaff ? 'ICT Department' : fullClassTitle}</h3>
+            <p className="text-xs text-emerald-600 font-bold">{isLibraryStaff ? 'Library & Resource Management' : isIctStaff ? 'ICT & Digital Learning' : 'Active CBC Stream'}</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
             <Users size={22} />
