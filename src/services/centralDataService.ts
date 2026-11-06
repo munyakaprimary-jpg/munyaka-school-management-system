@@ -7,21 +7,13 @@ export { STORAGE_KEYS };
 export const CentralDataService = {
   getLearners: (): any[] => {
     try {
-      const keysToPurge = [
-        'munyaka_learners_v2',
-        'munyaka_learners',
-        'munyaka_students',
-        'school_learners_data',
-        'school_learners_v1',
-        'students',
-        'learners',
-        'munyaka_learners_db',
-        'munyaka_central_db',
-        'school_learners_master'
-      ];
-      keysToPurge.forEach(k => localStorage.setItem(k, JSON.stringify([])));
-    } catch {}
-    return [];
+      const raw = localStorage.getItem('munyaka_learners');
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   },
 
   saveLearners: (learners: any[]): boolean => {
