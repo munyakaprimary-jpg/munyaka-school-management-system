@@ -105,11 +105,24 @@ export default function LearnersDirectory() {
     setLearners(prev => {
       const updated = [formatted, ...prev];
       CentralDataService.saveLearners(updated);
+      try {
+        const existingRaw = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_learners') || '[]';
+        const parsed = JSON.parse(existingRaw);
+        const nextList = [formatted, ...(Array.isArray(parsed) ? parsed : [])];
+        localStorage.setItem('munyaka_learners_v2', JSON.stringify(nextList));
+        localStorage.setItem('munyaka_learners', JSON.stringify(nextList));
+        localStorage.setItem('munyaka_students', JSON.stringify(nextList));
+      } catch (e) {
+        console.error('Error saving to storage keys:', e);
+      }
+      window.dispatchEvent(new CustomEvent('learners-updated', { detail: updated }));
+      window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners' } }));
+      window.dispatchEvent(new Event('storage'));
       return updated;
     });
     toast({
       title: "Learner Added",
-      description: `${formatted.fullName || 'Learner'} was successfully registered.`,
+      description: `${formatted.fullName || 'Learner'} was successfully registered and saved to the directory.`,
     });
   };
 

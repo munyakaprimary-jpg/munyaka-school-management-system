@@ -111,18 +111,25 @@ export default function AddLearnerModal({
       const selectedGrade = formData.grade;
       const selectedStream = formData.stream;
       const admissionNumber = formData.admissionNo || generateCohortAdmissionNumber(selectedGrade, existingLearners);
-      const identifierValue = formData.identifierValue.trim() || '';
       const gender = (formData as any).gender || 'Not Specified';
       const dateOfBirth = (formData as any).dateOfBirth || '';
       const parentName = formData.guardian.trim() || '—';
       const phone = formData.phone.trim() || '+254';
 
+      const idType = formData.identifierType || 'assessment';
+      const identifierValue = formData.identifierValue.trim() || '';
+
       const newLearnerRecord = {
         id: admissionNumber || `MUN-${Date.now().toString().slice(-4)}`,
         admissionNo: admissionNumber,
         admissionNumber: admissionNumber,
-        assessmentNo: identifierValue || '—',
-        assessmentNumber: identifierValue || '—',
+        admNo: admissionNumber,
+        idType: idType,
+        idValue: identifierValue,
+        assessmentNo: idType === 'assessment' ? identifierValue : '',
+        assessmentNumber: idType === 'assessment' ? identifierValue : '',
+        birthCertNo: idType === 'birth_cert' ? identifierValue : '',
+        birthCertificateNo: idType === 'birth_cert' ? identifierValue : '',
         fullName: fullName,
         name: fullName,
         gradeLevel: selectedGrade,
