@@ -87,7 +87,7 @@ export default function LearnersDirectory() {
       if (!learner) return false;
       const name = (learner.fullName || learner.name || learner.studentName || '').toString().toLowerCase();
       const adm = (learner.admissionNo || learner.admissionNumber || learner.admNo || learner.id || '').toString().toLowerCase();
-      const identifier = (learner.identifierValue || learner.assessmentNo || learner.birthCertNo || '').toString().toLowerCase();
+      const identifier = (learner.idValue || learner.identifierValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '').toString().toLowerCase();
       const grade = (learner.gradeLevel || learner.grade || '').toString().toLowerCase();
       const stream = (learner.stream || '').toString().toLowerCase();
 
@@ -171,7 +171,7 @@ export default function LearnersDirectory() {
         <div className="relative w-full lg:w-96">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input
-            placeholder="Search by name, adm no, or assessment no..."
+            placeholder="Search by name, adm no, or assessment / birth cert no..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-11 rounded-2xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500 font-medium h-12"
@@ -248,7 +248,7 @@ export default function LearnersDirectory() {
                       </span>
                     </td>
                     <td className="py-4 px-6 font-mono text-xs text-slate-600">
-                      {learner.assessmentNo || learner.assessmentNumber || learner.identifierValue || '—'}
+                      {learner.idValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '—'}
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-700 font-medium">
                       {learner.parentGuardian || learner.parentName || learner.guardian || '—'}
