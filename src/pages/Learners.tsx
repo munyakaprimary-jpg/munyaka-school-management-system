@@ -480,7 +480,7 @@ export default function Students() {
         id: targetId,
         name: fullName.trim(),
         fullName: fullName.trim(),
-        admissionNumber: admissionNumber || (existingRecord as any)?.admissionNumber || generateAdmissionNumber(grade),
+        admissionNumber: admissionNumber || (existingRecord as any)?.admissionNumber || (existingRecord as any)?.admissionNo || generateAdmissionNumber(grade),
         admNo: admissionNumber || existingRecord?.admNo || generateAdmissionNumber(grade),
         idType: idType,
         idValue: cleanValue,
