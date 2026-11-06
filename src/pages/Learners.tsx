@@ -302,12 +302,6 @@ export default function Students() {
     setAdmissionNumber(generateAdmissionNumber(initialGrade));
     setIsModalOpen(true);
   };
-      const initialStream = !isAdmin ? assignedTeacherStream : 'BLUE';
-      setGrade(initialGrade);
-      setStream(initialStream);
-      setAdmissionNumber(generateAdmissionNumber(initialGrade));
-      setIsModalOpen(true);
-    };
 
   const handleOpenTransferModal = () => {
     const roleLower = String(user?.role || '').toLowerCase();
