@@ -116,18 +116,17 @@ export default function LearnersDirectory() {
   }, [learners, searchTerm, gradeFilter, streamFilter]);
 
   const handleLearnerAdded = (newLearner: any) => {
-    const formatted = formatLearnerDoc(newLearner);
-    setLearners(prev => {
-      const updated = [formatted, ...prev];
-      localStorage.setItem('munyaka_learners', JSON.stringify(updated));
-      localStorage.setItem('munyaka_students', JSON.stringify(updated));
-      return updated;
-    });
-    toast({
-      title: "Learner Added",
-      description: `${formatted.fullName || 'Learner'} was successfully registered.`,
-    });
-  };
+      setLearners(prev => {
+        const updated = [newLearner, ...prev];
+        localStorage.setItem('munyaka_learners', JSON.stringify(updated));
+        localStorage.setItem('munyaka_students', JSON.stringify(updated));
+        return updated;
+      });
+      toast({
+        title: "Learner Added",
+        description: `${newLearner.fullName || newLearner.name || 'Learner'} was successfully registered.`,
+      });
+    };
 
   const handleDeleteLearner = (learnerToDelete: any) => {
     if (!learnerToDelete) return;
