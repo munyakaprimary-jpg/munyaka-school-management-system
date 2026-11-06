@@ -296,8 +296,12 @@ export default function Students() {
   };
 
   const handleOpenAdd = () => {
-      resetForm();
-      const initialGrade = !isAdmin ? assignedTeacherGrade : 'Grade 6';
+    resetForm();
+    const initialGrade = !isAdmin ? assignedTeacherGrade : 'Grade 6';
+    setGrade(initialGrade);
+    setAdmissionNumber(generateAdmissionNumber(initialGrade));
+    setIsModalOpen(true);
+  };
       const initialStream = !isAdmin ? assignedTeacherStream : 'BLUE';
       setGrade(initialGrade);
       setStream(initialStream);
@@ -538,9 +542,9 @@ export default function Students() {
 
       setIsModalOpen(false);
       resetForm();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving learner:', err);
-      showError('Failed to save learner record.');
+      showError('Failed to save learner record: ' + (err?.message || 'Unknown error'));
     } finally {
       setIsSaving(false);
     }
