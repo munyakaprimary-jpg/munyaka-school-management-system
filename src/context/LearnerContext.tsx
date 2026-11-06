@@ -66,10 +66,26 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const initializeLearners = async () => {
       try {
-        const rawV1 = localStorage.getItem('munyaka_app_learners_v1');
-        if (rawV1 && (rawV1.includes('MUN-001-2026') || rawV1.includes('Unnamed Learner'))) {
-          localStorage.removeItem('munyaka_app_learners_v1');
-        }
+        const keys = [STORAGE_KEY_LEARNERS_V2, 'munyaka_learners', 'munyaka_students', 'school_learners_data'];
+        keys.forEach(k => {
+          const current = localStorage.getItem(k);
+          if (current) {
+            try {
+              const parsed = JSON.parse(current);
+              if (Array.isArray(parsed)) {
+                const cleaned = parsed.filter((l: any) => {
+                  const adm = String(l?.admissionNo || l?.admissionNumber || l?.admNo || '');
+                  const name = String(l?.fullName || l?.name || '').toLowerCase();
+                  if (adm.includes('MUN-001-2021') || adm.includes('MUN-002-2021') || adm.includes('MUN-003-2021')) return false;
+                  if (adm.includes('MUN-001-2026') || adm.includes('MUN-002-2026')) return false;
+                  if (name.includes('unnamed') || name.includes('test learner')) return false;
+                  return true;
+                });
+                localStorage.setItem(k, JSON.stringify(cleaned));
+              }
+            } catch {}
+          }
+        });
 
         const storedLocal = localStorage.getItem(STORAGE_KEY_LEARNERS_V2) || localStorage.getItem('munyaka_learners') || '[]';
         let parsedList = [];
