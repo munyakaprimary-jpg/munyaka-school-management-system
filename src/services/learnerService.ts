@@ -45,17 +45,25 @@ export const formatLearnerDoc = (l: any): Learner => {
   return {
     ...l,
     id: l.id || l._id || admissionNumber || `MUN-${Date.now()}`,
-    admissionNumber,
-    identifierValue,
+    admissionNumber: admissionNumber || l.admissionNumber || '',
+    admissionNo: admissionNumber || l.admissionNo || '',
+    identifierValue: identifierValue || l.identifierValue || '',
     identifierType: l.identifierType || (l.birthCertNo ? 'Birth Certificate' : 'Assessment No'),
-    birthCertNo: l.birthCertNo || l.birthCertificateNo || identifierValue,
-    fullName,
-    gradeLevel,
-    stream,
-    gender,
-    dateOfBirth,
-    parentName,
-    phoneNumber
+    assessmentNo: l.assessmentNo || l.assessmentNumber || (l.identifierType === 'assessment' ? identifierValue : ''),
+    birthCertNo: l.birthCertNo || l.birthCertificateNo || (l.identifierType === 'birthCert' ? identifierValue : ''),
+    birthCertificateNo: l.birthCertificateNo || l.birthCertNo || '',
+    fullName: fullName || l.fullName || l.name || '',
+    name: fullName || l.name || l.fullName || '',
+    gradeLevel: gradeLevel || l.gradeLevel || '',
+    grade: gradeLevel || l.grade || '',
+    stream: stream || l.stream || '',
+    gender: gender || l.gender || '',
+    dateOfBirth: dateOfBirth || l.dateOfBirth || l.dob || '',
+    dob: dateOfBirth || l.dob || l.dateOfBirth || '',
+    parentName: parentName || l.parentName || l.parentGuardian || '',
+    parentGuardian: parentName || l.parentGuardian || l.parentName || '',
+    phoneNumber: phoneNumber || l.phoneNumber || l.phone || '',
+    phone: phoneNumber || l.phone || l.phoneNumber || ''
   };
 };
 

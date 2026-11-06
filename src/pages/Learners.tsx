@@ -427,17 +427,17 @@ export default function Students() {
   };
 
   const handleEditClick = (student: any) => {
-    setEditingId(student.id || student.admissionNumber);
-    setFullName(student.name || student.fullName || '');
+    setEditingId(student.id || student.admissionNumber || student.admNo);
+    setFullName(student.fullName || student.name || student.studentName || '');
     setAdmissionNumber(student.admissionNumber || student.admNo || '');
     setIdType(student.idType || (student.birthCertificateNo || student.birthCertNo ? 'birthCert' : 'assessment'));
     setIdValue(student.idValue || student.assessmentNumber || student.assessmentNo || student.birthCertificateNo || student.birthCertNo || '');
-    setGrade(student.grade || student.class || 'Grade 6');
+    setGrade(student.gradeLevel || student.grade || student.class || 'Grade 6');
     setStream(student.stream || 'BLUE');
-    setGender(student.gender || 'Female');
+    setGender(student.gender || student.sex || 'Female');
     setDateOfBirth(student.dateOfBirth || student.dob || student.birthDate || '');
-    setParentName(student.parentName || student.guardian || '');
-    setPhoneNumber(student.parentPhone || student.phoneNumber || student.phone || '');
+    setParentName(student.parentName || student.parentGuardian || student.guardian || '');
+    setPhoneNumber(student.phoneNumber || student.phone || student.parentPhone || '');
     setIsModalOpen(true);
   };
 
@@ -474,30 +474,39 @@ export default function Students() {
     setIsSaving(true);
     try {
       const targetId = editingId || generateLearnerId();
+      const existingList = getStoredLearners();
+      const existingRecord = existingList.find((l: any) => l.id === targetId || l.admissionNumber === admissionNumber || l.admNo === admissionNumber);
+
       const studentData = {
-              id: targetId,
-              name: fullName.trim(),
-              fullName: fullName.trim(),
-              admissionNumber: admissionNumber || generateAdmissionNumber(grade),
-              admNo: admissionNumber || generateAdmissionNumber(grade),
+        ...existingRecord,
+        id: targetId,
+        name: fullName.trim(),
+        fullName: fullName.trim(),
+        admissionNumber: admissionNumber || existingRecord?.admissionNumber || generateAdmissionNumber(grade),
+        admNo: admissionNumber || existingRecord?.admNo || generateAdmissionNumber(grade),
         idType: idType,
         idValue: cleanValue,
         assessmentNumber: idType === 'assessment' ? cleanValue : '',
         assessmentNo: idType === 'assessment' ? cleanValue : '',
         birthCertificateNo: idType === 'birthCert' ? cleanValue : '',
-        dateOfBirth: dateOfBirth,
+        birthCertNo: idType === 'birthCert' ? cleanValue : '',
+        dateOfBirth,
         dob: dateOfBirth,
         birthDate: dateOfBirth,
         gender,
+        sex: gender,
+        gradeLevel: grade,
         grade,
         class: grade,
         stream,
         parentName: parentName.trim(),
+        parentGuardian: parentName.trim(),
         guardian: parentName.trim(),
         phoneNumber: phoneNumber.trim(),
         parentPhone: phoneNumber.trim(),
         phone: phoneNumber.trim(),
         updatedAt: new Date().toISOString()
+      };
       };
 
       // Try saving to Firestore if available
