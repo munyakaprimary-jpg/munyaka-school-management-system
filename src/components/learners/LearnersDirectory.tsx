@@ -23,31 +23,17 @@ const AVAILABLE_GRADES = [
 
 const AVAILABLE_STREAMS = ['East', 'West', 'North', 'South', 'Red', 'Blue', 'Green', 'Gold'];
 
-const formatLearnerDoc = (learner: any) => {
-  if (!learner) return {};
-  return {
-    ...learner,
-    fullName: learner.fullName || learner.name || learner.studentName || 'Unknown Learner',
-    admissionNo: learner.admissionNo || learner.admissionNumber || learner.admNo || learner.id || '',
-    gradeLevel: learner.gradeLevel || learner.grade || 'Grade 4',
-    stream: learner.stream || 'Blue',
-    gender: learner.gender || 'Not Specified',
-    guardian: learner.guardian || learner.parentName || '—',
-    phone: learner.phone || '+254',
-  };
-};
-
 export default function LearnersDirectory() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [learners, setLearners] = useState<any[]>(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEYS.LEARNERS) || localStorage.getItem(STORAGE_KEYS.LEARNERS_BACKUP);
+      const stored = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || localStorage.getItem(STORAGE_KEYS.LEARNERS) || localStorage.getItem(STORAGE_KEYS.LEARNERS_BACKUP);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map(formatLearnerDoc);
+          return parsed;
         }
       }
     } catch (e) {
@@ -73,8 +59,7 @@ export default function LearnersDirectory() {
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) {
-            const formatted = parsed.map(formatLearnerDoc);
-            setLearners(formatted);
+            setLearners(parsed);
             return;
           }
         }
