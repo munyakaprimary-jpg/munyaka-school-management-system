@@ -9,51 +9,80 @@ export const CentralDataService = {
     const UNIFIED_STORAGE_KEY = 'munyaka_learners_v2';
     const DELETED_IDS_KEY = 'deleted_learner_ids';
     try {
-      const rawLearners = localStorage.getItem(UNIFIED_STORAGE_KEY);
-      if (!rawLearners) {
-        // Fallback to legacy reads if unified key is empty
-        const primary = readStorage<any[]>('school_learners_data', []);
-        const legacy = readStorage<any[]>('munyaka_students', []);
-        const schoolV1 = readStorage<any[]>('school_learners_v1', []);
-        const studentsKey = readStorage<any[]>('students', []);
-        const combined = [...primary, ...legacy, ...schoolV1, ...studentsKey];
-        if (combined.length === 0) {
-          return [];
-        }
-        const rawDeleted = localStorage.getItem(DELETED_IDS_KEY);
-        const deletedIds: string[] = rawDeleted ? JSON.parse(rawDeleted) : [];
-        const validMap = new Map<string, any>();
-        combined.forEach(l => {
-          if (l && (l.id || l.admissionNumber || l.admNo || l.name)) {
-            const idStr = String(l.id || l.admissionNumber || l.admNo || '').trim();
-            if (!deletedIds.includes(idStr)) {
-              const key = (idStr || String(l.name)).toLowerCase();
-              if (!validMap.has(key)) validMap.set(key, l);
+      // Gather learners from ALL possible keys across the app
+      const keysToHarvest = [
+        UNIFIED_STORAGE_KEY,
+        'munyaka_learners',
+        'munyaka_students',
+        'school_learners_data',
+        'school_learners_v1',
+        'students',
+        'learners',
+        'munyaka_learners_db',
+        'munyaka_central_db',
+        'school_learners_master'
+      ];
+
+      const allCollected: any[] = [];
+      keysToHarvest.forEach(k => {
+        try {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              allCollected.push(...parsed);
             }
           }
-        });
-        return dedupeLearnersById(Array.from(validMap.values()).map(formatLearnerDoc));
-      }
-
-      const learners = JSON.parse(rawLearners);
-      if (!Array.isArray(learners)) return [];
+        } catch {}
+      });
 
       const rawDeleted = localStorage.getItem(DELETED_IDS_KEY);
       const deletedIds: string[] = rawDeleted ? JSON.parse(rawDeleted) : [];
 
-      const validLearnersMap = new Map<string, any>();
-      learners.forEach((l: any) => {
+      const validMap = new Map<string, any>();
+      allCollected.forEach(l => {
         if (!l) return;
-        const idStr = String(l.id || l.admissionNo || l.admission_number || '').trim();
-        if (!deletedIds.includes(idStr)) {
-          const key = (idStr || String(l.name || '')).toLowerCase();
-          if (!validLearnersMap.has(key)) {
-            validLearnersMap.set(key, l);
-          }
+        const idStr = String(l.id || l.admissionNumber || l.admissionNo || l.admNo || '').trim();
+        const identifier = String(l.idValue || l.assessmentNo || l.assessmentNumber || l.birthCertNo || l.birthCertificateNo || '').trim();
+        const fullName = String(l.fullName || l.name || l.studentName || '').trim();
+
+        if (idStr && deletedIds.includes(idStr)) return;
+
+        // Create a robust composite key to prevent duplicates
+        const uniqueKey = (idStr || identifier || fullName).toLowerCase();
+        if (uniqueKey && !validMap.has(uniqueKey)) {
+          validMap.set(uniqueKey, l);
+        } else if (uniqueKey && validMap.has(uniqueKey)) {
+          // Merge properties if duplicate exists (retain non-empty fields)
+          const existing = validMap.get(uniqueKey);
+          validMap.set(uniqueKey, {
+            ...existing,
+            ...l,
+            admissionNo: existing.admissionNo || l.admissionNo || l.admissionNumber || l.admNo,
+            admissionNumber: existing.admissionNumber || l.admissionNumber || l.admissionNo || l.admNo,
+            assessmentNo: existing.assessmentNo || l.assessmentNo || l.assessmentNumber || l.idValue,
+            birthCertificateNo: existing.birthCertificateNo || l.birthCertificateNo || l.birthCertNo || l.idValue,
+            fullName: existing.fullName || l.fullName || l.name,
+            name: existing.name || l.name || l.fullName,
+            grade: existing.grade || l.grade || l.gradeLevel,
+            stream: existing.stream || l.stream_name,
+            gender: existing.gender || l.gender || l.sex,
+            parentName: existing.parentName || l.parentName || l.parentGuardian || l.guardian,
+            phoneNumber: existing.phoneNumber || l.phoneNumber || l.phone || l.parentPhone
+          });
         }
       });
 
-      return dedupeLearnersById(Array.from(validLearnersMap.values()).map(formatLearnerDoc));
+      const unifiedList = dedupeLearnersById(Array.from(validMap.values()).map(formatLearnerDoc));
+
+      // Automatically backfill unified key so all other keys sync with it
+      if (unifiedList.length > 0) {
+        localStorage.setItem(UNIFIED_STORAGE_KEY, JSON.stringify(unifiedList));
+        localStorage.setItem('munyaka_learners', JSON.stringify(unifiedList));
+        localStorage.setItem('school_learners_data', JSON.stringify(unifiedList));
+      }
+
+      return unifiedList;
     } catch {
       return [];
     }
