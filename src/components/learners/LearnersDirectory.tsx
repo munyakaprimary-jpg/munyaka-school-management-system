@@ -221,7 +221,7 @@ export default function LearnersDirectory() {
                 <th className="py-4 px-6">Admission No</th>
                 <th className="py-4 px-6">Student Full Name</th>
                 <th className="py-4 px-6">Grade & Stream</th>
-                <th className="py-4 px-6">Assessment No</th>
+                <th className="py-4 px-6">Assessment No / Birth Certificate No</th>
                 <th className="py-4 px-6">Parent / Guardian</th>
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>

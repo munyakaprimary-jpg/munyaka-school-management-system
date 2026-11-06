@@ -856,7 +856,7 @@ export default function Students() {
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-tight">
                     <th className="px-2.5 py-2 text-left whitespace-nowrap">ADMISSION NO.</th>
-                    <th className="px-2.5 py-2 text-left whitespace-nowrap">ASSESSMENT NO.</th>
+                    <th className="px-2.5 py-2 text-left whitespace-nowrap">ASSESSMENT NO. / BIRTH CERTIFICATE NO.</th>
                     <th className="px-2.5 py-2 text-left">FULL NAME</th>
                     <th className="px-2.5 py-2 text-left whitespace-nowrap">GRADE & STREAM</th>
                     <th className="px-2.5 py-2 text-left whitespace-nowrap">GENDER</th>
