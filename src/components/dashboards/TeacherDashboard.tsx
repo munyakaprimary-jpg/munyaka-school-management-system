@@ -47,18 +47,29 @@ export default function TeacherDashboard() {
       return {};
     }
   })();
-  const rawRole = currUserObj.rbacRole || currUserObj.role || (user as any)?.rbacRole || user?.role || '';
+  const rawRole = currUserObj.rbacRole || currUserObj.role || currUserObj.department || (user as any)?.rbacRole || user?.role || '';
   const normalizedRole = String(rawRole).toLowerCase().trim();
   const userName = String(currUserObj.name || currUserObj.fullName || user?.name || '').toUpperCase();
+  const assignedDept = String(currUserObj.assignedDepartment || currUserObj.department || (user as any)?.assignedDepartment || '').toLowerCase();
   
   const isLibraryStaff =
     normalizedRole === 'library_teacher' ||
     normalizedRole === 'librarian' ||
+    assignedDept.includes('library') ||
     title.includes('library') ||
     normalizedRole.includes('library') ||
     userName.includes('JANET GATHONI KUNGU');
   
-  const hasAssignedClass = Boolean((user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade);
+  const hasAssignedClass = Boolean((user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || currUserObj.assignedClass);
+
+  const isClassTeacher = hasAssignedClass && !isLibraryStaff;
+  const assignedClassLabel = currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || (isLibraryStaff ? 'Library & Media Center' : 'Specialist Department');
+  
+  const welcomeSubtitle = isLibraryStaff
+    ? `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Library & Resource Management.`
+    : isClassTeacher
+    ? `You are signed in as ${teacherName} (Staff). Your dashboard is strictly restricted to assigned class (${assignedClassLabel}) data.`
+    : `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Specialist Educator & Subject Management.`;
 
   // Library Teacher / Librarian Analytics Dashboard View
   if (isLibraryStaff) {
@@ -401,7 +412,11 @@ export default function TeacherDashboard() {
             Welcome back, {teacherName}!
           </h1>
           <p className="text-blue-100 text-sm md:text-base max-w-xl font-medium">
-            You are signed in as <span className="underline decoration-blue-400 font-bold">{teacherName}</span> ({staffTitle || getFormattedRoleLabel(user || { role: teacherRole })}). Your dashboard is strictly restricted to <span className="font-bold">{fullClassTitle}</span>.
+            {isLibraryStaff
+              ? `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Library & Resource Management.`
+              : isClassTeacher
+              ? `You are signed in as ${teacherName} (Staff). Your dashboard is strictly restricted to assigned class (${assignedClassLabel}) data.`
+              : `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Specialist Educator & Subject Management.`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 relative z-10">
@@ -426,9 +441,11 @@ export default function TeacherDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
         <Card className="border-none shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
           <div className="space-y-1">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned Class</p>
-            <h3 className="text-2xl font-black text-slate-900">{fullClassTitle}</h3>
-            <p className="text-xs text-emerald-600 font-bold">Active CBC Stream</p>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              {isLibraryStaff ? 'Assigned Department / Role' : 'Assigned Class'}
+            </p>
+            <h3 className="text-2xl font-black text-slate-900">{isLibraryStaff ? 'Library & Media Center' : fullClassTitle}</h3>
+            <p className="text-xs text-emerald-600 font-bold">{isLibraryStaff ? 'Library & Resource Management' : 'Active CBC Stream'}</p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
             <Users size={22} />
