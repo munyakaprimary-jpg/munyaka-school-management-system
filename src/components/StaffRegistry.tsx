@@ -134,18 +134,18 @@ export default function StaffRegistry() {
   };
 
   const [staffList, setStaffList] = useState<StaffMember[]>(() => {
-    const saved = localStorage.getItem('munyaka_staff');
-    let loadedStaff: any[] = [];
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          loadedStaff = parsed;
+      const saved = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_v2');
+      let loadedStaff: any[] = [];
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            loadedStaff = parsed;
+          }
+        } catch (e) {
+          console.error(e);
         }
-      } catch (e) {
-        console.error(e);
       }
-    }
     // Sanitize and deduplicate loaded list or return empty array if none
     const seenIds = new Set<string>();
     const sanitized: StaffMember[] = loadedStaff
@@ -572,6 +572,7 @@ export default function StaffRegistry() {
   const saveStaffToStorage = (newList: StaffMember[]) => {
     setStaffList(newList);
     localStorage.setItem('munyaka_staff', JSON.stringify(newList));
+    localStorage.setItem('munyaka_staff_v2', JSON.stringify(newList));
     localStorage.setItem('munyaka_staff_directory', JSON.stringify(newList));
   };
 
