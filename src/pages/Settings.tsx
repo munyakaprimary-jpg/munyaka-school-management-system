@@ -34,7 +34,6 @@ import { exportAllData, parseAndImportBackup } from '@/utils/storage';
 import { AdminQuoteSettings } from '@/components/admin/AdminQuoteSettings';
 
 const SETTINGS_STORAGE_KEY = 'munyaka_system_settings';
-const RBAC_STORAGE_KEY = 'munyaka_rbac_permissions';
 
 interface SystemSettings {
   schoolName: string;
