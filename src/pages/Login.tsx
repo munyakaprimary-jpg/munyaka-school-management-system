@@ -559,7 +559,7 @@ const Login: React.FC = () => {
     }
   
     return (
-          <div className="min-h-screen bg-[#0a0f1d] flex flex-col overflow-y-auto">
+          <div className="min-h-screen bg-gradient-to-br from-amber-950 via-slate-900 to-amber-900 flex flex-col overflow-y-auto">
             <div className="flex-1 flex items-center justify-center p-4 py-8">
               <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-500">
   
@@ -620,7 +620,7 @@ const Login: React.FC = () => {
                                                 : (config.text || '');
                       
                                               return (
-                                                                                                <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-slate-900/80 border border-slate-800 rounded-xl text-center shadow-lg shadow-black/20">
+                                                                                                <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-amber-950/80 border border-amber-500/30 text-amber-200 rounded-xl text-center shadow-lg shadow-black/20">
                                                                                                   <p
                                                                                                     className={`text-xs sm:text-sm tracking-wide leading-relaxed ${activeColorClass}`}
                                                                                                     style={
@@ -645,7 +645,7 @@ const Login: React.FC = () => {
 
           {/* ── Portal Access Tabs ── */}
                     <Tabs defaultValue="staff" className="w-full">
-                      <TabsList className="grid w-full grid-cols-4 h-12 rounded-2xl bg-slate-900/80 p-1 gap-1 border border-slate-800">
+                      <TabsList className="grid w-full grid-cols-4 h-12 rounded-2xl bg-amber-950/80 p-1 gap-1 border border-amber-600/30">
                         <TabsTrigger
                           value="student"
                           className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
