@@ -282,7 +282,7 @@ export default function LearnersDirectory() {
                       {learner.admissionNo || learner.admissionNumber || learner.admNo || '—'}
                     </td>
                     <td className="py-4 px-6 font-mono text-xs text-slate-700 font-semibold">
-                      {learner.idValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '—'}
+                      {learner.idValue || learner.birthCertificateNo || learner.birthCertNo || learner.assessmentNo || learner.assessmentNumber || '—'}
                     </td>
                     <td className="py-4 px-6 font-bold text-slate-900">
                       {learner.fullName || learner.name || learner.studentName || '—'}

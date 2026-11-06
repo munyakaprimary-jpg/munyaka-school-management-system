@@ -34,7 +34,7 @@ export const formatLearnerDoc = (l: any): Learner => {
   if (!l) return {} as Learner;
   const fullName = l.fullName || l.name || l.studentName || `${l.firstName || ''} ${l.lastName || ''}`.trim() || '';
   const admissionNumber = l.admissionNumber || l.admissionNo || l.admNo || '';
-  const identifierValue = l.identifierValue || l.assessmentNo || l.assessmentNumber || l.birthCertNo || l.birthCertificateNo || '';
+  const identifierValue = l.idValue || l.identifierValue || l.assessmentNo || l.assessmentNumber || l.birthCertNo || l.birthCertificateNo || '';
   const gradeLevel = l.gradeLevel || l.grade || '';
   const stream = l.stream || '';
   const gender = l.gender || l.sex || '';
@@ -47,11 +47,12 @@ export const formatLearnerDoc = (l: any): Learner => {
     id: l.id || l._id || admissionNumber || `MUN-${Date.now()}`,
     admissionNumber: admissionNumber || l.admissionNumber || '',
     admissionNo: admissionNumber || l.admissionNo || '',
+    idValue: identifierValue || l.idValue || '',
     identifierValue: identifierValue || l.identifierValue || '',
-    identifierType: l.identifierType || (l.birthCertNo ? 'Birth Certificate' : 'Assessment No'),
-    assessmentNo: l.assessmentNo || l.assessmentNumber || (l.identifierType === 'assessment' ? identifierValue : ''),
-    birthCertNo: l.birthCertNo || l.birthCertificateNo || (l.identifierType === 'birthCert' ? identifierValue : ''),
-    birthCertificateNo: l.birthCertificateNo || l.birthCertNo || '',
+    identifierType: l.identifierType || (l.birthCertificateNo || l.birthCertNo ? 'birthCert' : 'assessment'),
+    assessmentNo: l.assessmentNo || l.assessmentNumber || (l.identifierType === 'assessment' || !l.birthCertificateNo ? identifierValue : ''),
+    birthCertNo: l.birthCertNo || l.birthCertificateNo || (l.identifierType === 'birthCert' || l.birthCertificateNo ? identifierValue : ''),
+    birthCertificateNo: l.birthCertificateNo || l.birthCertNo || identifierValue || '',
     fullName: fullName || l.fullName || l.name || '',
     name: fullName || l.name || l.fullName || '',
     gradeLevel: gradeLevel || l.gradeLevel || '',
