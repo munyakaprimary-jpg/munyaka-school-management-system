@@ -507,7 +507,6 @@ export default function Students() {
         phone: phoneNumber.trim(),
         updatedAt: new Date().toISOString()
       };
-      };
 
       // Try saving to Firestore if available
       try {
@@ -538,6 +537,13 @@ export default function Students() {
       } catch {}
 
       setIsModalOpen(false);
+      resetForm();
+    } catch (err) {
+      console.error('Error saving learner:', err);
+      showError('Failed to save learner record.');
+    } finally {
+      setIsSaving(false);
+    }
       resetForm();
     } catch (err) {
       showError("Failed to save learner record.");
