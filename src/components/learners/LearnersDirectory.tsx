@@ -5,10 +5,8 @@ import {
   UserPlus, 
   Trash2, 
   GraduationCap, 
-  Filter,
   Users,
-  FileSpreadsheet,
-  CheckCircle2
+  FileSpreadsheet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,9 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import AddLearnerModal from '@/components/learners/AddLearnerModal';
 import AdminPinModal from '@/components/learners/AdminPinModal';
-import { STORAGE_KEYS } from '@/utils/storageKeys';
-import { CentralDataService } from '@/services/centralDataService';
-import { formatLearnerDoc } from '@/services/learnerService';
+import { useLearners } from '@/context/LearnerContext';
 import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 
 const AVAILABLE_GRADES = [
@@ -33,18 +29,7 @@ const AVAILABLE_STREAMS = ['East', 'West', 'North', 'South', 'Red', 'Blue', 'Gre
 export default function LearnersDirectory() {
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  const [learners, setLearners] = useState<any[]>(() => {
-    try {
-      const loaded = CentralDataService.getLearners() || [];
-      if (Array.isArray(loaded) && loaded.length > 0) {
-        return loaded.map(formatLearnerDoc);
-      }
-    } catch (e) {
-      console.error('Error loading learners from storage:', e);
-    }
-    return [];
-  });
+  const { learners, addLearner, deleteLearner } = useLearners();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
@@ -54,30 +39,6 @@ export default function LearnersDirectory() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<any>(null);
-
-  // Live Sync Effect
-  useEffect(() => {
-    const reloadData = () => {
-      try {
-        const loaded = CentralDataService.getLearners() || [];
-        setLearners(loaded.map(formatLearnerDoc));
-      } catch (e) {
-        console.error('Error reloading learners:', e);
-      }
-    };
-
-    window.addEventListener('learners-updated', reloadData);
-    window.addEventListener('students-updated', reloadData);
-    window.addEventListener('munyaka:data-changed', reloadData);
-    window.addEventListener('storage', reloadData);
-
-    return () => {
-      window.removeEventListener('learners-updated', reloadData);
-      window.removeEventListener('students-updated', reloadData);
-      window.removeEventListener('munyaka:data-changed', reloadData);
-      window.removeEventListener('storage', reloadData);
-    };
-  }, []);
 
   // Filtered & Searched Learners
   const filteredLearners = useMemo(() => {
@@ -100,48 +61,46 @@ export default function LearnersDirectory() {
     });
   }, [learners, searchTerm, gradeFilter, streamFilter, genderFilter]);
 
-  const handleLearnerAdded = (newLearner: any) => {
-    const formatted = formatLearnerDoc(newLearner);
-    setLearners(prev => {
-      const updated = [formatted, ...prev];
-      CentralDataService.saveLearners(updated);
-      try {
-        const existingRaw = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_learners') || '[]';
-        const parsed = JSON.parse(existingRaw);
-        const nextList = [formatted, ...(Array.isArray(parsed) ? parsed : [])];
-        localStorage.setItem('munyaka_learners_v2', JSON.stringify(nextList));
-        localStorage.setItem('munyaka_learners', JSON.stringify(nextList));
-        localStorage.setItem('munyaka_students', JSON.stringify(nextList));
-      } catch (e) {
-        console.error('Error saving to storage keys:', e);
-      }
-      window.dispatchEvent(new CustomEvent('learners-updated', { detail: updated }));
-      window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners' } }));
-      window.dispatchEvent(new Event('storage'));
-      return updated;
-    });
-    toast({
-      title: "Learner Added",
-      description: `${formatted.fullName || 'Learner'} was successfully registered and saved to the directory.`,
-    });
+  const handleLearnerAdded = async (newLearner: any) => {
+    try {
+      await addLearner(newLearner);
+      toast({
+        title: "Learner Added",
+        description: `${newLearner.fullName || newLearner.name || 'Learner'} was successfully registered and saved to the directory.`,
+      });
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: "Failed to save learner to directory.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleDeleteLearner = (learnerToDelete: any) => {
+  const handleDeleteLearner = async (learnerToDelete: any) => {
     if (!learnerToDelete) return;
     const targetId = learnerToDelete.id || learnerToDelete.admissionNo || learnerToDelete.admissionNumber;
-
-    setLearners(prev => {
-      const updated = prev.filter(l => (l.id !== targetId && l.admissionNo !== targetId && l.admissionNumber !== targetId));
-      CentralDataService.saveLearners(updated);
-      window.dispatchEvent(new CustomEvent('learners-updated', { detail: updated }));
-      window.dispatchEvent(new Event('storage'));
-      return updated;
-    });
-
-    toast({
-      title: "Learner Removed",
-      description: "Learner record deleted successfully.",
-    });
+    try {
+      if (deleteLearner) {
+        await deleteLearner(targetId);
+      } else {
+        const raw = localStorage.getItem('munyaka_learners') || '[]';
+        const list = JSON.parse(raw);
+        const updated = list.filter((l: any) => l.id !== targetId && l.admissionNumber !== targetId && l.admissionNo !== targetId);
+        localStorage.setItem('munyaka_learners', JSON.stringify(updated));
+        window.dispatchEvent(new Event('storage'));
+      }
+      toast({
+        title: "Learner Removed",
+        description: "Learner record deleted successfully.",
+      });
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: "Failed to delete learner.",
+        variant: "destructive"
+      });
+    }
   };
 
   const requestDelete = (learner: any) => {
@@ -285,7 +244,7 @@ export default function LearnersDirectory() {
               {filteredLearners.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-20 text-center text-slate-400 font-medium">
-                    No learners registered yet. Click "Register New Learner" above to add students.
+                    No learner records found. Click <span className="text-indigo-600 font-bold">+ Register New Learner</span> above to register a new student.
                   </td>
                 </tr>
               ) : (
