@@ -480,7 +480,7 @@ const Login: React.FC = () => {
       const finalRbacRole = matchedName.includes('JANET GATHONI KUNGU') || rawMatchedRole.includes('library') ? 'library_teacher' : (matched.rbacRole || mapRoleLabelToRbacKey(rawMatchedRole));
       const finalRole = finalRbacRole;
 
-      const userData = {
+      const userData: any = {
         id: matched.id || matched.staffId || `staff-${Date.now()}`,
         name: matched.name || 'Staff Member',
         email: matched.email || trimmedId,
@@ -491,6 +491,7 @@ const Login: React.FC = () => {
         rbacRole: finalRbacRole,
         assignedClass: matched.assignedGrade || matched.assignedClass || '',
         staff_id: matched.staffId || '',
+        department: matched.department || (matchedName.includes('JANET GATHONI KUNGU') ? 'Library & Media Center' : 'General'),
         avatar: (matched.name || 'U')
           .split(' ')
           .map(n => n[0] || '')
@@ -498,6 +499,15 @@ const Login: React.FC = () => {
           .substring(0, 2)
           .toUpperCase(),
       };
+
+      localStorage.setItem('munyaka_session', JSON.stringify(userData));
+      localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
+      localStorage.setItem('isAuthenticated', 'true');
+      if (setUser) setUser(userData);
+
+      showSuccess(`Welcome back, ${userData.name}!`);
+      setIsStaffVerifying(false);
+      navigate('/dashboard', { replace: true });
 
       try {
         localStorage.setItem('munyaka_session', JSON.stringify(userData));
