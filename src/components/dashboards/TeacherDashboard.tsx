@@ -70,7 +70,7 @@ export default function TeacherDashboard() {
   const hasAssignedClass = Boolean((user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || currUserObj.assignedClass);
 
   const isClassTeacher = hasAssignedClass && !isLibraryStaff && !isIctStaff;
-  const assignedClassLabel = currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || (isLibraryStaff ? 'Library & Media Center' : isIctStaff ? 'ICT Department' : 'Specialist Department');
+  const assignedClassLabel = currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || (isLibraryStaff ? 'Library & Media Center' : isIctStaff ? 'ICT Department' : 'Unassigned Class');
   
   const welcomeSubtitle = isLibraryStaff
     ? `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Library & Resource Management.`
