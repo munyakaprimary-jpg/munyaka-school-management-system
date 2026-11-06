@@ -473,14 +473,14 @@ export default function Students() {
     try {
       const targetId = editingId || generateLearnerId();
       const existingList = getStoredLearners();
-      const existingRecord = existingList.find((l: any) => l.id === targetId || l.admissionNumber === admissionNumber || l.admNo === admissionNumber);
+      const existingRecord = existingList.find((l: any) => l.id === targetId || l.admNo === admissionNumber || l.id === admissionNumber);
 
       const studentData = {
         ...existingRecord,
         id: targetId,
         name: fullName.trim(),
         fullName: fullName.trim(),
-        admissionNumber: admissionNumber || existingRecord?.admissionNumber || generateAdmissionNumber(grade),
+        admissionNumber: admissionNumber || (existingRecord as any)?.admissionNumber || generateAdmissionNumber(grade),
         admNo: admissionNumber || existingRecord?.admNo || generateAdmissionNumber(grade),
         idType: idType,
         idValue: cleanValue,

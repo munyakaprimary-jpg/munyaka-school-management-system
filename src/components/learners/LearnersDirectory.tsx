@@ -51,11 +51,12 @@ export default function LearnersDirectory() {
       const grade = (learner.gradeLevel || learner.grade || learner.class || '').toString().toLowerCase();
       const stream = (learner.stream || learner.stream_name || '').toString().toLowerCase();
       const gender = (learner.gender || learner.sex || '').toString().toLowerCase();
+      const academicYear = (learner.academicYear || learner.year || '2026').toString();
 
       const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean) || identifier.includes(searchClean);
-      const gradeMatch = gradeFilter === 'all' || grade.includes((gradeFilter || '').toString().toLowerCase());
-      const streamMatch = streamFilter === 'all' || stream.includes((streamFilter || '').toString().toLowerCase());
-      const genderMatch = genderFilter === 'all' || gender.includes((genderFilter || '').toString().toLowerCase());
+      const gradeMatch = gradeFilter === 'all' || grade === (gradeFilter || '').toString().toLowerCase() || grade.includes((gradeFilter || '').toString().toLowerCase());
+      const streamMatch = streamFilter === 'all' || stream === (streamFilter || '').toString().toLowerCase() || stream.includes((streamFilter || '').toString().toLowerCase());
+      const genderMatch = genderFilter === 'all' || gender === (genderFilter || '').toString().toLowerCase() || gender.includes((genderFilter || '').toString().toLowerCase());
 
       return nameMatch && gradeMatch && streamMatch && genderMatch;
     });
@@ -129,7 +130,7 @@ export default function LearnersDirectory() {
         s.parentName || s.parentGuardian || '',
         s.phoneNumber || s.phone || ''
       ]);
-      const csvContent = generateCSVHeader(headers) + rows.map(e => e.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(",")).join("\n");
+      const csvContent = [generateCSVHeader("LEARNERS DIRECTORY EXPORT").join(","), headers.join(","), ...rows.map(e => e.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(","))].join("\n");
       downloadCSV(csvContent, `Learners_Directory_${Date.now()}.csv`);
       toast({ title: "Export Successful", description: "Learners list downloaded as CSV." });
     } catch (e) {

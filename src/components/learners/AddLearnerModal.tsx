@@ -9,6 +9,8 @@ import { showSuccess, showError } from '@/utils/toast';
 import { getLearners, saveLearners, addPendingSyncItem } from '@/utils/storage';
 import { generateCohortAdmissionNumber } from '@/utils/admissionUtils';
 import { Learner } from '@/types/learners';
+import { STORAGE_KEYS } from '@/constants/storageKeys';
+import { useLearners } from '@/context/LearnerContext';
 
 interface AddLearnerModalProps {
   isOpen: boolean;
@@ -40,6 +42,7 @@ export default function AddLearnerModal({
   onClose,
   onLearnerAdded,
 }: AddLearnerModalProps) {
+  const { addLearner: contextAddLearner } = useLearners();
   const [existingLearners, setExistingLearners] = useState<any[]>([]);
 
   useEffect(() => {
@@ -144,25 +147,23 @@ export default function AddLearnerModal({
         phoneNumber: phone || '—',
         phone: phone || '—',
         status: 'Active',
+        academicYear: '2026',
         createdAt: new Date().toISOString()
       };
 
-      const updatedList = [newLearnerRecord, ...existingLearners];
-      saveLearners(updatedList);
+      await contextAddLearner(newLearnerRecord);
 
-      const existingRaw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || '[]';
+      const existingRaw = localStorage.getItem(STORAGE_KEYS.LEARNERS) || localStorage.getItem('munyaka_learners') || '[]';
       const existingLearnersStore = JSON.parse(existingRaw);
       const newStoreList = Array.isArray(existingLearnersStore) ? [newLearnerRecord, ...existingLearnersStore] : [newLearnerRecord];
 
+      localStorage.setItem(STORAGE_KEYS.LEARNERS, JSON.stringify(newStoreList));
       localStorage.setItem('munyaka_learners', JSON.stringify(newStoreList));
       localStorage.setItem('munyaka_students', JSON.stringify(newStoreList));
-      localStorage.setItem('munyaka_learners_backup', JSON.stringify(newStoreList));
-      localStorage.setItem('learners', JSON.stringify(newStoreList));
-      localStorage.setItem('students', JSON.stringify(newStoreList));
+      localStorage.setItem('school_learners_data', JSON.stringify(newStoreList));
 
       window.dispatchEvent(new CustomEvent('learners-updated', { detail: newStoreList }));
-      window.dispatchEvent(new CustomEvent('students-updated', { detail: newStoreList }));
-      window.dispatchEvent(new CustomEvent('sync-queue-updated', { detail: newStoreList }));
+      window.dispatchEvent(new CustomEvent('munyaka:learners-updated', { detail: newStoreList }));
       window.dispatchEvent(new Event('storage'));
 
       addPendingSyncItem({

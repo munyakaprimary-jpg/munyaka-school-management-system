@@ -1,3 +1,5 @@
+import { STORAGE_KEYS } from '../constants/storageKeys';
+
 export interface Learner {
   id: string;
   admissionNumber?: string;
@@ -28,7 +30,7 @@ export interface Learner {
   [key: string]: any;
 }
 
-const STORAGE_KEY = 'munyaka_learners';
+const STORAGE_KEY = STORAGE_KEYS.LEARNERS;
 
 export const formatLearnerDoc = (l: any): Learner => {
   if (!l) return {} as Learner;
