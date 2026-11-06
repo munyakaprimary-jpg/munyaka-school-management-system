@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
+import { DEFAULT_RBAC_ROLES, RBAC_MODULES, RBAC_STORAGE_KEY, getRbacMatrix } from '@/config/rbac';
 import SecurityAuthTab from '@/components/settings/SecurityAuthTab';
 import FirestoreSyncTab from '@/components/settings/FirestoreSyncTab';
 import Modal from '@/components/ui/Modal';
@@ -164,16 +165,7 @@ export default function Settings() {
   }, []);
 
   const [rbacMatrix, setRbacMatrix] = useState<Record<string, Record<string, boolean>>>(() => {
-    try {
-      const central = CentralDataService.getData<Record<string, Record<string, boolean>>>(RBAC_STORAGE_KEY, {});
-      if (central && typeof central === 'object' && Object.keys(central).length > 0) return central;
-      const saved = localStorage.getItem(RBAC_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') return parsed;
-      }
-    } catch {}
-    return DEFAULT_RBAC_MATRIX;
+    return getRbacMatrix();
   });
 
   const [isSaving, setIsSaving] = useState(false);
