@@ -77,8 +77,8 @@ export default function TeacherDashboard() {
     : isIctStaff
     ? `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to ICT Lab & Digital Learning Management.`
     : isClassTeacher
-    ? `You are signed in as ${teacherName} (Staff). Your dashboard is strictly restricted to assigned class (${assignedClassLabel}) data.`
-    : `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Specialist Educator & Subject Management.`;
+    ? `You are signed in as ${teacherName} (Staff). Your dashboard is strictly restricted to assigned class (${assignedClassLabel}) data (Mathematics, Science & Technology, and Integrated Science).`
+    : `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Specialist Educator & Subject Management (Mathematics, Science & Technology, and Integrated Science).`;
 
   // ICT Teacher / ICT Technician Analytics Dashboard View
   if (isIctStaff) {
@@ -617,7 +617,7 @@ export default function TeacherDashboard() {
         <div className="space-y-2 relative z-10">
           <div className="flex items-center gap-2">
             <Badge className="bg-white/20 text-white hover:bg-white/30 border-none font-bold uppercase tracking-wider text-[10px]">
-              Educator Portal
+              Teacher's Dashboard
             </Badge>
             <span className="text-xs text-blue-200 font-medium">• Active Session</span>
           </div>
@@ -628,8 +628,8 @@ export default function TeacherDashboard() {
             {isLibraryStaff
               ? `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Library & Resource Management.`
               : isClassTeacher
-              ? `You are signed in as ${teacherName} (Staff). Your dashboard is strictly restricted to assigned class (${assignedClassLabel}) data.`
-              : `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Specialist Educator & Subject Management.`}
+              ? `You are signed in as ${teacherName} (Staff). Your dashboard is strictly restricted to assigned class (${assignedClassLabel}) data — Mathematics, Science & Technology, and Integrated Science.`
+              : `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Specialist Educator & Subject Management — Mathematics, Science & Technology, and Integrated Science.`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 relative z-10">
