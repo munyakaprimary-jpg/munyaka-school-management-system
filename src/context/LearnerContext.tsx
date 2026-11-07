@@ -265,44 +265,42 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [filterLearnersForUser, setLearners]);
 
   const deleteLearner = useCallback(async (admissionNumber: string) => {
-      try {
-        const rawStored = localStorage.getItem(STORAGE_KEY_MUNYAKA_LEARNERS) || localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
-        const currentStored = rawStored ? JSON.parse(rawStored) : [];
-        
-        const learnerToDelete = currentStored.find((l: any) => {
-          const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '');
-          const lId = String(l.id || l._id || '');
-          return adm === admissionNumber || lId === admissionNumber || adm === String(admissionNumber) || lId === String(admissionNumber);
-        });
-  
-        if (!learnerToDelete) {
-          console.warn('[LearnerContext] Learner not found for deletion:', admissionNumber);
-          return;
-        }
-
-        // Optimistically remove from local storage and state first
-        const remaining = currentStored.filter((l: any) => {
-          const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '');
-          const lId = String(l.id || l._id || '');
-          return adm !== admissionNumber && lId !== admissionNumber && adm !== String(admissionNumber) && lId !== String(admissionNumber);
+    try {
+      setLearners((prevLearners) => {
+        const updated = prevLearners.filter((learner) => {
+          const matchAdmNo = learner.admNo === admissionNumber || learner.admissionNumber === admissionNumber || learner.admission_number === admissionNumber;
+          const matchId = learner.id === admissionNumber || learner._id === admissionNumber;
+          return !matchAdmNo && !matchId;
         });
 
-        localStorage.setItem(STORAGE_KEY_MUNYAKA_LEARNERS, JSON.stringify(remaining));
-        localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(remaining));
-        setLearners(filterLearnersForUser(remaining));
-  
-        const updatedList = await purgeLearnerPermanently(learnerToDelete);
-        setLearners(filterLearnersForUser(updatedList));
-  
-        window.dispatchEvent(new Event('students-updated'));
-        window.dispatchEvent(new Event('learners-updated'));
-        window.dispatchEvent(new Event('learners_updated'));
-        window.dispatchEvent(new Event('munyaka:data-changed'));
-        window.dispatchEvent(new Event('storage'));
-      } catch (err) {
-        console.error('[LearnerContext] deleteLearner error:', err);
+        localStorage.setItem(STORAGE_KEY_MUNYAKA_LEARNERS, JSON.stringify(updated));
+        localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(updated));
+        localStorage.setItem('school_learners_data', JSON.stringify(updated));
+        localStorage.setItem('munyaka_students', JSON.stringify(updated));
+        return updated;
+      });
+
+      const rawStored = localStorage.getItem(STORAGE_KEY_MUNYAKA_LEARNERS) || localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+      const currentStored = rawStored ? JSON.parse(rawStored) : [];
+      const learnerToDelete = currentStored.find((l: any) => {
+        const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '');
+        const lId = String(l.id || l._id || '');
+        return adm === admissionNumber || lId === admissionNumber;
+      });
+
+      if (learnerToDelete) {
+        await purgeLearnerPermanently(learnerToDelete);
       }
-    }, [filterLearnersForUser, setLearners]);
+
+      window.dispatchEvent(new Event('students-updated'));
+      window.dispatchEvent(new Event('learners-updated'));
+      window.dispatchEvent(new Event('learners_updated'));
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+      window.dispatchEvent(new Event('storage'));
+    } catch (err) {
+      console.error('[LearnerContext] deleteLearner error:', err);
+    }
+  }, [setLearners]);
 
   const refreshLearners = useCallback(() => {
     try {
