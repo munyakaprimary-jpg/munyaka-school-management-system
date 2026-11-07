@@ -101,21 +101,16 @@ const GradesStreams = () => {
   const [newStreamTeacher, setNewStreamTeacher] = useState("");
   const [newStreamStudents, setNewStreamStudents] = useState("");
 
-  // Helper: compute learner count for a grade and stream
+  // Helper: compute learner count for a grade and stream using robust matching
   const getLearnerCountForStream = (gradeName: string, streamName: string) => {
     return (learners || []).filter((learner) => {
-      const lGrade = String(learner.grade || learner.class || learner.gradeLevel || '').trim().toLowerCase();
-      const lStream = String(learner.stream || learner.streamName || '').trim().toLowerCase();
+      const learnerGrade = String(learner.grade || learner.class || learner.gradeLevel || '').trim().toLowerCase();
+      const learnerStream = String(learner.stream || learner.streamName || '').trim().toLowerCase();
       
       const targetGrade = gradeName.trim().toLowerCase();
       const targetStream = streamName.trim().toLowerCase();
 
-      // Check if either separate fields match or combined string matches (e.g. "Grade 1 Green")
-      const combined = `${lGrade} ${lStream}`;
-      const matchesSeparate = lGrade.includes(targetGrade) && lStream.includes(targetStream);
-      const matchesCombined = combined.includes(targetGrade) && combined.includes(targetStream);
-
-      return matchesSeparate || matchesCombined;
+      return learnerGrade.includes(targetGrade) && learnerStream.includes(targetStream);
     }).length;
   };
 
