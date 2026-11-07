@@ -39,9 +39,27 @@ export default function PaymentManagement() {
     const addCampus = useSchoolStore((state) => state.addCampus);
     const deleteCampus = useSchoolStore((state) => state.deleteCampus);
     const updateCampusSeats = useSchoolStore((state) => state.updateCampusSeats);
-  const activeLearnersCount = students?.length > 0 ? students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length : ((INITIAL_SEED_DATA as any)?.learners?.length || 31);
-  const feePerLearner = 100;
-  const estimatedMonthlyTotal = activeLearnersCount * feePerLearner;
+  const activeLearnersCount = students?.length > 0 ? students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length : (() => {
+    try {
+      const l = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v1') || '[]');
+      return Array.isArray(l) ? l.length : 0;
+    } catch {
+      return 0;
+    }
+  })();
+
+  const activeStaffCount = staff?.length > 0 ? staff.length : (() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || '[]');
+      return Array.isArray(s) ? s.length : 2;
+    } catch {
+      return 2;
+    }
+  })();
+
+  const totalSeats = activeLearnersCount + activeStaffCount;
+  const feePerSeat = 100;
+  const estimatedMonthlyTotal = totalSeats * feePerSeat;
   const activeLearners = activeLearnersCount;
   const PRICE_PER_SEAT = 250;
   const annualSubtotal = activeLearners * PRICE_PER_SEAT * 12;
@@ -744,7 +762,15 @@ export default function PaymentManagement() {
                   <Calendar className="text-indigo-600" size={24} /> Monthly Payment & Billing Setting
                 </CardTitle>
                 <p className="text-xs text-slate-500 font-medium mt-1">
-                  Calculated automatically from {activeLearnersCount} active learners and {Array.isArray(INITIAL_SEED_DATA) ? 6 : ((INITIAL_SEED_DATA as any).staff?.length || 6)} active staff synchronized from src/data/InitialSeedData.ts.
+                  Calculated automatically from {(() => {
+                    try {
+                      const l = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v1') || '[]');
+                      const s = JSON.parse(localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || '[]');
+                      return `${Array.isArray(l) ? l.length : 0} active learners and ${Array.isArray(s) ? s.length : 0} active staff synchronized`;
+                    } catch {
+                      return '0 active learners and 2 active staff synchronized';
+                    }
+                  })()} from Munyaka institutional storage.
                 </p>
               </div>
 
