@@ -391,7 +391,6 @@ export default function PaymentManagement() {
     window.dispatchEvent(new Event('fee_per_seat_updated'));
   };
 
-  const totalSeats = ((INITIAL_SEED_DATA as any).learners?.length || 31) + ((INITIAL_SEED_DATA as any).staff?.length || 6); // 37
   const currentFee = Number(monthlyFeePerStudent) || 0;
   const estimatedTotal = totalSeats * currentFee;
   const [paymentDueDate, setPaymentDueDate] = useState<string>(() => {
