@@ -20,6 +20,7 @@ interface LearnerContextType {
 const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
 export const STORAGE_KEY_LEARNERS_V2 = 'munyaka_learners_v2';
+export const STORAGE_KEY_MUNYAKA_LEARNERS = 'munyaka_learners';
 
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -60,75 +61,50 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, []);
 
-  // One-time Migration & Complete Bundling of Seed Data & Legacy Records into munyaka_learners_v2
+  // Non-destructive initialization & Firestore Sync
   useEffect(() => {
     let isMounted = true;
 
     const initializeLearners = async () => {
       try {
-        const keys = [STORAGE_KEY_LEARNERS_V2, 'munyaka_learners', 'munyaka_students', 'school_learners_data'];
-        keys.forEach(k => {
-          const current = localStorage.getItem(k);
-          if (current) {
-            try {
-              const parsed = JSON.parse(current);
-              if (Array.isArray(parsed)) {
-                const cleaned = parsed.filter((l: any) => {
-                  const adm = String(l?.admissionNo || l?.admissionNumber || l?.admNo || '');
-                  const name = String(l?.fullName || l?.name || '').toLowerCase();
-                  if (adm.includes('MUN-001-2021') || adm.includes('MUN-002-2021') || adm.includes('MUN-003-2021')) return false;
-                  if (adm.includes('MUN-001-2026') || adm.includes('MUN-002-2026')) return false;
-                  if (name.includes('unnamed') || name.includes('test learner')) return false;
-                  return true;
-                });
-                localStorage.setItem(k, JSON.stringify(cleaned));
-              }
-            } catch {}
-          }
-        });
+        const localData = localStorage.getItem(STORAGE_KEY_MUNYAKA_LEARNERS) || localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+        const initialLearners = localData ? JSON.parse(localData) : [];
 
-        // 1. Prioritize fetching live documents from Firestore learners collection
-        let firestoreLearners: any[] = [];
+        if (initialLearners.length > 0 && isMounted) {
+          setLearners(filterLearnersForUser(initialLearners));
+          setLoading(false);
+        }
+
+        // Fetch from Firestore learners collection non-destructively
         try {
-          const { collection, getDocs } = await import('firebase/firestore');
-          let firestoreDb: any = null;
-          try {
-            const fbConfig = await import('../config/firebase');
-            firestoreDb = fbConfig.db;
-          } catch {
-            try {
-              const fbConfig2 = await import('../lib/firebaseClient');
-              firestoreDb = fbConfig2.db;
-            } catch {}
-          }
-
-          if (firestoreDb) {
-            const querySnapshot = await getDocs(collection(firestoreDb, 'learners'));
-            firestoreLearners = querySnapshot.docs.map(docSnap => ({
+          const snapshot = await getDocs(collection(db, 'learners'));
+          if (!snapshot.empty) {
+            const cloudLearners = snapshot.docs.map(docSnap => ({
               id: docSnap.id,
               ...docSnap.data()
             }));
+            const combined = deduplicateLearners([...cloudLearners, ...initialLearners]);
+            localStorage.setItem(STORAGE_KEY_MUNYAKA_LEARNERS, JSON.stringify(combined));
+            localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(combined));
+            if (isMounted) {
+              setLearners(filterLearnersForUser(combined));
+              setLoading(false);
+            }
+          } else {
+            if (initialLearners.length > 0 && isMounted) {
+              setLearners(filterLearnersForUser(initialLearners));
+            } else if (isMounted) {
+              setLearners(filterLearnersForUser([]));
+            }
+            setLoading(false);
           }
-        } catch (fbErr) {
-          console.warn('Firebase Firestore learners fetch skipped/failed, using local fallback:', fbErr);
-        }
-
-        const storedLocal = localStorage.getItem(STORAGE_KEY_LEARNERS_V2) || localStorage.getItem('munyaka_learners') || '[]';
-        let parsedList = [];
-        try {
-          parsedList = JSON.parse(storedLocal);
-        } catch {}
-
-        const combinedList = firestoreLearners.length > 0 ? firestoreLearners : (Array.isArray(parsedList) ? parsedList : []);
-
-        const learnersList = deduplicateLearners(combinedList.map(formatLearnerDoc)).filter(l => {
-          const fn = String(l.fullName || l.name || '').trim();
-          if (!fn) return false;
-          return true;
-        });
-
-        if (isMounted) {
-          setLearners(filterLearnersForUser(learnersList));
+        } catch (error) {
+          console.warn('Offline mode: Using cached learners from local storage');
+          if (initialLearners.length > 0 && isMounted) {
+            setLearners(filterLearnersForUser(initialLearners));
+          } else if (isMounted) {
+            setLearners(filterLearnersForUser([]));
+          }
           setLoading(false);
         }
       } catch (err) {
@@ -145,7 +121,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const handleStorageChange = () => {
       if (!isMounted) return;
       try {
-        const stored = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+        const stored = localStorage.getItem(STORAGE_KEY_MUNYAKA_LEARNERS) || localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) {
@@ -165,7 +141,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, [filterLearnersForUser, setLearners]);
 
-  // Unified addLearner: Appends directly to munyaka_learners_v2, mirrors to helper keys, and syncs to Firestore
+  // Unified addLearner: Saves both to React State AND localStorage simultaneously before Firestore sync
   const addLearner = useCallback(async (newLearner: any) => {
     const normalizedNew = {
       ...newLearner,
@@ -174,13 +150,12 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       updatedAt: new Date().toISOString()
     };
 
-    let updatedList: any[] = [];
-    
     try {
-      const rawStored = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+      const rawStored = localStorage.getItem(STORAGE_KEY_MUNYAKA_LEARNERS) || localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
       const currentStored = rawStored ? JSON.parse(rawStored) : [];
       const existing = findExistingLearner(currentStored, normalizedNew);
 
+      let updatedList: any[] = [];
       if (existing) {
         updatedList = currentStored.map((l: any) => {
           const lId = String(l.id || (l as any).learnerId || '');
@@ -195,14 +170,17 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       updatedList = dedupeLearnersById(updatedList);
 
-      // Save to central storage key munyaka_learners_v2
+      // Save simultaneously to localStorage
+      localStorage.setItem(STORAGE_KEY_MUNYAKA_LEARNERS, JSON.stringify(updatedList));
       localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(updatedList));
-      // Mirror to secondary keys for compatibility
       localStorage.setItem('school_learners_data', JSON.stringify(updatedList));
       localStorage.setItem('munyaka_students', JSON.stringify(updatedList));
       localStorage.setItem('cached_learners', JSON.stringify(updatedList));
 
-      // Sync to Firestore
+      // Update React State immediately
+      setLearners(filterLearnersForUser(updatedList));
+
+      // Attempt Firestore sync
       if (db) {
         try {
           await setDoc(doc(db, 'learners', String(normalizedNew.id)), normalizedNew, { merge: true });
@@ -210,8 +188,6 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
           console.warn('[LearnerContext] Firestore sync warning on addLearner:', fsErr);
         }
       }
-
-      setLearners(filterLearnersForUser(updatedList));
 
       window.dispatchEvent(new Event('students-updated'));
       window.dispatchEvent(new Event('learners-updated'));
@@ -224,7 +200,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateLearner = useCallback(async (admissionNumber: string, updatedData: any) => {
     try {
-      const rawStored = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+      const rawStored = localStorage.getItem(STORAGE_KEY_MUNYAKA_LEARNERS) || localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
       const currentStored = rawStored ? JSON.parse(rawStored) : [];
       let targetId = '';
 
@@ -238,10 +214,16 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
 
       const deduped = dedupeLearnersById(updatedList);
+
+      // Save simultaneously to localStorage
+      localStorage.setItem(STORAGE_KEY_MUNYAKA_LEARNERS, JSON.stringify(deduped));
       localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(deduped));
       localStorage.setItem('school_learners_data', JSON.stringify(deduped));
       localStorage.setItem('munyaka_students', JSON.stringify(deduped));
       localStorage.setItem('cached_learners', JSON.stringify(deduped));
+
+      // Update React State immediately
+      setLearners(filterLearnersForUser(deduped));
 
       if (targetId && db) {
         try {
@@ -254,8 +236,6 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
-      setLearners(filterLearnersForUser(deduped));
-
       window.dispatchEvent(new Event('students-updated'));
       window.dispatchEvent(new Event('learners-updated'));
       window.dispatchEvent(new Event('munyaka:data-changed'));
@@ -266,10 +246,9 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteLearner = useCallback(async (admissionNumber: string) => {
       try {
-        const rawStored = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+        const rawStored = localStorage.getItem(STORAGE_KEY_MUNYAKA_LEARNERS) || localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
         const currentStored = rawStored ? JSON.parse(rawStored) : [];
         
-        // Find the learner to delete by admissionNumber
         const learnerToDelete = currentStored.find((l: any) => {
           const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '');
           const lId = String(l.id || l._id || '');
@@ -280,8 +259,18 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
           console.warn('[LearnerContext] Learner not found for deletion:', admissionNumber);
           return;
         }
+
+        // Optimistically remove from local storage and state first
+        const remaining = currentStored.filter((l: any) => {
+          const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '');
+          const lId = String(l.id || l._id || '');
+          return adm !== admissionNumber && lId !== admissionNumber && adm !== String(admissionNumber) && lId !== String(admissionNumber);
+        });
+
+        localStorage.setItem(STORAGE_KEY_MUNYAKA_LEARNERS, JSON.stringify(remaining));
+        localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(remaining));
+        setLearners(filterLearnersForUser(remaining));
   
-        // Use purgeLearnerPermanently for unified deletion across all storage layers
         const updatedList = await purgeLearnerPermanently(learnerToDelete);
         setLearners(filterLearnersForUser(updatedList));
   
@@ -297,7 +286,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const refreshLearners = useCallback(() => {
     try {
-      const rawStored = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+      const rawStored = localStorage.getItem(STORAGE_KEY_MUNYAKA_LEARNERS) || localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
       if (rawStored) {
         const parsed = JSON.parse(rawStored);
         if (Array.isArray(parsed)) {
@@ -313,6 +302,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const resetToSeedData = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY_LEARNERS_V2);
+    localStorage.removeItem(STORAGE_KEY_MUNYAKA_LEARNERS);
     localStorage.removeItem('school_learners_data');
     localStorage.removeItem('munyaka_students');
     localStorage.removeItem('cached_learners');
