@@ -382,21 +382,21 @@ export default function StaffRegistry() {
   }
 
   const handleDeleteStaff = (id: string) => {
-      if (confirm("Are you sure you want to remove this staff member from the system? This action cannot be undone.")) {
-        const removed = staffList.find(s => s.id === id);
-        const updated = staffList.filter(s => s.id !== id);
-        setStaffList(updated);
-        localStorage.setItem('munyaka_staff', JSON.stringify(updated));
-        toast.success("Staff member removed successfully");
-  
-        addPendingSyncItem({
-          id,
-          type: 'staff',
-          action: 'delete',
-          payload: removed || { id },
-        });
-      }
-    };
+        if (confirm("Are you sure you want to remove this staff member from the system? This action cannot be undone.")) {
+          const existing = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
+          const updated = existing.filter((s: any) => s.id !== id && s.email !== id);
+          localStorage.setItem('munyaka_staff', JSON.stringify(updated));
+          setStaffList(updated);
+          toast.success("Staff member removed successfully");
+    
+          addPendingSyncItem({
+            id,
+            type: 'staff',
+            action: 'delete',
+            payload: { id },
+          });
+        }
+      };
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);

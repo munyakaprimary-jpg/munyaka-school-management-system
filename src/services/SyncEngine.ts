@@ -50,17 +50,11 @@ export const syncUsersToCloud = async (): Promise<{ success: boolean; count: num
     
     let staffList = JSON.parse(rawStaffData);
 
-    // 2. Automatic Default Staff Fallback Seeding
+    // 2. Automatic Default Staff Fallback Seeding - REMOVED to prevent ghost record auto-seeding
+    // This section has been eliminated to ensure clean staff directory management without hardcoded fallback data
+    // Users must manually add staff members through the proper registration process
     if (!Array.isArray(staffList) || staffList.length === 0) {
-      staffList = [
-        { id: 'MUN-0001', name: 'JAMES NDIKI', role: 'ICT Teacher', email: 'jndiki@munyaka.sc.ke' },
-        { id: 'MUN-0002', name: 'ANN NDUTA MBUGUA', role: 'Class Teacher', email: 'annmbugua@munyaka.sc.ke' },
-        { id: 'MUN-0003', name: 'JANET GATHONI KUNGU', role: 'Library Teacher', email: 'janetkungu@munyaka.sc.ke' },
-        { id: 'MUN-0004', name: 'LAWRENCE NDEGWA GIOSHE', role: 'Subject Teacher', email: 'lndegwa@munyaka.sc.ke' },
-        { id: 'MUN-0005', name: 'ALICE MAINA', role: 'Class Teacher', email: 'maina@munyaka.sc.ke' },
-        { id: 'MUN-0006', name: 'HOGLA SANDUKI', role: 'Class Teacher', email: 'sanduki@munyaka.sc.ke' }
-      ];
-      localStorage.setItem('munyaka_staff', JSON.stringify(staffList));
+      staffList = [];
     }
 
     const recordsToSync: any[] = [];
