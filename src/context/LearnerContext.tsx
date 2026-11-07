@@ -46,7 +46,15 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, [user]);
 
-  const [learners, setLearnersState] = useState<any[]>([]);
+  const [learners, setLearnersState] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      console.error("Failed to parse learners storage", e);
+      return [];
+    }
+  });
   const learnersRef = useRef(learners);
   learnersRef.current = learners;
 
