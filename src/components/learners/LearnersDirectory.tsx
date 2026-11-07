@@ -39,6 +39,7 @@ export default function LearnersDirectory() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<any>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Filtered & Searched Learners
   const filteredLearners = useMemo(() => {
@@ -51,7 +52,6 @@ export default function LearnersDirectory() {
       const grade = (learner.gradeLevel || learner.grade || learner.class || '').toString().toLowerCase();
       const stream = (learner.stream || learner.stream_name || '').toString().toLowerCase();
       const gender = (learner.gender || learner.sex || '').toString().toLowerCase();
-      const academicYear = (learner.academicYear || learner.year || '2026').toString();
 
       const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean) || identifier.includes(searchClean);
       const gradeMatch = gradeFilter === 'all' || grade === (gradeFilter || '').toString().toLowerCase() || grade.includes((gradeFilter || '').toString().toLowerCase());
@@ -99,6 +99,32 @@ export default function LearnersDirectory() {
       toast({
         title: "Error",
         description: "Failed to delete learner.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteMultipleLearners = async (ids: string[]) => {
+    try {
+      for (const id of ids) {
+        if (deleteLearner) {
+          await deleteLearner(id);
+        } else {
+          const raw = localStorage.getItem('munyaka_learners') || '[]';
+          const list = JSON.parse(raw);
+          const updated = list.filter((l: any) => (l.id || l.admNo) !== id && l.admissionNumber !== id && l.admissionNo !== id);
+          localStorage.setItem('munyaka_learners', JSON.stringify(updated));
+        }
+      }
+      window.dispatchEvent(new Event('storage'));
+      toast({
+        title: "Learners Removed",
+        description: `${ids.length} learner records deleted successfully.`,
+      });
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: "Failed to delete selected learners.",
         variant: "destructive"
       });
     }
@@ -228,10 +254,40 @@ export default function LearnersDirectory() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {selectedIds.length > 0 && (
+          <div className="flex items-center justify-between bg-red-50 border border-red-200 p-3 rounded-lg mx-6 mt-4">
+            <span className="text-red-700 font-medium">{selectedIds.length} learner(s) selected</span>
+            <button
+              onClick={() => {
+                if (confirm(`Delete ${selectedIds.length} selected learners?`)) {
+                  deleteMultipleLearners(selectedIds);
+                  setSelectedIds([]);
+                }
+              }}
+              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 font-medium text-sm"
+            >
+              Delete Selected ({selectedIds.length})
+            </button>
+          </div>
+        )}
+
+        <div className="overflow-x-auto mt-4">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
+                <th className="p-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={filteredLearners.length > 0 && selectedIds.length === filteredLearners.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(filteredLearners.map(l => l.id || l.admNo));
+                      } else {
+                        setSelectedIds([]);
+                      }
+                    }}
+                  />
+                </th>
                 <th className="py-4 px-6">Admission No</th>
                 <th className="py-4 px-6">Assessment No / Birth Certificate No</th>
                 <th className="py-4 px-6">Student Full Name</th>
@@ -244,13 +300,25 @@ export default function LearnersDirectory() {
             <tbody className="divide-y divide-slate-100">
               {filteredLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-20 text-center text-slate-400 font-medium">
+                  <td colSpan={8} className="py-20 text-center text-slate-400 font-medium">
                     No learner records found. Click <span className="text-indigo-600 font-bold">+ Register New Learner</span> above to register a new student.
                   </td>
                 </tr>
               ) : (
                 filteredLearners.map((learner, idx) => (
-                  <tr key={learner.id || learner.admissionNo || idx} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={learner.id || learner.admissionNo || idx} className="hover:bg-slate-50/85 transition-colors">
+                    <td className="p-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(learner.id || learner.admNo)}
+                        onChange={(e) => {
+                          const id = learner.id || learner.admNo;
+                          setSelectedIds(prev => 
+                            e.target.checked ? [...prev, id] : prev.filter(item => item !== id)
+                          );
+                        }}
+                      />
+                    </td>
                     <td className="py-4 px-6 font-mono font-bold text-xs text-indigo-600">
                       {learner.admissionNo || learner.admissionNumber || learner.admNo || '—'}
                     </td>
