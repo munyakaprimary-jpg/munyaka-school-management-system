@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
-import { DEFAULT_RBAC_ROLES, RBAC_MODULES, RBAC_STORAGE_KEY, getRbacMatrix } from '@/config/rbac';
+import { DEFAULT_RBAC_ROLES, RBAC_MODULES, RBAC_STORAGE_KEY, getRbacMatrix, EXACT_RBAC_ROLES } from '@/config/rbac';
 import SecurityAuthTab from '@/components/settings/SecurityAuthTab';
 import FirestoreSyncTab from '@/components/settings/FirestoreSyncTab';
 import Modal from '@/components/ui/Modal';
@@ -83,32 +83,43 @@ const DEFAULT_SETTINGS: SystemSettings = {
 };
 
 const SYSTEM_ROLES = [
-  { id: 'admin', name: 'Administrators', description: 'Full access to institutional control center, staff records, and financial ledgers.' },
-  { id: 'teacher', name: 'Teachers', description: 'Access to mark entry, learner attendance, lesson plans, and CBC assessments.' },
-  { id: 'bursar', name: 'Bursars', description: 'Access to fee collections, payment records, and financial summaries.' },
-  { id: 'librarian', name: 'Librarians', description: 'Access to library catalog, book checkouts, and e-resource inventories.' },
-  { id: 'ict_technician', name: 'ICT Technicians', description: 'Access to lab devices, digital literacy hubs, and network monitoring.' },
-  { id: 'developer', name: 'Platform Developers', description: 'Full access to multi-tenant configurations, schema migrations, and raw database backups.' }
+  { id: 'HOI', name: 'HOI (Head of Institution / Principal)', description: 'Full institutional access (Admissions, CBC Assessments, Fees, Staff Management, System Settings, RBAC).' },
+  { id: 'DHOI', name: 'DHOI (Deputy Head of Institution)', description: 'Full institutional access (Admissions, CBC Assessments, Fees, Staff Management, System Settings, RBAC).' },
+  { id: 'Class Teacher', name: 'Class Teacher', description: 'Student Profiles (View), Attendance / Roll Call, Exam Marks & CBC Assessments, Homework.' },
+  { id: 'Subject Teacher', name: 'Subject Teacher', description: 'Exam Marks & CBC Assessments, Subject Timetable.' },
+  { id: 'ICT Teacher', name: 'ICT Teacher', description: 'ICT Lab & Digital Learning, Hardware Inventory, Server / System Maintenance, Basic Learner Info.' },
+  { id: 'Library Teacher', name: 'Library Teacher', description: 'Library Catalog, E-Resources, Book Issuance/Returns, Basic Learner Info.' },
+  { id: 'Lab Teacher', name: 'Lab Teacher', description: 'Science & Computer Lab Inventory, Experiment Schedules, Safety Records.' },
+  { id: 'Bursar', name: 'Bursar', description: 'Fees & Financial Ledgers, Payment Receipts, Fee Statements, Expenses.' },
+  { id: 'Store Master', name: 'Store Master', description: 'School Stores, Procurement, Inventory & Stock Ledgers.' },
 ];
 
 const MODULE_PERMISSIONS = [
   { id: 'dashboard', name: 'Dashboard & Overview' },
-  { id: 'admissions', name: 'Student Admissions & Profiles' },
-  { id: 'academics', name: 'Timetable & CBC Assessments' },
-  { id: 'finance', name: 'Fees & Financial Ledgers' },
-  { id: 'library', name: 'Library & E-Resources' },
-  { id: 'ict_labs', name: 'ICT Lab & Hardware Inventory' },
-  { id: 'communication', name: 'SMS & Email Communication' },
-  { id: 'settings', name: 'System Settings & RBAC' }
+  { id: 'students', name: 'Student Profiles & Admissions' },
+  { id: 'academics', name: 'Exam Marks & CBC Assessments' },
+  { id: 'attendance', name: 'Attendance & Roll Call' },
+  { id: 'homework', name: 'Homework & Assignments' },
+  { id: 'timetable', name: 'Subject Timetable' },
+  { id: 'fees', name: 'Fees & Financial Ledgers' },
+  { id: 'library', name: 'Library Catalog & E-Resources' },
+  { id: 'ict', name: 'ICT Lab & Hardware Inventory' },
+  { id: 'science_lab', name: 'Science Lab Inventory & Safety' },
+  { id: 'stores', name: 'School Stores & Procurement' },
+  { id: 'staff', name: 'Staff Management' },
+  { id: 'settings', name: 'System Settings & RBAC' },
 ];
 
 const DEFAULT_RBAC_MATRIX: Record<string, Record<string, boolean>> = {
-  admin: { dashboard: true, admissions: true, academics: true, finance: true, library: true, ict_labs: true, communication: true, settings: true },
-  teacher: { dashboard: true, admissions: false, academics: true, finance: false, library: true, ict_labs: true, communication: true, settings: false },
-  bursar: { dashboard: true, admissions: true, academics: false, finance: true, library: false, ict_labs: false, communication: true, settings: false },
-  librarian: { dashboard: true, admissions: false, academics: false, finance: false, library: true, ict_labs: false, communication: false, settings: false },
-  ict_technician: { dashboard: true, admissions: false, academics: false, finance: false, library: false, ict_labs: true, communication: false, settings: false },
-  developer: { dashboard: true, admissions: true, academics: true, finance: true, library: true, ict_labs: true, communication: true, settings: true }
+  HOI: { dashboard: true, students: true, academics: true, attendance: true, homework: true, timetable: true, fees: true, library: true, ict: true, science_lab: true, stores: true, staff: true, settings: true },
+  DHOI: { dashboard: true, students: true, academics: true, attendance: true, homework: true, timetable: true, fees: true, library: true, ict: true, science_lab: true, stores: true, staff: true, settings: true },
+  'Class Teacher': { dashboard: true, students: true, academics: true, attendance: true, homework: true, timetable: true, fees: false, library: false, ict: false, science_lab: false, stores: false, staff: false, settings: false },
+  'Subject Teacher': { dashboard: true, students: false, academics: true, attendance: false, homework: true, timetable: true, fees: false, library: false, ict: false, science_lab: false, stores: false, staff: false, settings: false },
+  'ICT Teacher': { dashboard: true, students: true, academics: false, attendance: false, homework: false, timetable: false, fees: false, library: false, ict: true, science_lab: false, stores: false, staff: false, settings: false },
+  'Library Teacher': { dashboard: true, students: true, academics: false, attendance: false, homework: false, timetable: false, fees: false, library: true, ict: false, science_lab: false, stores: false, staff: false, settings: false },
+  'Lab Teacher': { dashboard: true, students: false, academics: false, attendance: false, homework: false, timetable: false, fees: false, library: false, ict: false, science_lab: true, stores: false, staff: false, settings: false },
+  Bursar: { dashboard: true, students: false, academics: false, attendance: false, homework: false, timetable: false, fees: true, library: false, ict: false, science_lab: false, stores: false, staff: false, settings: false },
+  'Store Master': { dashboard: true, students: false, academics: false, attendance: false, homework: false, timetable: false, fees: false, library: false, ict: false, science_lab: false, stores: true, staff: false, settings: false },
 };
 
 export default function Settings() {
@@ -535,41 +546,45 @@ export default function Settings() {
             </CardHeader>
             <CardContent className="px-0 pt-6 space-y-6">
               <div className="space-y-6">
-                {SYSTEM_ROLES.map(role => (
-                  <div key={role.id} className="p-5 bg-slate-50/80 rounded-2xl border space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-slate-900 text-base">{role.name}</h4>
-                          <Badge variant="outline" className="font-mono text-xs uppercase">{role.id}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{role.description}</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                      {MODULE_PERMISSIONS.map(mod => {
-                        const isAllowed = Boolean(rbacMatrix[role.id]?.[mod.id]);
-                        return (
-                          <div 
-                            key={mod.id} 
-                            onClick={() => handlePermissionToggle(role.id, mod.id)}
-                            className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                              isAllowed 
-                                ? 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-sm' 
-                                : 'bg-white border-slate-200 text-slate-400 opacity-60 hover:opacity-100'
-                            }`}
-                          >
-                            <span className="text-xs font-bold truncate">{mod.name}</span>
-                            <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isAllowed ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                              {isAllowed ? <Check size={12} /> : <X size={12} />}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+                {EXACT_RBAC_ROLES.map(roleId => {
+                                  const role = SYSTEM_ROLES.find(r => r.id === roleId);
+                                  if (!role) return null;
+                                  return (
+                                    <div key={role.id} className="p-5 bg-slate-50/80 rounded-2xl border space-y-4">
+                                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <h4 className="font-bold text-slate-900 text-base">{role.name}</h4>
+                                            <Badge variant="outline" className="font-mono text-xs uppercase">{role.id}</Badge>
+                                          </div>
+                                          <p className="text-xs text-muted-foreground mt-0.5">{role.description}</p>
+                                        </div>
+                                      </div>
+                
+                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                                        {MODULE_PERMISSIONS.map(mod => {
+                                          const isAllowed = Boolean(rbacMatrix[role.id]?.[mod.id]);
+                                          return (
+                                            <div
+                                              key={mod.id}
+                                              onClick={() => handlePermissionToggle(role.id, mod.id)}
+                                              className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                                                isAllowed
+                                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-sm'
+                                                  : 'bg-white border-slate-200 text-slate-400 opacity-60 hover:opacity-100'
+                                              }`}
+                                            >
+                                              <span className="text-xs font-bold truncate">{mod.name}</span>
+                                              <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isAllowed ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                                                {isAllowed ? <Check size={12} /> : <X size={12} />}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
               </div>
             </CardContent>
           </Card>
