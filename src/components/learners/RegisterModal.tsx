@@ -181,11 +181,21 @@ export default function RegisterModal({
     }
     try {
       const queue = JSON.parse(localStorage.getItem('munyaka_sync_queue') || '[]');
+      const normalizedBirthCert = birthCertificateNo || assessmentNo || '';
+      const normalizedAssessment = assessmentNo || birthCertificateNo || '';
       queue.push({
         id: crypto.randomUUID?.() || `sync-${Date.now()}`,
         table_name: 'learners',
         action: 'INSERT',
-        payload: { admissionNumber, fullName, regGrade, regStream, phone },
+        payload: {
+          admissionNumber,
+          fullName,
+          regGrade,
+          regStream,
+          phone,
+          birthCertificateNo: normalizedBirthCert,
+          assessmentNo: normalizedAssessment
+        },
         synced: false,
         created_at: new Date().toISOString()
       });
