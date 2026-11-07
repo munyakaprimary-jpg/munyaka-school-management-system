@@ -93,11 +93,11 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const { collection, getDocs } = await import('firebase/firestore');
           let firestoreDb: any = null;
           try {
-            const fbConfig = await import('../firebaseConfig');
+            const fbConfig = await import('../config/firebase');
             firestoreDb = fbConfig.db;
           } catch {
             try {
-              const fbConfig2 = await import('../services/firebase');
+              const fbConfig2 = await import('../lib/firebaseClient');
               firestoreDb = fbConfig2.db;
             } catch {}
           }
