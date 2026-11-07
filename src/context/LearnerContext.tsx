@@ -48,8 +48,20 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [learners, setLearnersState] = useState<any[]>(() => {
     try {
+      const deduplicateLearners = (list: any[]) => {
+        const seen = new Set();
+        return list.filter((learner) => {
+          const key = learner.admNo || learner.admissionNumber || learner.id || `${learner.fullName || learner.name || ''}-${learner.dob || ''}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      };
       const stored = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2');
-      return stored ? JSON.parse(stored) : [];
+      const parsed = stored ? JSON.parse(stored) : [];
+      const clean = deduplicateLearners(parsed);
+      localStorage.setItem('munyaka_learners', JSON.stringify(clean));
+      return clean;
     } catch (e) {
       console.error("Failed to parse learners storage", e);
       return [];
