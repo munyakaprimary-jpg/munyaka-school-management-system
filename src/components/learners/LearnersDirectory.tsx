@@ -288,13 +288,13 @@ export default function LearnersDirectory() {
                     }}
                   />
                 </th>
-                <th className="py-4 px-6">Admission No</th>
-                <th className="py-4 px-6">Assessment No / Birth Certificate No</th>
-                <th className="py-4 px-6">Student Full Name</th>
-                <th className="py-4 px-6">Grade & Stream</th>
-                <th className="py-4 px-6">Gender</th>
-                <th className="py-4 px-6">Parent / Guardian</th>
-                <th className="py-4 px-6 text-right">Actions</th>
+                <th className="p-3">ADMISSION NO.</th>
+                <th className="p-3">ASSESSMENT NO. / BIRTH CERTIFICATE NO.</th>
+                <th className="p-3">FULL NAME</th>
+                <th className="p-3">GRADE & STREAM</th>
+                <th className="py-4 px-6">GENDER</th>
+                <th className="py-4 px-6">PARENT / GUARDIAN</th>
+                <th className="py-4 px-6 text-right">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
