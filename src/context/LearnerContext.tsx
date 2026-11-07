@@ -87,13 +87,41 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         });
 
+        // 1. Prioritize fetching live documents from Firestore learners collection
+        let firestoreLearners: any[] = [];
+        try {
+          const { collection, getDocs } = await import('firebase/firestore');
+          let firestoreDb: any = null;
+          try {
+            const fbConfig = await import('../firebaseConfig');
+            firestoreDb = fbConfig.db;
+          } catch {
+            try {
+              const fbConfig2 = await import('../services/firebase');
+              firestoreDb = fbConfig2.db;
+            } catch {}
+          }
+
+          if (firestoreDb) {
+            const querySnapshot = await getDocs(collection(firestoreDb, 'learners'));
+            firestoreLearners = querySnapshot.docs.map(docSnap => ({
+              id: docSnap.id,
+              ...docSnap.data()
+            }));
+          }
+        } catch (fbErr) {
+          console.warn('Firebase Firestore learners fetch skipped/failed, using local fallback:', fbErr);
+        }
+
         const storedLocal = localStorage.getItem(STORAGE_KEY_LEARNERS_V2) || localStorage.getItem('munyaka_learners') || '[]';
         let parsedList = [];
         try {
           parsedList = JSON.parse(storedLocal);
         } catch {}
 
-        const learnersList = deduplicateLearners((Array.isArray(parsedList) ? parsedList : []).map(formatLearnerDoc)).filter(l => {
+        const combinedList = firestoreLearners.length > 0 ? firestoreLearners : (Array.isArray(parsedList) ? parsedList : []);
+
+        const learnersList = deduplicateLearners(combinedList.map(formatLearnerDoc)).filter(l => {
           const fn = String(l.fullName || l.name || '').trim();
           if (!fn) return false;
           return true;
