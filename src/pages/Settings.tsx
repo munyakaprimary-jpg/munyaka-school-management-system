@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
-import { DEFAULT_RBAC_ROLES, RBAC_MODULES, RBAC_STORAGE_KEY, getRbacMatrix, EXACT_RBAC_ROLES } from '@/config/rbac';
 import SecurityAuthTab from '@/components/settings/SecurityAuthTab';
 import FirestoreSyncTab from '@/components/settings/FirestoreSyncTab';
 import Modal from '@/components/ui/Modal';
@@ -96,17 +95,11 @@ const SYSTEM_ROLES = [
 
 const MODULE_PERMISSIONS = [
   { id: 'dashboard', name: 'Dashboard & Overview' },
-  { id: 'students', name: 'Student Profiles & Admissions' },
-  { id: 'academics', name: 'Exam Marks & CBC Assessments' },
-  { id: 'attendance', name: 'Attendance & Roll Call' },
-  { id: 'homework', name: 'Homework & Assignments' },
-  { id: 'timetable', name: 'Subject Timetable' },
+  { id: 'students', name: 'Student Profiles' },
+  { id: 'academics', name: 'Timetable & CBC Assessments' },
   { id: 'fees', name: 'Fees & Financial Ledgers' },
-  { id: 'library', name: 'Library Catalog & E-Resources' },
+  { id: 'library', name: 'Library & E-Resources' },
   { id: 'ict', name: 'ICT Lab & Hardware Inventory' },
-  { id: 'science_lab', name: 'Science Lab Inventory & Safety' },
-  { id: 'stores', name: 'School Stores & Procurement' },
-  { id: 'staff', name: 'Staff Management' },
   { id: 'settings', name: 'System Settings & RBAC' },
 ];
 
@@ -121,6 +114,35 @@ const DEFAULT_RBAC_MATRIX: Record<string, Record<string, boolean>> = {
   Bursar: { dashboard: true, students: false, academics: false, attendance: false, homework: false, timetable: false, fees: true, library: false, ict: false, science_lab: false, stores: false, staff: false, settings: false },
   'Store Master': { dashboard: true, students: false, academics: false, attendance: false, homework: false, timetable: false, fees: false, library: false, ict: false, science_lab: false, stores: true, staff: false, settings: false },
 };
+
+const RBAC_STORAGE_KEY = 'munyaka_rbac_matrix';
+
+const EXACT_RBAC_ROLES = [
+  "HOI",
+  "DHOI",
+  "Class Teacher",
+  "Subject Teacher",
+  "ICT Teacher",
+  "Library Teacher",
+  "Lab Teacher",
+  "Bursar",
+  "Store Master"
+] as const;
+
+function getRbacMatrix(): Record<string, Record<string, boolean>> {
+  try {
+    const raw = localStorage.getItem(RBAC_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return { ...DEFAULT_RBAC_MATRIX, ...parsed };
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return DEFAULT_RBAC_MATRIX;
+}
 
 export default function Settings() {
   const [settings, setSettings] = useState<SystemSettings>(() => {
@@ -547,44 +569,44 @@ export default function Settings() {
             <CardContent className="px-0 pt-6 space-y-6">
               <div className="space-y-6">
                 {EXACT_RBAC_ROLES.map(roleId => {
-                                  const role = SYSTEM_ROLES.find(r => r.id === roleId);
-                                  if (!role) return null;
-                                  return (
-                                    <div key={role.id} className="p-5 bg-slate-50/80 rounded-2xl border space-y-4">
-                                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                        <div>
-                                          <div className="flex items-center gap-2">
-                                            <h4 className="font-bold text-slate-900 text-base">{role.name}</h4>
-                                            <Badge variant="outline" className="font-mono text-xs uppercase">{role.id}</Badge>
-                                          </div>
-                                          <p className="text-xs text-muted-foreground mt-0.5">{role.description}</p>
-                                        </div>
-                                      </div>
+                  const role = SYSTEM_ROLES.find(r => r.id === roleId);
+                  if (!role) return null;
+                  return (
+                    <div key={role.id} className="p-5 bg-slate-50/80 rounded-2xl border space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-slate-900 text-base">{role.name}</h4>
+                            <Badge variant="outline" className="font-mono text-xs uppercase">{role.id}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">{role.description}</p>
+                        </div>
+                      </div>
                 
-                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                                        {MODULE_PERMISSIONS.map(mod => {
-                                          const isAllowed = Boolean(rbacMatrix[role.id]?.[mod.id]);
-                                          return (
-                                            <div
-                                              key={mod.id}
-                                              onClick={() => handlePermissionToggle(role.id, mod.id)}
-                                              className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                                                isAllowed
-                                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-sm'
-                                                  : 'bg-white border-slate-200 text-slate-400 opacity-60 hover:opacity-100'
-                                              }`}
-                                            >
-                                              <span className="text-xs font-bold truncate">{mod.name}</span>
-                                              <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isAllowed ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                                                {isAllowed ? <Check size={12} /> : <X size={12} />}
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                        {MODULE_PERMISSIONS.map(mod => {
+                          const isAllowed = Boolean(rbacMatrix[role.id]?.[mod.id]);
+                          return (
+                            <div
+                              key={mod.id}
+                              onClick={() => handlePermissionToggle(role.id, mod.id)}
+                              className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                                isAllowed
+                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-sm'
+                                  : 'bg-white border-slate-200 text-slate-400 opacity-60 hover:opacity-100'
+                              }`}
+                            >
+                              <span className="text-xs font-bold truncate">{mod.name}</span>
+                              <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isAllowed ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                                {isAllowed ? <Check size={12} /> : <X size={12} />}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
