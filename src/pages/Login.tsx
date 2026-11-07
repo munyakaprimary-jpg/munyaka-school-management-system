@@ -412,8 +412,8 @@ const Login: React.FC = () => {
           showSuccess(`Welcome, ${config.userName}!`);
           setIsAdminVerifying(false);
           let redirectTarget = '/dashboard';
-          if (selectedAdminRole === 'bursar') redirectTarget = '/fees';
-          else if (selectedAdminRole === 'ict' || selectedAdminRole === 'lab') redirectTarget = '/server';
+          if ((selectedAdminRole as string) === 'bursar') redirectTarget = '/fees';
+          else if ((selectedAdminRole as string) === 'ict' || (selectedAdminRole as string) === 'lab') redirectTarget = '/server';
           navigate(redirectTarget, { replace: true });
           return;
         }
