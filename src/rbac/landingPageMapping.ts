@@ -1,15 +1,36 @@
 import { getPermissionsMatrix, getDefaultLandingPage } from './permissionMatrix';
 
-export function getRoleLandingPage(role: string, customPermissions?: Record<string, boolean>, staffMember?: { title?: string; category?: string; assignedClass?: string }): string {
-  const normRole = String(role || '').trim().toUpperCase();
+export function getRoleLandingPage(role: string, customPermissions?: Record<string, boolean>, staffMember?: { title?: string; category?: string; assignedClass?: string; role?: string }): string {
+  const normRole = String(role || staffMember?.role || '').trim();
+  const lowerRole = normRole.toLowerCase();
   const title = String(staffMember?.title || staffMember?.category || '').trim().toLowerCase();
+
+  // Route based on assigned role / title
+  if (lowerRole.includes('bursar') || title.includes('bursar') || title.includes('accountant')) {
+    return '/fees';
+  }
+  if (lowerRole.includes('ict') || lowerRole.includes('lab') || title.includes('ict') || title.includes('computer') || title.includes('lab')) {
+    return '/server';
+  }
+  if (lowerRole.includes('store') || title.includes('store')) {
+    return '/payments';
+  }
+  if (lowerRole.includes('library') || title.includes('library') || title.includes('librarian')) {
+    return '/library';
+  }
+  if (lowerRole.includes('hoi') || lowerRole.includes('dhoi') || title.includes('hoi') || title.includes('head')) {
+    return '/dashboard';
+  }
+  if (lowerRole.includes('teacher') || lowerRole.includes('staff') || normRole === 'Class Teacher') {
+    return '/roll-call';
+  }
 
   // Check specialized staff titles / roles first
   if (title.includes('library') || title.includes('librarian')) {
     return '/library';
   }
-  if (title.includes('ict') || title.includes('computer')) {
-    return '/inventory';
+  if (title.includes('ict') || title.includes('computer') || title.includes('lab')) {
+    return '/server';
   }
   if (title.includes('bursar') || title.includes('accountant')) {
     return '/fees';
@@ -42,5 +63,5 @@ export function getRoleLandingPage(role: string, customPermissions?: Record<stri
     }
   }
 
-  return getDefaultLandingPage(normRole);
+  return getDefaultLandingPage(normRole.toUpperCase());
 }
