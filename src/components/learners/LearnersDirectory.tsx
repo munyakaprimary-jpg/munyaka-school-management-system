@@ -41,11 +41,23 @@ export default function LearnersDirectory() {
   const [pendingDelete, setPendingDelete] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Filtered & Searched Learners
+  // Filtered & Searched Learners & Deduplication
   const filteredLearners = useMemo(() => {
     const searchClean = (searchTerm || '').toString().toLowerCase().trim();
-    return (learners || []).filter(learner => {
+    
+    // Deduplicate by admissionNo or id or fullName+grade
+    const seen = new Set();
+    const uniqueLearners = (learners || []).filter(learner => {
       if (!learner) return false;
+      const adm = (learner.admissionNo || learner.admissionNumber || learner.admNo || learner.id || '').toString().trim().toLowerCase();
+      const name = (learner.fullName || learner.name || learner.studentName || '').toString().trim().toLowerCase();
+      const key = adm || `${name}_${learner.gradeLevel || learner.grade || ''}_${learner.stream || ''}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return uniqueLearners.filter(learner => {
       const name = (learner.fullName || learner.name || learner.studentName || '').toString().toLowerCase();
       const adm = (learner.admissionNo || learner.admissionNumber || learner.admNo || learner.id || '').toString().toLowerCase();
       const identifier = (learner.idValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '').toString().toLowerCase();
