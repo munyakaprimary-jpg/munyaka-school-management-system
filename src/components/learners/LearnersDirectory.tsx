@@ -286,25 +286,25 @@ export default function LearnersDirectory() {
         <div className="overflow-x-auto mt-4">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                <th className="p-3 w-10">
+              <tr className="border-b bg-gray-50 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                <th className="p-3 w-10 text-center">
                   <input
                     type="checkbox"
                     checked={filteredLearners.length > 0 && selectedIds.length === filteredLearners.length}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setSelectedIds(filteredLearners.map(l => l.id || l.admNo));
+                        setSelectedIds(filteredLearners.map(l => l.id || l.birthCertificateNo || l.assessmentNo || l.admNo));
                       } else {
                         setSelectedIds([]);
                       }
                     }}
                   />
                 </th>
-                <th className="p-3">ASSESSMENT NO. / BIRTH CERTIFICATE NO.</th>
-                <th className="p-3">FULL NAME</th>
-                <th className="p-3">GRADE & STREAM</th>
-                <th className="py-4 px-6">GENDER</th>
-                <th className="py-4 px-6">PARENT / GUARDIAN</th>
+                <th className="p-3 text-left">ASSESSMENT NO. / BIRTH CERTIFICATE NO.</th>
+                <th className="p-3 text-left">FULL NAME</th>
+                <th className="p-3 text-left">GRADE & STREAM</th>
+                <th className="py-4 px-6 text-left">GENDER</th>
+                <th className="py-4 px-6 text-left">PARENT / GUARDIAN</th>
                 <th className="py-4 px-6 text-right">ACTIONS</th>
               </tr>
             </thead>
@@ -316,20 +316,22 @@ export default function LearnersDirectory() {
                   </td>
                 </tr>
               ) : (
-                filteredLearners.map((learner, idx) => (
-                  <tr key={learner.id || learner.admissionNo || idx} className="hover:bg-slate-50/85 transition-colors">
-                    <td className="p-3 w-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(learner.id || learner.admNo)}
-                        onChange={(e) => {
-                          const id = learner.id || learner.admNo;
-                          setSelectedIds(prev =>
-                            e.target.checked ? [...prev, id] : prev.filter(item => item !== id)
-                          );
-                        }}
-                      />
-                    </td>
+                filteredLearners.map((learner, idx) => {
+                  const uniqueKey = learner.id || learner.birthCertificateNo || learner.assessmentNo || learner.admissionNo || learner.fullName || idx;
+                  return (
+                    <tr key={uniqueKey} className="hover:bg-slate-50/85 transition-colors">
+                      <td className="p-3 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(learner.id || learner.birthCertificateNo || learner.assessmentNo || learner.admNo)}
+                          onChange={(e) => {
+                            const id = learner.id || learner.birthCertificateNo || learner.assessmentNo || learner.admNo;
+                            setSelectedIds(prev =>
+                              e.target.checked ? [...prev, id] : prev.filter(item => item !== id)
+                            );
+                          }}
+                        />
+                      </td>
                     <td className="py-4 px-6 font-mono text-xs text-slate-700 font-semibold">
                       {learner.idValue || learner.birthCertificateNo || learner.birthCertNo || learner.assessmentNo || learner.assessmentNumber || '—'}
                     </td>
@@ -358,7 +360,8 @@ export default function LearnersDirectory() {
                       </Button>
                     </td>
                   </tr>
-                ))
+                );
+              })
               )}
             </tbody>
           </table>
