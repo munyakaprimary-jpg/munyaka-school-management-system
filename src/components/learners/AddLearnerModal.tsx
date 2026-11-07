@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { getLearners, saveLearners, addPendingSyncItem } from '@/utils/storage';
-import { generateCohortAdmissionNumber } from '@/utils/admissionUtils';
 import { Learner } from '@/types/learners';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { useLearners } from '@/context/LearnerContext';
@@ -43,18 +42,9 @@ export default function AddLearnerModal({
   onLearnerAdded,
 }: AddLearnerModalProps) {
   const { addLearner: contextAddLearner } = useLearners();
-  const [existingLearners, setExistingLearners] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (isOpen) {
-      const data = getLearners();
-      setExistingLearners(Array.isArray(data) ? data : []);
-    }
-  }, [isOpen]);
 
   const [formData, setFormData] = useState({
     fullName: '',
-    admissionNo: '',
     grade: 'Grade 4',
     stream: 'Blue',
     guardian: '',
@@ -68,16 +58,13 @@ export default function AddLearnerModal({
 
   useEffect(() => {
     if (isOpen) {
-      const existingLearners = getLearners();
-      const freshAdmNo = generateCohortAdmissionNumber(formData.grade, existingLearners);
       setFormData(prev => ({
         ...prev,
-        admissionNo: freshAdmNo,
         phone: prev.phone && prev.phone !== '' ? prev.phone : '+254',
         location: prev.location || 'Eldoret'
       }));
     }
-  }, [isOpen, formData.grade]);
+  }, [isOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -85,14 +72,7 @@ export default function AddLearnerModal({
   };
 
   const handleSelectChange = (field: string, value: string) => {
-    setFormData(prev => {
-      const updated = { ...prev, [field]: value };
-      if (field === 'grade') {
-        const existingLearners = getLearners();
-        updated.admissionNo = generateCohortAdmissionNumber(value, existingLearners);
-      }
-      return updated;
-    });
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSaveLearner = async (e: React.FormEvent) => {
@@ -113,20 +93,16 @@ export default function AddLearnerModal({
     try {
       const selectedGrade = formData.grade;
       const selectedStream = formData.stream;
-      const admissionNumber = formData.admissionNo || generateCohortAdmissionNumber(selectedGrade, existingLearners);
       const gender = (formData as any).gender || 'Not Specified';
       const dateOfBirth = (formData as any).dateOfBirth || '';
       const parentName = formData.guardian.trim() || '—';
-      const phone = formData.phone.trim() || '+254';
 
       const idType = formData.identifierType || 'assessment';
       const identifierValue = formData.identifierValue.trim() || '';
+      const uniqueId = identifierValue || `MUN-${Date.now().toString().slice(-4)}`;
 
       const newLearnerRecord = {
-        id: admissionNumber || `MUN-${Date.now().toString().slice(-4)}`,
-        admissionNo: admissionNumber,
-        admissionNumber: admissionNumber,
-        admNo: admissionNumber,
+        id: uniqueId,
         idType: idType,
         idValue: identifierValue,
         assessmentNo: idType === 'assessment' ? identifierValue : '',
@@ -208,17 +184,6 @@ export default function AddLearnerModal({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="admissionNo">Admission No.</Label>
-            <Input
-              id="admissionNo"
-              name="admissionNo"
-              placeholder="Auto-generated"
-              value={formData.admissionNo}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="grade">Grade *</Label>
             <Select
               value={formData.grade}
@@ -230,6 +195,23 @@ export default function AddLearnerModal({
               <SelectContent>
                 {GRADE_OPTIONS.map((g) => (
                   <SelectItem key={g} value={g}>{g}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="stream">Stream *</Label>
+            <Select
+              value={formData.stream}
+              onValueChange={(val) => handleSelectChange('stream', val)}
+            >
+              <SelectTrigger id="stream">
+                <SelectValue placeholder="Select Stream" />
+              </SelectTrigger>
+              <SelectContent>
+                {STREAM_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -267,23 +249,6 @@ export default function AddLearnerModal({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="stream">Stream *</Label>
-            <Select
-              value={formData.stream}
-              onValueChange={(val) => handleSelectChange('stream', val)}
-            >
-              <SelectTrigger id="stream">
-                <SelectValue placeholder="Select Stream" />
-              </SelectTrigger>
-              <SelectContent>
-                {STREAM_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="guardian">Guardian Name *</Label>
             <Input
               id="guardian"
@@ -294,9 +259,7 @@ export default function AddLearnerModal({
               required
             />
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="phone">Phone (+254...) *</Label>
             <Input
@@ -309,18 +272,18 @@ export default function AddLearnerModal({
               required
             />
           </div>
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Location *</Label>
-            <Input
-              id="location"
-              name="location"
-              placeholder="e.g. Eldoret"
-              value={formData.location}
-              onChange={handleChange}
-              required
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="location">Location *</Label>
+          <Input
+            id="location"
+            name="location"
+            placeholder="e.g. Eldoret"
+            value={formData.location}
+            onChange={handleChange}
+            required
+          />
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
