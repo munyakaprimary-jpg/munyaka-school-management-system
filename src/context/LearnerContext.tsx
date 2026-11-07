@@ -57,15 +57,6 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [learners, setLearnersState] = useState<any[]>(() => {
     try {
-      const deduplicateLearners = (list: any[]) => {
-        const seen = new Set();
-        return list.filter((learner) => {
-          const key = learner.admNo || learner.admissionNumber || learner.id || `${learner.fullName || learner.name || ''}-${learner.dob || ''}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-      };
       const parsed = getStoredLearners();
       const clean = deduplicateLearners(parsed);
       saveStoredLearners(clean);

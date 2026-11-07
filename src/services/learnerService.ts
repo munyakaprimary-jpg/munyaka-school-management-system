@@ -133,6 +133,29 @@ export const deleteLearner = async (id: string): Promise<boolean> => {
 
 export const generateLearnerId = () => `MUN-${Math.floor(1000 + Math.random() * 9000)}-${new Date().getFullYear()}`;
 export const findExistingLearner = (list: any[], l: any) => list.find(item => item.id === l.id || item.admissionNumber === l.admissionNumber);
-export const dedupeLearnersById = (list: any[]) => list;
-export const deduplicateLearnersById = (list: any[]) => list;
-export const deduplicateLearners = (list: any[]) => list;
+export const dedupeLearnersById = (list: any[]) => {
+  const seen = new Set<string>();
+  return (list || []).filter((learner) => {
+    if (!learner) return false;
+    const identifier = (
+      learner.birthCertificateNo ||
+      learner.birthCertNo ||
+      learner.assessmentNo ||
+      learner.admissionNumber ||
+      learner.admissionNo ||
+      learner.admNo ||
+      learner.fullName ||
+      learner.name ||
+      ''
+    ).trim().toLowerCase();
+
+    if (!identifier || seen.has(identifier)) {
+      return false;
+    }
+    seen.add(identifier);
+    return true;
+  });
+};
+
+export const deduplicateLearnersById = dedupeLearnersById;
+export const deduplicateLearners = dedupeLearnersById;
