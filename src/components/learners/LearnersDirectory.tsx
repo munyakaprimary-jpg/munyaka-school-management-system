@@ -300,6 +300,7 @@ export default function LearnersDirectory() {
                     }}
                   />
                 </th>
+                <th className="p-3">ADMISSION NO.</th>
                 <th className="p-3">ASSESSMENT NO. / BIRTH CERTIFICATE NO.</th>
                 <th className="p-3">FULL NAME</th>
                 <th className="p-3">GRADE & STREAM</th>
@@ -311,7 +312,7 @@ export default function LearnersDirectory() {
             <tbody className="divide-y divide-slate-100">
               {filteredLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-20 text-center text-slate-400 font-medium">
+                  <td colSpan={8} className="py-20 text-center text-slate-400 font-medium">
                     No learner records found. Click <span className="text-indigo-600 font-bold">+ Register New Learner</span> above to register a new student.
                   </td>
                 </tr>
@@ -324,11 +325,14 @@ export default function LearnersDirectory() {
                         checked={selectedIds.includes(learner.id || learner.admNo)}
                         onChange={(e) => {
                           const id = learner.id || learner.admNo;
-                          setSelectedIds(prev =>
+                          setSelectedIds(prev => 
                             e.target.checked ? [...prev, id] : prev.filter(item => item !== id)
                           );
                         }}
                       />
+                    </td>
+                    <td className="py-4 px-6 font-mono font-bold text-xs text-indigo-600">
+                      {learner.admissionNo || learner.admissionNumber || learner.admNo || '—'}
                     </td>
                     <td className="py-4 px-6 font-mono text-xs text-slate-700 font-semibold">
                       {learner.idValue || learner.birthCertificateNo || learner.birthCertNo || learner.assessmentNo || learner.assessmentNumber || '—'}
