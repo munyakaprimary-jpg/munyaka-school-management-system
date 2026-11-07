@@ -185,7 +185,18 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
 // All authenticated users (regardless of role) land on the main dashboard.
 // This intentionally bypasses any secondary landing / role-selection screens.
 
-function getStaffRedirectPath(_systemRole: string): string {
+function getStaffRedirectPath(systemRole: string): string {
+  try {
+    const rawMatrix = localStorage.getItem('munyaka_rbac_matrix');
+    if (rawMatrix) {
+      const matrix = JSON.parse(rawMatrix);
+      const permissions = matrix[systemRole] || matrix['HOI'] || {};
+      if (permissions.fees) return '/fees';
+      if (permissions.ict) return '/server';
+      if (permissions.students || permissions.academics || permissions.attendance) return '/learners';
+      if (permissions.library) return '/library';
+    }
+  } catch {}
   return '/dashboard';
 }
 
@@ -400,7 +411,10 @@ const Login: React.FC = () => {
           localStorage.setItem('userRole', selectedAdminRole);
           showSuccess(`Welcome, ${config.userName}!`);
           setIsAdminVerifying(false);
-          navigate('/dashboard', { replace: true });
+          let redirectTarget = '/dashboard';
+          if (selectedAdminRole === 'bursar') redirectTarget = '/fees';
+          else if (selectedAdminRole === 'ict' || selectedAdminRole === 'lab') redirectTarget = '/server';
+          navigate(redirectTarget, { replace: true });
           return;
         }
       }
