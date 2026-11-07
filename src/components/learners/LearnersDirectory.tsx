@@ -39,7 +39,6 @@ export default function LearnersDirectory() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<any>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Filtered & Searched Learners
   const filteredLearners = useMemo(() => {
@@ -233,19 +232,6 @@ export default function LearnersDirectory() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                <th className="py-4 px-4 w-10">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.length > 0 && selectedIds.length === filteredLearners.length}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedIds(filteredLearners.map((l) => l.id || l.admNo || l.admissionNo || l.admissionNumber));
-                      } else {
-                        setSelectedIds([]);
-                      }
-                    }}
-                  />
-                </th>
                 <th className="py-4 px-6">Admission No</th>
                 <th className="py-4 px-6">Assessment No / Birth Certificate No</th>
                 <th className="py-4 px-6">Student Full Name</th>
@@ -258,29 +244,13 @@ export default function LearnersDirectory() {
             <tbody className="divide-y divide-slate-100">
               {filteredLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-20 text-center text-slate-400 font-medium">
+                  <td colSpan={7} className="py-20 text-center text-slate-400 font-medium">
                     No learner records found. Click <span className="text-indigo-600 font-bold">+ Register New Learner</span> above to register a new student.
                   </td>
                 </tr>
               ) : (
-                filteredLearners.map((learner, idx) => {
-                  const learnerId = learner.id || learner.admNo || learner.admissionNo || learner.admissionNumber;
-                  const isSelected = selectedIds.includes(learnerId);
-                  return (
-                  <tr key={learnerId || idx} className={`hover:bg-slate-50/80 transition-colors ${isSelected ? 'bg-indigo-50/50' : ''}`}>
-                    <td className="py-4 px-4 w-10">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedIds([...selectedIds, learnerId]);
-                          } else {
-                            setSelectedIds(selectedIds.filter(id => id !== learnerId));
-                          }
-                        }}
-                      />
-                    </td>
+                filteredLearners.map((learner, idx) => (
+                  <tr key={learner.id || learner.admissionNo || idx} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-4 px-6 font-mono font-bold text-xs text-indigo-600">
                       {learner.admissionNo || learner.admissionNumber || learner.admNo || '—'}
                     </td>
@@ -312,8 +282,7 @@ export default function LearnersDirectory() {
                       </Button>
                     </td>
                   </tr>
-                  );
-                })
+                ))
               )}
             </tbody>
           </table>
