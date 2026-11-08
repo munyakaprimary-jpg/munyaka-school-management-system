@@ -310,7 +310,7 @@ export default function AddLearnerModal({
             id="dateOfBirth"
             name="dateOfBirth"
             placeholder="YYYY-MM-DD"
-            value={formData.dateOfBirth}
+            value={(formData as any).dateOfBirth || ''}
             onChange={handleChange}
           />
         </div>

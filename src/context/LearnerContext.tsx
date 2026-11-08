@@ -302,6 +302,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const resetToSeedData = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem('munyaka_learners_v2');
+    localStorage.removeItem('munyaka_central_db');
     localStorage.removeItem('school_learners_data');
     localStorage.removeItem('munyaka_students');
     localStorage.removeItem('cached_learners');
