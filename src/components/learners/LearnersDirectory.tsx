@@ -320,52 +320,66 @@ export default function LearnersDirectory() {
                   </td>
                 </tr>
               ) : (
-                filteredLearners.map((learner, idx) => (
-                  <tr key={learner.id || learner.admissionNo || idx} className="hover:bg-slate-50/85 transition-colors">
-                    <td className="p-3 w-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(learner.id || learner.admNo)}
-                        onChange={(e) => {
-                          const id = learner.id || learner.admNo;
-                          setSelectedIds(prev => 
-                            e.target.checked ? [...prev, id] : prev.filter(item => item !== id)
-                          );
-                        }}
-                      />
-                    </td>
-                    <td className="py-4 px-6 font-mono font-bold text-xs text-indigo-600">
-                      {learner.admissionNo || learner.admissionNumber || learner.admNo || '—'}
-                    </td>
-                    <td className="py-4 px-6 font-mono text-xs text-slate-700 font-semibold">
-                      {learner.idValue || learner.birthCertificateNo || learner.birthCertNo || learner.assessmentNo || learner.assessmentNumber || '—'}
-                    </td>
-                    <td className="py-4 px-6 font-bold text-slate-900">
-                      {learner.fullName || learner.name || learner.studentName || '—'}
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
-                        {learner.gradeAndStream || `${learner.gradeLevel || learner.grade || ''} (${learner.stream || ''})`.trim() || '—'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-xs font-medium text-slate-600">
-                      {learner.gender || learner.sex || '—'}
-                    </td>
-                    <td className="py-4 px-6 text-sm text-slate-700 font-medium">
-                      {learner.parentName || learner.parentGuardian || learner.guardian || '—'}
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => requestDelete(learner)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                filteredLearners.map((learner, index) => {
+                  const rowKey = learner.id ||
+                                 learner.admissionNo ||
+                                 learner.birthCertificateNo ||
+                                 learner.assessmentNo ||
+                                 `learner-${index}-${(learner.fullName || learner.name || '').replace(/\s+/g, '-').toLowerCase()}`;
+
+                  const identifier = learner.id ||
+                                       learner.admissionNo ||
+                                       learner.birthCertificateNo ||
+                                       learner.assessmentNo ||
+                                       learner.fullName ||
+                                       learner.name;
+
+                  return (
+                    <tr key={rowKey} className="hover:bg-slate-50/85 transition-colors">
+                      <td className="p-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(identifier)}
+                          onChange={(e) => {
+                            setSelectedIds(prev =>
+                              e.target.checked ? [...prev, identifier] : prev.filter(item => item !== identifier)
+                            );
+                          }}
+                        />
+                      </td>
+                      <td className="py-4 px-6 font-mono font-bold text-xs text-indigo-600">
+                        {learner.admissionNo || learner.admissionNumber || learner.admNo || '—'}
+                      </td>
+                      <td className="py-4 px-6 font-mono text-xs text-slate-700 font-semibold">
+                        {learner.idValue || learner.birthCertificateNo || learner.birthCertNo || learner.assessmentNo || learner.assessmentNumber || '—'}
+                      </td>
+                      <td className="py-4 px-6 font-bold text-slate-900">
+                        {learner.fullName || learner.name || learner.studentName || '—'}
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
+                          {learner.gradeAndStream || `${learner.gradeLevel || learner.grade || ''} (${learner.stream || ''})`.trim() || '—'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-xs font-medium text-slate-600">
+                        {learner.gender || learner.sex || '—'}
+                      </td>
+                      <td className="py-4 px-6 text-sm text-slate-700 font-medium">
+                        {learner.parentName || learner.parentGuardian || learner.guardian || '—'}
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => requestDelete(learner)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
