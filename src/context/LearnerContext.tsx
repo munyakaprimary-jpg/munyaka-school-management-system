@@ -157,12 +157,13 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Unified addLearner: Saves both to React State AND localStorage simultaneously before Firestore sync
   const addLearner = useCallback(async (newLearner: any) => {
-    const normalizedNew = {
-      ...newLearner,
-      id: newLearner.id ? String(newLearner.id) : generateLearnerId(),
-      createdAt: newLearner.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+      const currentStored = getStoredLearners();
+      const normalizedNew = {
+        ...newLearner,
+        id: newLearner.id ? String(newLearner.id) : generateLearnerId(currentStored),
+        createdAt: newLearner.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
 
     try {
       const currentStored = getStoredLearners();

@@ -131,7 +131,42 @@ export const deleteLearner = async (id: string): Promise<boolean> => {
   return learnerService.deleteLearner(id);
 };
 
-export const generateLearnerId = () => `MUN-${Math.floor(1000 + Math.random() * 9000)}-${new Date().getFullYear()}`;
+export const generateAdmissionNumber = (existingLearners: any[]) => {
+  const currentYear = new Date().getFullYear();
+  const yearPrefix = `-${currentYear}`;
+  
+  // Find existing learners for this year to determine next sequence
+  const currentYearLearners = (existingLearners || []).filter(l => {
+    const adm = l.admNo || l.admissionNo || l.admissionNumber || '';
+    return adm.includes(yearPrefix);
+  });
+
+  let maxSeq = 0;
+  currentYearLearners.forEach(l => {
+    const adm = l.admNo || l.admissionNo || l.admissionNumber || '';
+    // Extract middle digits e.g., MUN-049-2026 -> 49
+    const parts = adm.split('-');
+    if (parts.length >= 2) {
+      const seq = parseInt(parts[1], 10);
+      if (!isNaN(seq) && seq > maxSeq) {
+        maxSeq = seq;
+      }
+    }
+  });
+
+  const nextSeq = maxSeq + 1;
+  const formattedSeq = String(nextSeq).padStart(3, '0');
+  return `MUN-${formattedSeq}-${currentYear}`;
+};
+
+export const generateLearnerId = (existingLearners?: any[]) => {
+  if (existingLearners && existingLearners.length > 0) {
+    return generateAdmissionNumber(existingLearners);
+  }
+  // Fallback for when no existing learners are available
+  const currentYear = new Date().getFullYear();
+  return `MUN-001-${currentYear}`;
+};
 export const findExistingLearner = (list: any[], l: any) => list.find(item => item.id === l.id || item.admissionNumber === l.admissionNumber);
 export const dedupeLearnersById = (list: any[]) => {
   const seen = new Set<string>();
