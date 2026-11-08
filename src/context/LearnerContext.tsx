@@ -254,25 +254,24 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteLearner = useCallback(async (admissionNumber: string) => {
     try {
-      setLearners((prevLearners) => {
-        const updated = prevLearners.filter((learner) => {
-          const matchAdmNo = learner.admNo === admissionNumber || learner.admissionNumber === admissionNumber || learner.admission_number === admissionNumber;
-          const matchId = learner.id === admissionNumber || learner._id === admissionNumber;
-          return !matchAdmNo && !matchId;
-        });
-
-        localStorage.setItem(STORAGE_KEY_MUNYAKA_LEARNERS, JSON.stringify(updated));
-        localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(updated));
-        localStorage.setItem('school_learners_data', JSON.stringify(updated));
-        localStorage.setItem('munyaka_students', JSON.stringify(updated));
-        return updated;
+      const currentStored = getStoredLearners();
+      const updated = currentStored.filter((learner: any) => {
+        const matchAdmNo = String(learner.admNo || '').trim() === String(admissionNumber).trim() || String(learner.admissionNumber || '').trim() === String(admissionNumber).trim() || String(learner.admission_number || '').trim() === String(admissionNumber).trim();
+        const matchId = String(learner.id || '').trim() === String(admissionNumber).trim() || String(learner._id || '').trim() === String(admissionNumber).trim();
+        const matchBirth = String(learner.birthCertificateNo || '').trim() === String(admissionNumber).trim();
+        const matchAssess = String(learner.assessmentNo || '').trim() === String(admissionNumber).trim();
+        return !matchAdmNo && !matchId && !matchBirth && !matchAssess;
       });
 
-      const currentStored = getStoredLearners();
+      saveStoredLearners(updated);
+      setLearners(filterLearnersForUser(updated));
+
       const learnerToDelete = currentStored.find((l: any) => {
         const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '');
         const lId = String(l.id || l._id || '');
-        return adm === admissionNumber || lId === admissionNumber;
+        const bCert = String(l.birthCertificateNo || '');
+        const assess = String(l.assessmentNo || '');
+        return adm === admissionNumber || lId === admissionNumber || bCert === admissionNumber || assess === admissionNumber;
       });
 
       if (learnerToDelete) {
@@ -287,7 +286,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (err) {
       console.error('[LearnerContext] deleteLearner error:', err);
     }
-  }, [setLearners]);
+  }, [filterLearnersForUser, setLearners]);
 
   const refreshLearners = useCallback(() => {
     try {
