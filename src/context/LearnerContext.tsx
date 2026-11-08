@@ -28,7 +28,6 @@ export const getStoredLearners = () => {
 
 export const saveStoredLearners = (learners: any[]) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(learners));
-  localStorage.setItem('munyaka_learners_v2', JSON.stringify(learners));
 };
 
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
