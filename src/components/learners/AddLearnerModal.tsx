@@ -247,6 +247,7 @@ export default function AddLearnerModal({
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="none">None / Skip</SelectItem>
                 <SelectItem value="assessment">Assessment Number / UPI</SelectItem>
                 <SelectItem value="birth_cert">Birth Certificate No.</SelectItem>
               </SelectContent>
