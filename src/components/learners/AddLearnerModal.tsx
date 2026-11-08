@@ -59,7 +59,6 @@ export default function AddLearnerModal({
     stream: 'Blue',
     guardian: '',
     phone: '+254',
-    location: 'Eldoret',
     identifierType: 'assessment' as 'assessment' | 'birth_cert',
     identifierValue: '',
   });
@@ -74,7 +73,6 @@ export default function AddLearnerModal({
         ...prev,
         admissionNo: freshAdmNo,
         phone: prev.phone && prev.phone !== '' ? prev.phone : '+254',
-        location: prev.location || 'Eldoret'
       }));
     }
   }, [isOpen, formData.grade]);
@@ -117,7 +115,7 @@ export default function AddLearnerModal({
       const gender = (formData as any).gender || 'Not Specified';
       const dateOfBirth = (formData as any).dateOfBirth || '';
       const parentName = formData.guardian.trim() || '—';
-      const phone = formData.phone.trim() || '+254';
+      const phoneValue = formData.phone.trim() || '+254';
 
       const idType = formData.identifierType || 'assessment';
       const identifierValue = formData.identifierValue.trim() || '';
@@ -144,8 +142,8 @@ export default function AddLearnerModal({
         dateOfBirth: dateOfBirth || '—',
         parentGuardian: parentName || '—',
         parentName: parentName || '—',
-        phoneNumber: phone || '—',
-        phone: phone || '—',
+        phoneNumber: phoneValue || '—',
+        phone: phoneValue || '—',
         status: 'Active',
         academicYear: '2026',
         createdAt: new Date().toISOString()
@@ -238,10 +236,70 @@ export default function AddLearnerModal({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
+            <Label htmlFor="stream">Stream *</Label>
+            <Select
+              value={formData.stream}
+              onValueChange={(val) => handleSelectChange('stream', val)}
+            >
+              <SelectTrigger id="stream">
+                <SelectValue placeholder="Select Stream" />
+              </SelectTrigger>
+              <SelectContent>
+                {STREAM_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gender">Gender</Label>
+            <Select
+              value={(formData as any).gender || 'Not Specified'}
+              onValueChange={(val: any) => setFormData(prev => ({ ...prev, gender: val }))}
+            >
+              <SelectTrigger id="gender">
+                <SelectValue placeholder="Select Gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="parentGuardian">Parent / Guardian</Label>
+            <Input
+              id="parentGuardian"
+              name="guardian"
+              placeholder="e.g. Joseph Kiprop"
+              value={formData.guardian}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number *</Label>
+            <Input
+              id="phone"
+              name="phone"
+              placeholder="+254700123456"
+              value={formData.phone}
+              onChange={handleChange}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
             <Label htmlFor="identifierType">Identifier Type</Label>
             <Select
               value={formData.identifierType}
-              onValueChange={(val: any) => handleSelectChange('identifierType', val)}
+              onValueChange={(val: any) => setFormData(prev => ({ ...prev, identifierType: val }))}
             >
               <SelectTrigger id="identifierType">
                 <SelectValue placeholder="Select type" />
@@ -266,82 +324,24 @@ export default function AddLearnerModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="stream">Stream *</Label>
-            <Select
-              value={formData.stream}
-              onValueChange={(val) => handleSelectChange('stream', val)}
-            >
-              <SelectTrigger id="stream">
-                <SelectValue placeholder="Select Stream" />
-              </SelectTrigger>
-              <SelectContent>
-                {STREAM_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="guardian">Guardian Name *</Label>
-            <Input
-              id="guardian"
-              name="guardian"
-              placeholder="e.g. Mary Kiprop"
-              value={formData.guardian}
-              onChange={handleChange}
-              required
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="dateOfBirth">Date of Birth</Label>
+          <Input
+            id="dateOfBirth"
+            name="dateOfBirth"
+            placeholder="YYYY-MM-DD"
+            value={formData.dateOfBirth}
+            onChange={handleChange}
+          />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone (+254...) *</Label>
-            <Input
-              id="phone"
-              name="phone"
-              type="tel"
-              placeholder="+254712345678"
-              value={formData.phone}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location">Location *</Label>
-            <Input
-              id="location"
-              name="location"
-              placeholder="e.g. Eldoret"
-              value={formData.location}
-              onChange={handleChange}
-              required
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={isSaving}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            className="bg-gray-900 text-white hover:bg-gray-800"
-            disabled={isSaving}
-          >
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Register Student
-          </Button>
-        </div>
+        <Button
+          type="submit"
+          disabled={isSaving}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-md"
+        >
+          {isSaving ? 'Saving...' : 'Register Learner'}
+        </Button>
       </form>
     </Modal>
   );
