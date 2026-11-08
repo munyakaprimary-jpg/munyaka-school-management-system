@@ -92,17 +92,26 @@ export default function LearnersDirectory() {
 
   const handleDeleteLearner = async (learnerToDelete: any) => {
     if (!learnerToDelete) return;
-    const targetId = learnerToDelete.id || learnerToDelete.admissionNo || learnerToDelete.admissionNumber;
+    const targetId = learnerToDelete.id || learnerToDelete.admissionNo || learnerToDelete.admissionNumber || learnerToDelete.birthCertificateNo || learnerToDelete.assessmentNo;
     try {
       if (deleteLearner) {
         await deleteLearner(targetId);
-      } else {
-        const raw = localStorage.getItem('munyaka_learners') || '[]';
-        const list = JSON.parse(raw);
-        const updated = list.filter((l: any) => l.id !== targetId && l.admissionNumber !== targetId && l.admissionNo !== targetId);
-        localStorage.setItem('munyaka_learners', JSON.stringify(updated));
-        window.dispatchEvent(new Event('storage'));
       }
+      // Also try fallback identifiers to ensure complete removal from munyaka_learners
+      const raw = localStorage.getItem('munyaka_learners') || '[]';
+      const list = JSON.parse(raw);
+      const updated = list.filter((l: any) =>
+        l.id !== targetId &&
+        l.admissionNumber !== targetId &&
+        l.admissionNo !== targetId &&
+        l.admNo !== targetId &&
+        l.birthCertificateNo !== targetId &&
+        l.assessmentNo !== targetId
+      );
+      localStorage.setItem('munyaka_learners', JSON.stringify(updated));
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('learners-updated'));
+
       toast({
         title: "Learner Removed",
         description: "Learner record deleted successfully.",
