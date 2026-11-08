@@ -321,21 +321,11 @@ export default function LearnersDirectory() {
                 </tr>
               ) : (
                 filteredLearners.map((learner, index) => {
-                  const rowKey = learner.id ||
-                                 learner.admissionNo ||
-                                 learner.birthCertificateNo ||
-                                 learner.assessmentNo ||
-                                 `learner-${index}-${(learner.fullName || learner.name || '').replace(/\s+/g, '-').toLowerCase()}`;
-
-                  const identifier = learner.id ||
-                                       learner.admissionNo ||
-                                       learner.birthCertificateNo ||
-                                       learner.assessmentNo ||
-                                       learner.fullName ||
-                                       learner.name;
+                  const uniqueKey = `row-${index}-${learner.id || learner.admissionNo || learner.birthCertificateNo || learner.assessmentNo || 'item'}`;
+                  const identifier = learner.id || learner.admissionNo || learner.birthCertificateNo || learner.assessmentNo || learner.fullName;
 
                   return (
-                    <tr key={rowKey} className="hover:bg-slate-50/85 transition-colors">
+                    <tr key={uniqueKey} className="hover:bg-slate-50/85 transition-colors">
                       <td className="p-3 w-10">
                         <input
                           type="checkbox"
