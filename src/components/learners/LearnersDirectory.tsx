@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, 
-  UserPlus, 
-  Trash2, 
-  GraduationCap, 
+import {
+  Search,
+  UserPlus,
+  Trash2,
+  GraduationCap,
   Users,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye,
+  Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -291,33 +293,33 @@ export default function LearnersDirectory() {
           </div>
         )}
 
-        <div className="overflow-x-auto mt-4">
+        <div className="overflow-x-auto bg-white rounded-lg shadow border border-gray-200 m-6">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                <th className="p-3 w-10">
+              <tr className="bg-gray-100 text-gray-700 text-xs uppercase font-semibold border-b">
+                <th className="p-3 w-10 text-center">
                   <input
                     type="checkbox"
                     checked={filteredLearners.length > 0 && selectedIds.length === filteredLearners.length}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setSelectedIds(filteredLearners.map(l => l.id || l.admNo));
+                        setSelectedIds(filteredLearners.map(l => l.id || l.birthCertificateNo || l.assessmentNo));
                       } else {
                         setSelectedIds([]);
                       }
                     }}
                   />
                 </th>
-                <th className="p-3">ADMISSION NO.</th>
-                <th className="p-3">ASSESSMENT NO. / BIRTH CERTIFICATE NO.</th>
-                <th className="p-3">FULL NAME</th>
-                <th className="p-3">GRADE & STREAM</th>
-                <th className="py-4 px-6">GENDER</th>
-                <th className="py-4 px-6">PARENT / GUARDIAN</th>
-                <th className="py-4 px-6 text-right">ACTIONS</th>
+                <th className="p-3">Assessment / Birth Cert No.</th>
+                <th className="p-3">Full Name</th>
+                <th className="p-3">Grade & Stream</th>
+                <th className="p-3">Gender</th>
+                <th className="p-3">Parent / Guardian</th>
+                <th className="p-3">Phone Number</th>
+                <th className="p-3 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-gray-200 text-sm text-gray-800">
               {filteredLearners.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-20 text-center text-slate-400 font-medium">
@@ -326,12 +328,12 @@ export default function LearnersDirectory() {
                 </tr>
               ) : (
                 filteredLearners.map((learner, index) => {
-                  const uniqueKey = `row-${index}-${learner.id || learner.admissionNo || learner.birthCertificateNo || learner.assessmentNo || 'item'}`;
-                  const identifier = learner.id || learner.admissionNo || learner.birthCertificateNo || learner.assessmentNo || learner.fullName;
+                  const rowKey = `learner-${index}-${learner.id || learner.birthCertificateNo || 'row'}`;
+                  const identifier = learner.id || learner.birthCertificateNo || learner.assessmentNo;
 
                   return (
-                    <tr key={uniqueKey} className="hover:bg-slate-50/85 transition-colors">
-                      <td className="p-3 w-10">
+                    <tr key={rowKey} className="hover:bg-gray-50 transition-colors">
+                      <td className="p-3 text-center">
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(identifier)}
@@ -342,35 +344,28 @@ export default function LearnersDirectory() {
                           }}
                         />
                       </td>
-                      <td className="py-4 px-6 font-mono font-bold text-xs text-indigo-600">
-                        {learner.admissionNo || learner.admissionNumber || learner.admNo || '—'}
+                      <td className="p-3 font-mono text-xs text-blue-600 font-medium">
+                        {learner.birthCertificateNo || learner.assessmentNo || '-'}
                       </td>
-                      <td className="py-4 px-6 font-mono text-xs text-slate-700 font-semibold">
-                        {learner.idValue || learner.birthCertificateNo || learner.birthCertNo || learner.assessmentNo || learner.assessmentNumber || '—'}
-                      </td>
-                      <td className="py-4 px-6 font-bold text-slate-900">
-                        {learner.fullName || learner.name || learner.studentName || '—'}
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
-                          {learner.gradeAndStream || `${learner.gradeLevel || learner.grade || ''} (${learner.stream || ''})`.trim() || '—'}
+                      <td className="p-3 font-bold text-gray-900">{learner.fullName || learner.name || '-'}</td>
+                      <td className="p-3">
+                        <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                          {learner.grade || learner.gradeLevel || '-'} {learner.stream ? `(${learner.stream})` : ''}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-xs font-medium text-slate-600">
-                        {learner.gender || learner.sex || '—'}
-                      </td>
-                      <td className="py-4 px-6 text-sm text-slate-700 font-medium">
-                        {learner.parentName || learner.parentGuardian || learner.guardian || '—'}
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => requestDelete(learner)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      <td className="p-3 text-gray-600">{learner.gender || learner.sex || '-'}</td>
+                      <td className="p-3 text-gray-700">{learner.guardian || learner.parentName || learner.parentGuardian || '-'}</td>
+                      <td className="p-3 font-mono text-gray-600">{learner.phone || learner.phoneNumber || '-'}</td>
+                      <td className="p-3 text-center">
+                        <div className="flex items-center justify-center space-x-2">
+                          <button
+                            onClick={() => requestDelete(learner)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
