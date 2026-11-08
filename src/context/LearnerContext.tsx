@@ -257,13 +257,15 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       setLearners((prevLearners) => {
         const updated = prevLearners.filter((learner) => {
-          const matchAdmNo = learner.admNo === admissionNumber || learner.admissionNumber === admissionNumber || learner.admission_number === admissionNumber;
-          const matchId = learner.id === admissionNumber || learner._id === admissionNumber;
+          const matchAdmNo = String(learner.admNo || '').trim() === String(admissionNumber || '').trim() ||
+                             String(learner.admissionNumber || '').trim() === String(admissionNumber || '').trim() ||
+                             String(learner.admission_number || '').trim() === String(admissionNumber || '').trim();
+          const matchId = String(learner.id || '').trim() === String(admissionNumber || '').trim() ||
+                          String(learner._id || '').trim() === String(admissionNumber || '').trim();
           return !matchAdmNo && !matchId;
         });
 
-        localStorage.setItem(STORAGE_KEY_MUNYAKA_LEARNERS, JSON.stringify(updated));
-        localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(updated));
+        saveStoredLearners(updated);
         localStorage.setItem('school_learners_data', JSON.stringify(updated));
         localStorage.setItem('munyaka_students', JSON.stringify(updated));
         return updated;
@@ -271,9 +273,10 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const currentStored = getStoredLearners();
       const learnerToDelete = currentStored.find((l: any) => {
-        const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '');
-        const lId = String(l.id || l._id || '');
-        return adm === admissionNumber || lId === admissionNumber;
+        const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '').trim();
+        const lId = String(l.id || l._id || '').trim();
+        const target = String(admissionNumber || '').trim();
+        return adm === target || lId === target;
       });
 
       if (learnerToDelete) {

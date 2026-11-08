@@ -92,17 +92,19 @@ export default function LearnersDirectory() {
 
   const handleDeleteLearner = async (learnerToDelete: any) => {
     if (!learnerToDelete) return;
-    const targetId = learnerToDelete.id || learnerToDelete.admissionNo || learnerToDelete.admissionNumber;
+    const targetId = learnerToDelete.id || learnerToDelete.admissionNo || learnerToDelete.admissionNumber || learnerToDelete.admNo;
     try {
       if (deleteLearner) {
         await deleteLearner(targetId);
       } else {
         const raw = localStorage.getItem('munyaka_learners') || '[]';
         const list = JSON.parse(raw);
-        const updated = list.filter((l: any) => l.id !== targetId && l.admissionNumber !== targetId && l.admissionNo !== targetId);
+        const updated = list.filter((l: any) => l.id !== targetId && l.admissionNumber !== targetId && l.admissionNo !== targetId && l.admNo !== targetId);
         localStorage.setItem('munyaka_learners', JSON.stringify(updated));
         window.dispatchEvent(new Event('storage'));
       }
+      window.dispatchEvent(new Event('learners_updated'));
+      window.dispatchEvent(new Event('students-updated'));
       toast({
         title: "Learner Removed",
         description: "Learner record deleted successfully.",
@@ -129,6 +131,7 @@ export default function LearnersDirectory() {
         }
       }
       window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('learners_updated'));
       toast({
         title: "Learners Removed",
         description: `${ids.length} learner records deleted successfully.`,
@@ -147,9 +150,9 @@ export default function LearnersDirectory() {
     setIsAuthOpen(true);
   };
 
-  const handleVerifyAuth = () => {
+  const handleVerifyAuth = async () => {
     if (pendingDelete) {
-      handleDeleteLearner(pendingDelete);
+      await handleDeleteLearner(pendingDelete);
     }
     setIsAuthOpen(false);
     setPendingDelete(null);

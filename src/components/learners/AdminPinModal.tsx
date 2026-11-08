@@ -27,7 +27,7 @@ export default function AdminPinModal({
     try {
       window.dispatchEvent(new Event('learners_updated'));
       window.dispatchEvent(new Event('storage'));
-      onSuccess();
+      await onSuccess?.();
       onClose();
     } catch (error) {
       console.error("[AdminPinModal] Delete failed:", error);
