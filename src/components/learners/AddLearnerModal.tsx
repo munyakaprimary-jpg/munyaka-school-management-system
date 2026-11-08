@@ -151,26 +151,6 @@ export default function AddLearnerModal({
 
       await contextAddLearner(newLearnerRecord);
 
-      const existingRaw = localStorage.getItem(STORAGE_KEYS.LEARNERS) || localStorage.getItem('munyaka_learners') || '[]';
-      const existingLearnersStore = JSON.parse(existingRaw);
-      const newStoreList = Array.isArray(existingLearnersStore) ? [newLearnerRecord, ...existingLearnersStore] : [newLearnerRecord];
-
-      localStorage.setItem(STORAGE_KEYS.LEARNERS, JSON.stringify(newStoreList));
-      localStorage.setItem('munyaka_learners', JSON.stringify(newStoreList));
-      localStorage.setItem('munyaka_students', JSON.stringify(newStoreList));
-      localStorage.setItem('school_learners_data', JSON.stringify(newStoreList));
-
-      window.dispatchEvent(new CustomEvent('learners-updated', { detail: newStoreList }));
-      window.dispatchEvent(new CustomEvent('munyaka:learners-updated', { detail: newStoreList }));
-      window.dispatchEvent(new Event('storage'));
-
-      addPendingSyncItem({
-        id: newLearnerRecord.id,
-        type: 'learner',
-        action: 'create',
-        payload: newLearnerRecord,
-      });
-
       showSuccess("Learner successfully registered and saved to directory!");
       if (onLearnerAdded) {
         onLearnerAdded(newLearnerRecord);
