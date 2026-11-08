@@ -252,26 +252,32 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [filterLearnersForUser, setLearners]);
 
-  const deleteLearner = useCallback(async (admissionNumber: string) => {
+  const deleteLearner = useCallback(async (identifier: string) => {
     try {
-      const currentStored = getStoredLearners();
-      const updated = currentStored.filter((learner: any) => {
-        const matchAdmNo = String(learner.admNo || '').trim() === String(admissionNumber).trim() || String(learner.admissionNumber || '').trim() === String(admissionNumber).trim() || String(learner.admission_number || '').trim() === String(admissionNumber).trim();
-        const matchId = String(learner.id || '').trim() === String(admissionNumber).trim() || String(learner._id || '').trim() === String(admissionNumber).trim();
-        const matchBirth = String(learner.birthCertificateNo || '').trim() === String(admissionNumber).trim();
-        const matchAssess = String(learner.assessmentNo || '').trim() === String(admissionNumber).trim();
-        return !matchAdmNo && !matchId && !matchBirth && !matchAssess;
+      const target = String(identifier || '').trim().toLowerCase();
+      const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      const updated = existing.filter((learner: any) => {
+        const id = String(learner.id || '').trim().toLowerCase();
+        const birthCert = String(learner.birthCertificateNo || '').trim().toLowerCase();
+        const assessment = String(learner.assessmentNo || '').trim().toLowerCase();
+        const adm = String(learner.admNo || learner.admissionNumber || learner.admission_number || '').trim().toLowerCase();
+
+        const matches = (id === target) || (birthCert === target) || (assessment === target) || (adm === target);
+        return !matches;
       });
 
-      saveStoredLearners(updated);
-      setLearners(filterLearnersForUser(updated));
+      // Save single source of truth
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      
+      // Force context state update immediately
+      setLearners([...updated]);
 
-      const learnerToDelete = currentStored.find((l: any) => {
-        const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '');
-        const lId = String(l.id || l._id || '');
-        const bCert = String(l.birthCertificateNo || '');
-        const assess = String(l.assessmentNo || '');
-        return adm === admissionNumber || lId === admissionNumber || bCert === admissionNumber || assess === admissionNumber;
+      const learnerToDelete = existing.find((l: any) => {
+        const id = String(l.id || '').trim().toLowerCase();
+        const birthCert = String(l.birthCertificateNo || '').trim().toLowerCase();
+        const assessment = String(l.assessmentNo || '').trim().toLowerCase();
+        const adm = String(l.admNo || l.admissionNumber || l.admission_number || '').trim().toLowerCase();
+        return (id === target) || (birthCert === target) || (assessment === target) || (adm === target);
       });
 
       if (learnerToDelete) {
@@ -286,7 +292,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (err) {
       console.error('[LearnerContext] deleteLearner error:', err);
     }
-  }, [filterLearnersForUser, setLearners]);
+  }, [setLearners]);
 
   const refreshLearners = useCallback(() => {
     try {
