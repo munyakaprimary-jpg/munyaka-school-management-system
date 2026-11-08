@@ -13,7 +13,7 @@ import { Layers, Plus, Users, User, Trash2, Edit2, Lock, AlertCircle, Loader2 } 
 import { showSuccess, showError } from '@/utils/toast';
 import { GRADES_DATA, GradeInfo, StreamInfo } from '@/lib/mock-data';
 import { sortGrades, GRADE_ORDER } from '@/utils/gradeSort';
-import { useLearners } from '@/context/LearnerContext';
+import { notifyDataChanged } from '@/utils/storage';
 import { cn } from '@/lib/utils';
 
 type Grade = GradeInfo;
@@ -41,7 +41,6 @@ const isSeedStream = (_g: Grade, _s: Stream): boolean => {
 };
 
 const GradesStreams = () => {
-  const { learners } = useLearners();
   // Helper: filter out any grades / streams that originated from the
   // built-in mock seed. Only user-created entries (added via the "Add
   // Stream" / "Add Grade Level" buttons) survive.
@@ -101,18 +100,22 @@ const GradesStreams = () => {
   const [newStreamTeacher, setNewStreamTeacher] = useState("");
   const [newStreamStudents, setNewStreamStudents] = useState("");
 
-  // Helper: compute learner count for a grade and stream using robust matching
-  const getLearnerCountForStream = (gradeName: string, streamName: string) => {
-    return (learners || []).filter((learner) => {
-      const learnerGrade = String(learner.grade || learner.class || learner.gradeLevel || '').trim().toLowerCase();
-      const learnerStream = String(learner.stream || learner.streamName || '').trim().toLowerCase();
-      
-      const targetGrade = gradeName.trim().toLowerCase();
-      const targetStream = streamName.trim().toLowerCase();
-
-      return learnerGrade.includes(targetGrade) && learnerStream.includes(targetStream);
-    }).length;
-  };
+  useEffect(() => {
+    // Always persist to the canonical key AND the legacy key so that:
+    //   1. New readers find data under the canonical name
+    //   2. Existing pages listening on `munyaka_grades` still work
+    // Including when grades becomes [] after a delete so we don't leave
+    // stale entries in localStorage.
+    try {
+      const data = JSON.stringify(grades);
+      localStorage.setItem(STORAGE_KEY, data);
+      localStorage.setItem(LEGACY_STORAGE_KEY, data);
+      notifyDataChanged(STORAGE_KEY);
+      notifyDataChanged(LEGACY_STORAGE_KEY);
+    } catch (e) {
+      // localStorage quota exceeded — best-effort, fall through silently
+    }
+  }, [grades]);
 
   // Broadcast changes to other tabs/pages via a custom event
   useEffect(() => {

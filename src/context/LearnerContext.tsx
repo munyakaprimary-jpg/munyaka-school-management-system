@@ -10,9 +10,9 @@ interface LearnerContextType {
   learners: any[];
   loading: boolean;
   setLearners: React.Dispatch<React.SetStateAction<any[]>>;
-  addLearner: (newLearner: any) => Promise<void>;
-  updateLearner?: (identifier: string, updatedData: any) => Promise<void>;
-  deleteLearner: (identifier: string) => Promise<void>;
+  addLearner: (newLearner: any) => Promise<void> | void;
+  updateLearner?: (admissionNumber: string, updatedData: any) => Promise<void> | void;
+  deleteLearner: (admissionNumber: string) => Promise<void> | void;
   refreshLearners?: () => void;
   resetToSeedData: () => void;
 }
@@ -28,6 +28,7 @@ export const getStoredLearners = () => {
 
 export const saveStoredLearners = (learners: any[]) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(learners));
+  localStorage.setItem('munyaka_learners_v2', JSON.stringify(learners));
 };
 
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -156,13 +157,12 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Unified addLearner: Saves both to React State AND localStorage simultaneously before Firestore sync
   const addLearner = useCallback(async (newLearner: any) => {
-      const currentStored = getStoredLearners();
-      const normalizedNew = {
-        ...newLearner,
-        id: newLearner.id ? String(newLearner.id) : generateLearnerId(currentStored),
-        createdAt: newLearner.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+    const normalizedNew = {
+      ...newLearner,
+      id: newLearner.id ? String(newLearner.id) : generateLearnerId(),
+      createdAt: newLearner.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
 
     try {
       const currentStored = getStoredLearners();
@@ -256,11 +256,13 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       setLearners((prevLearners) => {
         const updated = prevLearners.filter((learner) => {
-          const lId = learner.id || learner.birthCertificateNo || learner.assessmentNo || learner.admissionNo || learner.admNo || learner.fullName;
-          return lId !== admissionNumber;
+          const matchAdmNo = learner.admNo === admissionNumber || learner.admissionNumber === admissionNumber || learner.admission_number === admissionNumber;
+          const matchId = learner.id === admissionNumber || learner._id === admissionNumber;
+          return !matchAdmNo && !matchId;
         });
 
-        saveStoredLearners(updated);
+        localStorage.setItem(STORAGE_KEY_MUNYAKA_LEARNERS, JSON.stringify(updated));
+        localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(updated));
         localStorage.setItem('school_learners_data', JSON.stringify(updated));
         localStorage.setItem('munyaka_students', JSON.stringify(updated));
         return updated;
@@ -268,8 +270,9 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const currentStored = getStoredLearners();
       const learnerToDelete = currentStored.find((l: any) => {
-        const lId = l.id || l.birthCertificateNo || l.assessmentNo || l.admissionNo || l.admNo || l.fullName;
-        return lId === admissionNumber;
+        const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '');
+        const lId = String(l.id || l._id || '');
+        return adm === admissionNumber || lId === admissionNumber;
       });
 
       if (learnerToDelete) {
@@ -302,7 +305,6 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const resetToSeedData = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem('munyaka_learners_v2');
-    localStorage.removeItem('munyaka_central_db');
     localStorage.removeItem('school_learners_data');
     localStorage.removeItem('munyaka_students');
     localStorage.removeItem('cached_learners');
