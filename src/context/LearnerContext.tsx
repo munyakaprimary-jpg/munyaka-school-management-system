@@ -10,9 +10,9 @@ interface LearnerContextType {
   learners: any[];
   loading: boolean;
   setLearners: React.Dispatch<React.SetStateAction<any[]>>;
-  addLearner: (newLearner: any) => Promise<void> | void;
-  updateLearner?: (admissionNumber: string, updatedData: any) => Promise<void> | void;
-  deleteLearner: (admissionNumber: string) => Promise<void> | void;
+  addLearner: (newLearner: any) => Promise<void>;
+  updateLearner?: (identifier: string, updatedData: any) => Promise<void>;
+  deleteLearner: (identifier: string) => Promise<void>;
   refreshLearners?: () => void;
   resetToSeedData: () => void;
 }
