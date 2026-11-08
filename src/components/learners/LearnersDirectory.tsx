@@ -92,14 +92,19 @@ export default function LearnersDirectory() {
 
   const handleDeleteLearner = async (learnerToDelete: any) => {
     if (!learnerToDelete) return;
-    const targetId = learnerToDelete.id || learnerToDelete.admissionNo || learnerToDelete.admissionNumber || learnerToDelete.admNo;
+    const identifier = learnerToDelete.id || learnerToDelete.birthCertificateNo || learnerToDelete.assessmentNo || learnerToDelete.admissionNo || learnerToDelete.admNo || learnerToDelete.fullName;
+    if (!identifier) return;
+
     try {
       if (deleteLearner) {
-        await deleteLearner(targetId);
+        await deleteLearner(identifier);
       } else {
         const raw = localStorage.getItem('munyaka_learners') || '[]';
         const list = JSON.parse(raw);
-        const updated = list.filter((l: any) => l.id !== targetId && l.admissionNumber !== targetId && l.admissionNo !== targetId && l.admNo !== targetId);
+        const updated = list.filter((l: any) => {
+          const lId = l.id || l.birthCertificateNo || l.assessmentNo || l.admissionNo || l.admNo || l.fullName;
+          return lId !== identifier;
+        });
         localStorage.setItem('munyaka_learners', JSON.stringify(updated));
         window.dispatchEvent(new Event('storage'));
       }

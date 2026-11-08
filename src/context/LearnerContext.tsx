@@ -257,12 +257,8 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       setLearners((prevLearners) => {
         const updated = prevLearners.filter((learner) => {
-          const matchAdmNo = String(learner.admNo || '').trim() === String(admissionNumber || '').trim() ||
-                             String(learner.admissionNumber || '').trim() === String(admissionNumber || '').trim() ||
-                             String(learner.admission_number || '').trim() === String(admissionNumber || '').trim();
-          const matchId = String(learner.id || '').trim() === String(admissionNumber || '').trim() ||
-                          String(learner._id || '').trim() === String(admissionNumber || '').trim();
-          return !matchAdmNo && !matchId;
+          const lId = learner.id || learner.birthCertificateNo || learner.assessmentNo || learner.admissionNo || learner.admNo || learner.fullName;
+          return lId !== admissionNumber;
         });
 
         saveStoredLearners(updated);
@@ -273,10 +269,8 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const currentStored = getStoredLearners();
       const learnerToDelete = currentStored.find((l: any) => {
-        const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '').trim();
-        const lId = String(l.id || l._id || '').trim();
-        const target = String(admissionNumber || '').trim();
-        return adm === target || lId === target;
+        const lId = l.id || l.birthCertificateNo || l.assessmentNo || l.admissionNo || l.admNo || l.fullName;
+        return lId === admissionNumber;
       });
 
       if (learnerToDelete) {
