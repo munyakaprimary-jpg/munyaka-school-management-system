@@ -303,14 +303,14 @@ export default function LearnersDirectory() {
                     checked={filteredLearners.length > 0 && selectedIds.length === filteredLearners.length}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setSelectedIds(filteredLearners.map(l => l.id || l.birthCertificateNo || l.assessmentNo));
+                        setSelectedIds(filteredLearners.map(l => l.id || l.admissionNo || l.admNo));
                       } else {
                         setSelectedIds([]);
                       }
                     }}
                   />
                 </th>
-                <th className="p-3">Assessment / Birth Cert No.</th>
+                <th className="p-3">Admission No.</th>
                 <th className="p-3">Full Name</th>
                 <th className="p-3">Grade & Stream</th>
                 <th className="p-3">Gender</th>
@@ -328,8 +328,8 @@ export default function LearnersDirectory() {
                 </tr>
               ) : (
                 filteredLearners.map((learner, index) => {
-                  const rowKey = `learner-${index}-${learner.id || learner.birthCertificateNo || 'row'}`;
-                  const identifier = learner.id || learner.birthCertificateNo || learner.assessmentNo;
+                  const rowKey = `learner-${index}-${learner.id || learner.admissionNo || 'row'}`;
+                  const identifier = learner.id || learner.admissionNo || learner.admNo;
 
                   return (
                     <tr key={rowKey} className="hover:bg-gray-50 transition-colors">
@@ -345,7 +345,7 @@ export default function LearnersDirectory() {
                         />
                       </td>
                       <td className="p-3 font-mono text-xs text-blue-600 font-medium">
-                        {learner.birthCertificateNo || learner.assessmentNo || '-'}
+                        {learner.admissionNo || learner.admissionNumber || learner.admNo || '-'}
                       </td>
                       <td className="p-3 font-bold text-gray-900">{learner.fullName || learner.name || '-'}</td>
                       <td className="p-3">
