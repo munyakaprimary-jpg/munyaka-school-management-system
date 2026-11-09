@@ -368,17 +368,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (inputEmail: string, inputPass: string): Promise<boolean> => {
     await new Promise(resolve => setTimeout(resolve, 300));
 
-    // ── Enforce Whitelist Check on Login ────────────────────────────────────
+    // ── Enforce Whitelist Check on Login & Dynamic Profile Mapping ───────────
     const registeredUsers = JSON.parse(localStorage.getItem('munyaka_user_accounts') || localStorage.getItem(USERS_STORAGE_KEY) || '[]');
+    const staffRegistry = JSON.parse(localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff_directory') || '[]');
     const normalizedInput = inputEmail.trim().toLowerCase();
 
-    // Check if email or username/staffId exists in registered users list
+    // Match against registered staff/user by email, username, or staffId
     const registeredUsersArray = Array.isArray(registeredUsers) ? registeredUsers : Object.values(registeredUsers);
-    const userExists = registeredUsersArray.find((registeredUser: any) =>
-      (registeredUser.email && String(registeredUser.email).trim().toLowerCase() === normalizedInput) ||
-      (registeredUser.username && String(registeredUser.username).trim().toLowerCase() === normalizedInput) ||
-      (registeredUser.staffId && String(registeredUser.staffId).trim().toLowerCase() === normalizedInput) ||
-      (registeredUser.staff_id && String(registeredUser.staff_id).trim().toLowerCase() === normalizedInput)
+    const staffRegistryArray = Array.isArray(staffRegistry) ? staffRegistry : Object.values(staffRegistry);
+
+    const matchedAccount = registeredUsersArray.find((u: any) =>
+      (u.email && String(u.email).trim().toLowerCase() === normalizedInput) ||
+      (u.username && String(u.username).trim().toLowerCase() === normalizedInput) ||
+      (u.staffId && String(u.staffId).trim().toLowerCase() === normalizedInput) ||
+      (u.staff_id && String(u.staff_id).trim().toLowerCase() === normalizedInput)
+    ) || staffRegistryArray.find((s: any) =>
+      (s.email && String(s.email).trim().toLowerCase() === normalizedInput) ||
+      (s.staffId && String(s.staffId).trim().toLowerCase() === normalizedInput) ||
+      (s.staff_id && String(s.staff_id).trim().toLowerCase() === normalizedInput)
     );
 
     // Allow master admin bypass or pre-configured admin accounts if not in custom user_accounts
@@ -389,30 +396,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       normalizedInput === 'jamesndiki@gmail.com' ||
       normalizedInput === 'jndiki@munyaka.sc.ke';
 
-    if (!userExists && !isMasterAdminBypass) {
-      // Check staff directory as well
-      let staffList = [];
-      try {
-        staffList = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
-      } catch {}
-      const foundInStaff = staffList.find((s: any) =>
-        String(s.email || '').trim().toLowerCase() === normalizedInput ||
-        String(s.staffId || '').trim().toLowerCase() === normalizedInput ||
-        String(s.staff_id || '').trim().toLowerCase() === normalizedInput
-      );
-
-      if (!foundInStaff) {
-        showError("Access Denied: Your account is not registered in the system staff directory. Please contact the System Administrator.");
-        return false;
-      }
+    if (!matchedAccount && !isMasterAdminBypass) {
+      showError("Access Denied: Your account is not registered in the system staff directory. Please contact the System Administrator.");
+      return false;
     }
 
-    if (userExists && (userExists.status === 'Inactive' || userExists.isActive === false || userExists.is_active === false)) {
+    if (matchedAccount && (matchedAccount.status === 'Inactive' || matchedAccount.isActive === false || matchedAccount.is_active === false)) {
       showError("Access Suspended: Your account is currently inactive. Contact the System Administrator.");
       return false;
     }
 
+    // Build dynamic user profile from actual record values
+    let authenticatedUser: any;
+    if (isMasterAdminBypass && !matchedAccount) {
+      authenticatedUser = {
+        id: 'admin-master',
+        name: 'System Administrator',
+        email: inputEmail,
+        role: 'admin',
+        assignedGrade: 'All Grades',
+        assignedStream: 'All Streams',
+        status: 'Active'
+      };
+    } else {
+      authenticatedUser = {
+        id: matchedAccount.id || matchedAccount.staffId || matchedAccount.staff_id || `user-${Date.now()}`,
+        name: matchedAccount.name || matchedAccount.fullName || matchedAccount.username || matchedAccount.email || 'Staff Member',
+        email: matchedAccount.email || inputEmail,
+        role: matchedAccount.role || matchedAccount.assignedRole || (isMasterAdminBypass ? 'admin' : 'Teacher'),
+        assignedGrade: matchedAccount.assignedGrade || matchedAccount.grade || matchedAccount.classAssigned || matchedAccount.class_assigned || null,
+        assignedStream: matchedAccount.assignedStream || matchedAccount.stream || null,
+        status: matchedAccount.status || 'Active'
+      };
+    }
+
     const cleanInput = String(inputEmail || '').trim().toLowerCase();
+    setUser(authenticatedUser);
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(authenticatedUser));
+    localStorage.setItem('munyaka_active_user', JSON.stringify(authenticatedUser));
+    showSuccess(`Welcome back, ${authenticatedUser.name}! (${authenticatedUser.role})`);
+    return true;
     const cleanPass = String(inputPass || '').trim();
 
     console.log('[AuthContext.login] Login attempt started for identifier:', cleanInput);
