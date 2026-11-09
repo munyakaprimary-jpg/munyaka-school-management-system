@@ -95,12 +95,30 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  const staffName = currentStaff.name || currentStaff.fullName || user?.name || 'Staff Member';
-  const staffRole = currentStaff.role || currentStaff.assignedRole || user?.role || 'Staff';
-  const profileName = staffName;
-  const profileRole = staffRole;
-  const initials = staffName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
-  const activeRole = (currentStaff.role || currentStaff.assignedRole || user?.role || '').toLowerCase();
+  // Dynamically fetch active registered user profile
+  const getActiveUserRole = () => {
+    if (!user) return 'STAFF';
+
+    const registeredUsers = JSON.parse(localStorage.getItem('munyaka_user_accounts') || '[]');
+    const staffRegistry = JSON.parse(localStorage.getItem('munyaka_staff_registry') || '[]');
+
+    const match = registeredUsers.find((u: any) =>
+      (u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()) ||
+      (u.username && user.name && u.username.toLowerCase() === user.name.toLowerCase()) ||
+      (u.name && user.name && u.name.toLowerCase() === user.name.toLowerCase())
+    ) || staffRegistry.find((s: any) =>
+      (s.email && user.email && s.email.toLowerCase() === user.email.toLowerCase()) ||
+      (s.name && user.name && s.name.toLowerCase() === user.name.toLowerCase())
+    );
+
+    return match?.role || match?.assignedRole || user.role || 'STAFF';
+  };
+
+  const activeRole = getActiveUserRole();
+  const displayName = currentStaff.name || currentStaff.fullName || user?.name || (user as any)?.username || 'Staff Member';
+  const profileName = displayName;
+  const profileRole = activeRole;
+  const initials = displayName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
 
   const navigationItems: NavItem[] = [
     { name: 'Home / Dashboard', href: '/', icon: LayoutDashboard, allowedRoles: ['all'] },
@@ -223,9 +241,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                   {initials}
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-sm font-bold text-slate-200 truncate">{staffName}</h4>
+                  <h4 className="text-sm font-bold text-slate-200 truncate">{profileName}</h4>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
-                    {staffRole}
+                    {profileRole}
                   </span>
                 </div>
               </div>
