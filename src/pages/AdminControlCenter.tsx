@@ -767,7 +767,50 @@ export default function AdminControlCenter() {
                     <Users className="w-5 h-5 text-indigo-600" />
                     <CardTitle className="text-lg">User Accounts</CardTitle>
                   </div>
-                  <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+                  <button
+                    onClick={() => {
+                      if (window.confirm("Are you sure you want to reset all registered user accounts? This will restore only the default System Admin account.")) {
+                        const defaultAdmin = [{
+                          id: 'user-admin-default',
+                          name: 'System Admin',
+                          email: 'admin@munyaka.sc.ke',
+                          username: 'admin',
+                          role: 'SYSTEM ADMINISTRATOR',
+                          status: 'Active'
+                        }];
+                        localStorage.setItem('munyaka_user_accounts', JSON.stringify(defaultAdmin));
+                        localStorage.setItem('munyaka_users', JSON.stringify(defaultAdmin));
+                        window.dispatchEvent(new Event('storage'));
+                        window.location.reload();
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-200 text-xs transition-all"
+                  >
+                    Reset Accounts
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to reset all registered user accounts? This will restore only the default System Admin account.")) {
+                          const defaultAdmin = [{
+                            id: 'user-admin-default',
+                            name: 'System Admin',
+                            email: 'admin@munyaka.sc.ke',
+                            username: 'admin',
+                            role: 'SYSTEM ADMINISTRATOR',
+                            status: 'Active'
+                          }];
+                          localStorage.setItem('munyaka_user_accounts', JSON.stringify(defaultAdmin));
+                          localStorage.setItem('munyaka_users', JSON.stringify(defaultAdmin));
+                          window.dispatchEvent(new Event('storage'));
+                          window.location.reload();
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-200 text-xs transition-all"
+                    >
+                      Reset Accounts
+                    </button>
+                    <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
                     <DialogTrigger asChild>
                       <Button size="sm" className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
                         <Plus className="w-4 h-4 mr-1" />
