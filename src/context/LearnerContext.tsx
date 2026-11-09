@@ -22,13 +22,70 @@ const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 export const STORAGE_KEY = 'munyaka_learners';
 
 export const getStoredLearners = () => {
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
+  try {
+    const keys = [STORAGE_KEY, 'munyaka_learners_v2', 'munyaka_app_learners_v1', 'school_learners_data', 'munyaka_students', 'cached_learners', 'munyaka_central_db'];
+    let allRaw: any[] = [];
+    const seenIds = new Set<string>();
+    const seenAdmins = new Set<string>();
+
+    for (const key of keys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        const list = Array.isArray(parsed)
+          ? parsed
+          : (parsed?.learners || parsed?.students || parsed?.munyaka_learners || []);
+        if (Array.isArray(list)) {
+          for (const l of list) {
+            if (!l) continue;
+            const name = String(l.fullName || l.name || l.studentName || `${l.firstName || ''} ${l.lastName || ''}`).trim();
+            if (!name || name === 'undefined undefined' || name === 'null null' || name === 'Unnamed Learner') continue;
+            const id = String(l.id || l._id || '');
+            const adm = String(l.admissionNo || l.admNo || l.admissionNumber || '');
+            
+            if (id && seenIds.has(id)) continue;
+            if (adm && seenAdmins.has(adm)) continue;
+            
+            if (id) seenIds.add(id);
+            if (adm) seenAdmins.add(adm);
+            
+            allRaw.push(l);
+          }
+        }
+      } catch (err) {
+        console.error(`[LearnerContext] Error reading key ${key}:`, err);
+      }
+    }
+
+    if (allRaw.length > 0) {
+      const normalized = allRaw.map((l: any) => ({
+        ...l,
+        id: l.id || l._id || l.admissionNo || l.admissionNumber || `learner_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        admissionNumber: l.admissionNumber || l.admissionNo || l.admNo || '',
+        admissionNo: l.admissionNo || l.admissionNumber || l.admNo || '',
+        name: l.fullName || l.name || l.studentName || `${l.firstName || ''} ${l.lastName || ''}`.trim() || '',
+        grade: l.grade || l.gradeLevel || 'Grade 4',
+        stream: l.stream || 'Blue',
+      }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+      localStorage.setItem('munyaka_learners_v2', JSON.stringify(normalized));
+      localStorage.setItem('school_learners_data', JSON.stringify(normalized));
+      return normalized;
+    }
+  } catch (e) {
+    console.error("Failed to parse learners storage", e);
+  }
+  return [];
 };
 
 export const saveStoredLearners = (learners: any[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(learners));
-  localStorage.setItem('munyaka_learners_v2', JSON.stringify(learners));
+  const serialized = JSON.stringify(learners);
+  localStorage.setItem(STORAGE_KEY, serialized);
+  localStorage.setItem('munyaka_learners_v2', serialized);
+  localStorage.setItem('school_learners_data', serialized);
+  localStorage.setItem('munyaka_students', serialized);
+  localStorage.setItem('munyaka_app_learners_v1', serialized);
 };
 
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
