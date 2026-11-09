@@ -170,12 +170,13 @@ export function hydrateAllStores(): HydrationReport {
   };
 
   try {
-    const raw = localStorage.getItem('munyaka_app_learners_v1');
-    if (raw && (raw.includes('MUN-001-2026') || raw.includes('Unnamed Learner') || raw.includes('unnamed learner'))) {
-      localStorage.removeItem('munyaka_app_learners_v1');
-    }
-    if (!localStorage.getItem('munyaka_app_learners_v1')) {
-      localStorage.setItem('munyaka_app_learners_v1', JSON.stringify([]));
+    // Collect from all legacy keys if primary is empty
+    let existingRaw = localStorage.getItem('munyaka_app_learners_v1');
+    if (!existingRaw || existingRaw === '[]') {
+      const fallbackRaw = localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+      if (fallbackRaw && fallbackRaw !== '[]') {
+        localStorage.setItem('munyaka_app_learners_v1', fallbackRaw);
+      }
     }
     report.keys.push('munyaka_app_learners_v1');
 
@@ -217,31 +218,22 @@ export function normalizeStaffAccessCode(code: string | undefined | null, index:
  */
 export function getLearners(): Learner[] {
   try {
-    let data = localStorage.getItem('munyaka_app_learners_v1') || localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
-    if (!data || data === '[]') {
+    let raw = localStorage.getItem('munyaka_app_learners_v1') || localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+    if (!raw || raw === '[]') {
       const legacy = localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
       if (legacy && legacy !== '[]') {
-        data = legacy;
+        raw = legacy;
         localStorage.setItem('munyaka_app_learners_v1', legacy);
       }
     }
-    if (!data) return [];
-    const parsed = JSON.parse(data);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) return [];
     return parsed.filter((l: any) => {
       if (!l) return false;
       const fn = String(l.fullName || l.name || '').trim();
       return fn.length > 0;
-    }).map((l: any) => ({
-      id: l.id || `learner_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      admissionNo: l.admissionNo || l.admNo || l.admissionNumber || '',
-      fullName: l.fullName || l.name || l.studentName || '',
-      grade: l.grade || l.gradeLevel || 'Grade 4',
-      stream: l.stream || 'Blue',
-      guardian: l.guardian || l.parentName || l.parentGuardian || '—',
-      phone: l.phone || l.phoneNumber || '+254',
-      location: l.location || 'Eldoret',
-    }));
+    });
   } catch (e) {
     return [];
   }
