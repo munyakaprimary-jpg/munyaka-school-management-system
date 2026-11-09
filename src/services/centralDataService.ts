@@ -7,22 +7,11 @@ export { STORAGE_KEYS };
 export const CentralDataService = {
   getLearners: (): any[] => {
     try {
-      // Unify all storage keys, prioritizing munyaka_learners_v2, munyaka_learners, school_learners_data, munyaka_students
-      const keys = ['munyaka_learners_v2', 'munyaka_learners', 'school_learners_data', 'munyaka_students', 'learners', 'students'];
-      let parsed: any[] = [];
-      for (const k of keys) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          try {
-            const data = JSON.parse(raw);
-            if (Array.isArray(data) && data.length > 0) {
-              parsed = data;
-              break;
-            }
-          } catch {}
-        }
-      }
-      return dedupeLearnersById(parsed);
+      // Unify all legacy storage keys into primary munyaka_learners_v2 / school_learners_data
+      const primary = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+      if (!primary) return [];
+      const parsed = JSON.parse(primary);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
