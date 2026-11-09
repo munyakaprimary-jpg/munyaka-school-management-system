@@ -153,41 +153,41 @@ export default function Students() {
   const assignedTeacherStream = !isAdmin ? (resolvedStream || 'BLUE') : 'all';
 
   const [students, setStudents] = useState<any[]>(() => {
-    // Load from centralized master data service (aggregates across all storage keys)
-    const loaded = CentralDataService.getLearners() || [];
-    return ensureProperAdmissionNumbers(loaded.map(formatLearnerDoc));
-  });
+      // Load from centralized master data service (aggregates across all storage keys)
+      const loaded = CentralDataService.getLearners() || [];
+      return loaded.map(formatLearnerDoc);
+    });
 
   // Real-Time Firestore Subscription & local storage sync
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     try {
       unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
-        if (!snapshot.empty) {
-          const list = snapshot.docs.map(formatLearnerDoc);
-          setStudents(ensureProperAdmissionNumbers(list));
-        }
-      }, (err) => {
-        console.warn("Firestore learners snapshot offline or error:", err);
-      });
-    } catch (e) {
-      console.warn("Firestore collection subscription failed:", e);
-    }
-
-    const handleStudentsUpdated = () => {
-      const loaded = CentralDataService.getLearners() || [];
-      setStudents(ensureProperAdmissionNumbers(loaded.map(formatLearnerDoc)));
-    };
-    const handleLearnersUpdated = () => {
-      const loaded = CentralDataService.getLearners();
-      setStudents(ensureProperAdmissionNumbers(loaded));
-    };
-    const handleDataChanged = () => {
-      const loaded = CentralDataService.getLearners();
-      setStudents(ensureProperAdmissionNumbers(loaded));
-    };
-
-    window.addEventListener('students-updated', handleStudentsUpdated);
+              if (!snapshot.empty) {
+                const list = snapshot.docs.map(formatLearnerDoc);
+                setStudents(list);
+              }
+            }, (err) => {
+              console.warn("Firestore learners snapshot offline or error:", err);
+            });
+          } catch (e) {
+            console.warn("Firestore collection subscription failed:", e);
+          }
+      
+          const handleStudentsUpdated = () => {
+            const loaded = CentralDataService.getLearners() || [];
+            setStudents(loaded.map(formatLearnerDoc));
+          };
+          const handleLearnersUpdated = () => {
+            const loaded = CentralDataService.getLearners();
+            setStudents(loaded.map(formatLearnerDoc));
+          };
+          const handleDataChanged = () => {
+            const loaded = CentralDataService.getLearners();
+            setStudents(loaded.map(formatLearnerDoc));
+          };
+      
+          window.addEventListener('students-updated', handleStudentsUpdated);
     window.addEventListener('learners-updated', handleLearnersUpdated);
     window.addEventListener('munyaka:data-changed', handleDataChanged);
 
@@ -379,17 +379,14 @@ export default function Students() {
         console.warn("Firestore transfer save fallback:", firestoreErr);
       }
 
-      setStudents(prevLearners => [studentData, ...prevLearners]);
-      const updated = [studentData, ...students];
-      const resequenced = ensureProperAdmissionNumbers(updated);
-      setStudents(resequenced);
-
-      try {
-        CentralDataService.saveLearners(resequenced);
-      } catch {}
-
-      showSuccess("Learner successfully added and saved to directory!");
-      setIsTransferModalOpen(false);
+      const updatedList = [studentData, ...students];
+            setStudents(updatedList);
+            try {
+              CentralDataService.saveLearners(updatedList);
+            } catch {}
+      
+            showSuccess("Learner successfully added and saved to directory!");
+            setIsTransferModalOpen(false);
     } catch (err) {
       showError("Failed to transfer in learner.");
     } finally {
@@ -528,13 +525,13 @@ export default function Students() {
         showSuccess("Learner successfully added and saved to directory!");
       }
 
-      setStudents(ensureProperAdmissionNumbers(updated));
+      setStudents(updated);
+            
+            try {
+              CentralDataService.saveLearners(updated);
+            } catch {}
       
-      try {
-        CentralDataService.saveLearners(ensureProperAdmissionNumbers(updated));
-      } catch {}
-
-      setIsModalOpen(false);
+            setIsModalOpen(false);
       resetForm();
     } catch (err: any) {
       console.error('Error saving learner:', err);
@@ -868,7 +865,7 @@ export default function Students() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {filteredStudents.map((student, idx) => {
-                    const sId = student.id || student.admissionNumber || student.admNo || idx;
+                    const sId = student.id || student._id || student.admissionNumber || student.admNo || `row-${idx}`;
                     const sName = student.fullName || student.name || student.learnerName || student.studentName || (student.firstName || student.lastName ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : '') || '';
                     const sAdm = student.admissionNumber || student.admNo || '—';
                     const sAss = student.assessmentNo || student.assessmentNumber || student.assessment || student.assNo || '—';
@@ -1271,8 +1268,8 @@ export default function Students() {
       <Modal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
-        title="Admin Verification"
-        description="Please enter the admin password to confirm deletion of this learner record."
+        title="Confirm Permanent Deletion"
+        description={`Are you sure you want to permanently delete ${pendingDelete?.name || 'this learner'} record? This action cannot be undone.`}
         footer={
           <>
             <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold flex-1">Cancel</Button>
