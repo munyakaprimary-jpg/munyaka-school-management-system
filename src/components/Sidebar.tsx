@@ -97,6 +97,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   const staffName = currentStaff.name || currentStaff.fullName || user?.name || 'Staff Member';
   const staffRole = currentStaff.role || currentStaff.assignedRole || user?.role || 'Staff';
+  const profileName = staffName;
+  const profileRole = staffRole;
   const initials = staffName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
   const activeRole = (currentStaff.role || currentStaff.assignedRole || user?.role || '').toLowerCase();
 
