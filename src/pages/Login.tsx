@@ -499,13 +499,17 @@ const Login: React.FC = () => {
       );
 
       if (!userExists && !foundInStaff && normalizedInput !== 'admin' && !normalizedInput.includes('munyaka')) {
-        showError("Access Denied: Your account is not registered in the system staff directory. Please contact the System Administrator.");
+        try {
+          showError("Access Denied: Your account is not registered in the system staff directory. Please contact the System Administrator.");
+        } catch {}
         setStaffAuthError("Access Denied: Your account is not registered in the system staff directory. Please contact the System Administrator.");
         return;
       }
 
       if (userExists && (userExists.status === 'Inactive' || userExists.isActive === false || userExists.is_active === false)) {
-        showError("Access Suspended: Your account is currently inactive. Contact the System Administrator.");
+        try {
+          showError("Access Suspended: Your account is currently inactive. Contact the System Administrator.");
+        } catch {}
         setStaffAuthError("Access Suspended: Your account is currently inactive. Contact the System Administrator.");
         return;
       }
