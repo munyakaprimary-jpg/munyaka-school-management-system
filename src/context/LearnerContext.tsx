@@ -23,7 +23,7 @@ export const STORAGE_KEY = 'munyaka_learners';
 
 export const getStoredLearners = () => {
   try {
-    const keys = [STORAGE_KEY, 'munyaka_learners_v2', 'munyaka_app_learners_v1', 'school_learners_data', 'munyaka_students', 'cached_learners', 'munyaka_central_db'];
+    const keys = ['munyaka_learners', STORAGE_KEY, 'munyaka_learners_v2', 'munyaka_app_learners_v1', 'school_learners_data', 'munyaka_students', 'cached_learners', 'munyaka_central_db'];
     let allRaw: any[] = [];
     const seenIds = new Set<string>();
     const seenAdmins = new Set<string>();
@@ -68,6 +68,7 @@ export const getStoredLearners = () => {
         grade: l.grade || l.gradeLevel || 'Grade 4',
         stream: l.stream || 'Blue',
       }));
+      localStorage.setItem('munyaka_learners', JSON.stringify(normalized));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       localStorage.setItem('munyaka_learners_v2', JSON.stringify(normalized));
       localStorage.setItem('school_learners_data', JSON.stringify(normalized));
@@ -81,6 +82,7 @@ export const getStoredLearners = () => {
 
 export const saveStoredLearners = (learners: any[]) => {
   const serialized = JSON.stringify(learners);
+  localStorage.setItem('munyaka_learners', serialized);
   localStorage.setItem(STORAGE_KEY, serialized);
   localStorage.setItem('munyaka_learners_v2', serialized);
   localStorage.setItem('school_learners_data', serialized);
