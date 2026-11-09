@@ -39,15 +39,7 @@ import { ExportSuccessShareModal } from "@/components/teacher/ExportSuccessShare
 
 function GlobalExportListener() {
   useEffect(() => {
-    const legacyKeys = [
-      'munyaka_students',
-      'munyaka_pupils',
-      'munyaka_staff',
-      'munyaka_staff_db',
-      'munyaka_staff_directory',
-      'munyaka_staff_master',
-    ];
-    legacyKeys.forEach((key) => localStorage.removeItem(key));
+    // Keep user accounts and staff directory intact
   }, []);
 
   const [modalState, setModalState] = useState<{

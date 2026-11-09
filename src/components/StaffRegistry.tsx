@@ -383,9 +383,32 @@ export default function StaffRegistry() {
 
   const handleDeleteStaff = (id: string) => {
         if (confirm("Are you sure you want to remove this staff member from the system? This action cannot be undone.")) {
-          const existing = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
-          const updated = existing.filter((s: any) => s.id !== id && s.email !== id);
-          localStorage.setItem('munyaka_staff', JSON.stringify(updated));
+          const keysToClean = ['munyaka_staff', 'munyaka_staff_directory', 'munyaka_user_accounts', 'munyaka_users', 'munyaka_staff_registry'];
+          keysToClean.forEach(key => {
+            try {
+              const raw = localStorage.getItem(key);
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                  const filtered = parsed.filter((s: any) =>
+                    s && String(s.id || s.staffId || s.staff_id) !== String(id) &&
+                    String(s.email || '').trim().toLowerCase() !== String(id).trim().toLowerCase() &&
+                    String(s.username || '').trim().toLowerCase() !== String(id).trim().toLowerCase()
+                  );
+                  localStorage.setItem(key, JSON.stringify(filtered));
+                }
+              }
+            } catch (e) {
+              console.warn(`Error cleaning ${key}:`, e);
+            }
+          });
+
+          const existing = JSON.parse(localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff') || '[]');
+          const updated = existing.filter((s: any) =>
+            s && String(s.id || s.staffId || s.staff_id) !== String(id) &&
+            String(s.email || '').trim().toLowerCase() !== String(id).trim().toLowerCase() &&
+            String(s.username || '').trim().toLowerCase() !== String(id).trim().toLowerCase()
+          );
           setStaffList(updated);
           toast.success("Staff member removed successfully");
     
