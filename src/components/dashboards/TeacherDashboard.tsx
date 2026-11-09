@@ -27,6 +27,12 @@ import { getFormattedRoleLabel } from '@/utils/staffRoleUtils';
 export default function TeacherDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // Dynamic User Profile details from session
+  const displayName = user?.name || (user as any)?.username || 'Staff Member';
+  const userRole = user?.role || 'Staff Member';
+  const assignedGrade = (user as any)?.assignedGrade || user?.grade || 'Unassigned Grade';
+  const assignedStream = (user as any)?.assignedStream || user?.stream || '';
   const centralData = useCentralData();
   const students = (centralData as any)?.students || [];
   const marks = (centralData as any)?.marks || [];
