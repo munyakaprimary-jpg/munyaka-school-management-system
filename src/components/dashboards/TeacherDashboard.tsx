@@ -623,7 +623,7 @@ export default function TeacherDashboard() {
         <div className="space-y-2 relative z-10">
           <div className="flex items-center gap-2">
             <Badge className="bg-white/20 text-white hover:bg-white/30 border-none font-bold uppercase tracking-wider text-[10px]">
-              Teacher's Dashboard
+              {user?.role ? user.role.toUpperCase() + ' DASHBOARD' : 'STAFF DASHBOARD'}
             </Badge>
             <span className="text-xs text-blue-200 font-medium">• Active Session</span>
           </div>
@@ -631,11 +631,7 @@ export default function TeacherDashboard() {
             Welcome back, {teacherName}!
           </h1>
           <p className="text-blue-100 text-sm md:text-base max-w-xl font-medium">
-            {isLibraryStaff
-              ? `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Library & Resource Management.`
-              : isClassTeacher
-              ? `You are signed in as ${teacherName} (Staff). Your dashboard is strictly restricted to assigned class (${assignedClassLabel}) data — Mathematics, Science & Technology, and Integrated Science.`
-              : `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Specialist Educator & Subject Management — Mathematics, Science & Technology, and Integrated Science.`}
+            {(user as any)?.assignedGrade ? `Your dashboard is restricted to assigned class (${(user as any).assignedGrade} ${(user as any).assignedStream || ''}) data.` : `Signed in with ${user?.role || 'Staff'} permissions.`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 relative z-10">
