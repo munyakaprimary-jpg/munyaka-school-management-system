@@ -73,14 +73,7 @@ export const formatLearnerDoc = (l: any): Learner => {
 export const learnerService = {
   async getLearners(): Promise<Learner[]> {
     try {
-      let data = localStorage.getItem(STORAGE_KEY);
-      if (!data) {
-        const legacyData = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_students');
-        if (legacyData) {
-          localStorage.setItem(STORAGE_KEY, legacyData);
-          data = legacyData;
-        }
-      }
+      let data = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
       if (!data) return [];
       const parsed = JSON.parse(data);
       if (!Array.isArray(parsed)) return [];
@@ -102,7 +95,13 @@ export const learnerService = {
     } else {
       learners.unshift(formatted);
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(learners));
+    const serialized = JSON.stringify(learners);
+    localStorage.setItem(STORAGE_KEY, serialized);
+    localStorage.setItem('school_learners_data', serialized);
+    localStorage.setItem('munyaka_learners', serialized);
+    localStorage.setItem('munyaka_students', serialized);
+    window.dispatchEvent(new Event('munyaka_learners_updated'));
+    window.dispatchEvent(new Event('munyaka:data-changed'));
     return formatted;
   },
 
@@ -110,7 +109,13 @@ export const learnerService = {
     try {
       let learners = await this.getLearners();
       learners = learners.filter(l => l.id !== id && l.admissionNumber !== id && l.admNo !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(learners));
+      const serialized = JSON.stringify(learners);
+      localStorage.setItem(STORAGE_KEY, serialized);
+      localStorage.setItem('school_learners_data', serialized);
+      localStorage.setItem('munyaka_learners', serialized);
+      localStorage.setItem('munyaka_students', serialized);
+      window.dispatchEvent(new Event('munyaka_learners_updated'));
+      window.dispatchEvent(new Event('munyaka:data-changed'));
       return true;
     } catch (e) {
       console.error('Error deleting learner:', e);

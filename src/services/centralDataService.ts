@@ -7,9 +7,10 @@ export { STORAGE_KEYS };
 export const CentralDataService = {
   getLearners: (): any[] => {
     try {
-      const raw = localStorage.getItem('munyaka_learners');
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
+      // Unify all legacy storage keys into primary munyaka_learners_v2 / school_learners_data
+      const primary = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+      if (!primary) return [];
+      const parsed = JSON.parse(primary);
       return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
@@ -27,6 +28,7 @@ export const CentralDataService = {
     try {
       localStorage.setItem(UNIFIED_STORAGE_KEY, JSON.stringify(normalized));
       localStorage.setItem('school_learners_data', JSON.stringify(normalized));
+      localStorage.setItem('munyaka_learners', JSON.stringify(normalized));
       localStorage.setItem('munyaka_students', JSON.stringify(normalized));
     } catch (err) {
       console.error('[CentralDataService] Failed to save learners:', err);
