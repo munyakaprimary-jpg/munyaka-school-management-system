@@ -73,11 +73,21 @@ export const formatLearnerDoc = (l: any): Learner => {
 export const learnerService = {
   async getLearners(): Promise<Learner[]> {
     try {
-      let data = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
-      if (!data) return [];
-      const parsed = JSON.parse(data);
-      if (!Array.isArray(parsed)) return [];
-      return parsed.map(formatLearnerDoc);
+      const keys = ['munyaka_learners_v2', STORAGE_KEY, 'school_learners_data', 'munyaka_learners', 'munyaka_students', 'learners', 'students'];
+      let parsed: any[] = [];
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          try {
+            const data = JSON.parse(raw);
+            if (Array.isArray(data) && data.length > 0) {
+              parsed = data;
+              break;
+            }
+          } catch {}
+        }
+      }
+      return dedupeLearnersById(parsed).map(formatLearnerDoc);
     } catch (e) {
       console.error('Error fetching learners:', e);
       return [];
@@ -143,18 +153,24 @@ export const dedupeLearnersById = (list: any[]) => {
   return (list || []).filter((learner) => {
     if (!learner) return false;
     const identifier = (
-      learner.birthCertificateNo ||
-      learner.birthCertNo ||
-      learner.assessmentNo ||
+      learner.id ||
       learner.admissionNumber ||
       learner.admissionNo ||
       learner.admNo ||
+      learner.birthCertificateNo ||
+      learner.birthCertNo ||
+      learner.assessmentNo ||
       learner.fullName ||
       learner.name ||
       ''
     ).trim().toLowerCase();
 
     if (!identifier || seen.has(identifier)) {
+      // If missing unique identifier, fallback to index uniqueness check or keep if has ID
+      if (learner.id && !seen.has(String(learner.id))) {
+        seen.add(String(learner.id));
+        return true;
+      }
       return false;
     }
     seen.add(identifier);
