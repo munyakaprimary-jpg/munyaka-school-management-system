@@ -121,21 +121,20 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-      const parsed = getStoredLearners();
-      const clean = deduplicateLearners(parsed);
-      if (clean.length > 0) return clean;
-    } catch (e) {
-      console.error('Error loading storage', e);
+export const getStoredLearners = () => {
+  try {
+    const data = localStorage.getItem('munyaka_learners');
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
     }
-    return [];
-  });
-      saveStoredLearners(clean);
-      return clean;
-    } catch (e) {
-      console.error("Failed to parse learners storage", e);
-      return [];
-    }
-  });
+  } catch (e) {
+    console.error("Failed to parse learners storage", e);
+  }
+  return [];
+};
   const learnersRef = useRef(learners);
   learnersRef.current = learners;
 
