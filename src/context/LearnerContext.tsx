@@ -116,8 +116,19 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [learners, setLearnersState] = useState<any[]>(() => {
     try {
+      const saved = localStorage.getItem('munyaka_learners');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
       const parsed = getStoredLearners();
       const clean = deduplicateLearners(parsed);
+      if (clean.length > 0) return clean;
+    } catch (e) {
+      console.error('Error loading storage', e);
+    }
+    return [];
+  });
       saveStoredLearners(clean);
       return clean;
     } catch (e) {
