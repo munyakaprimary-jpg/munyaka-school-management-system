@@ -479,24 +479,29 @@ const Login: React.FC = () => {
       // ── Enforce Whitelist Check on Staff Login ─────────────────────────────
       const registeredUsers = JSON.parse(localStorage.getItem('munyaka_user_accounts') || localStorage.getItem('munyaka_users') || '[]');
       const normalizedInput = trimmedId.toLowerCase();
-      const registeredUsersArray = Array.isArray(registeredUsers) ? registeredUsers : Object.values(registeredUsers);
+      const registeredUsersArray = Array.isArray(registeredUsers) ? registeredUsers : (registeredUsers ? Object.values(registeredUsers) : []);
 
-      const userExists = registeredUsersArray.find((registeredUser: any) =>
-        (registeredUser.email && String(registeredUser.email).trim().toLowerCase() === normalizedInput) ||
-        (registeredUser.username && String(registeredUser.username).trim().toLowerCase() === normalizedInput) ||
-        (registeredUser.staffId && String(registeredUser.staffId).trim().toLowerCase() === normalizedInput) ||
-        (registeredUser.staff_id && String(registeredUser.staff_id).trim().toLowerCase() === normalizedInput)
-      );
+      const userExists = registeredUsersArray.length > 0 ? registeredUsersArray.find((registeredUser: any) =>
+        registeredUser && typeof registeredUser === 'object' && (
+          (registeredUser.email && String(registeredUser.email).trim().toLowerCase() === normalizedInput) ||
+          (registeredUser.username && String(registeredUser.username).trim().toLowerCase() === normalizedInput) ||
+          (registeredUser.staffId && String(registeredUser.staffId).trim().toLowerCase() === normalizedInput) ||
+          (registeredUser.staff_id && String(registeredUser.staff_id).trim().toLowerCase() === normalizedInput)
+        )
+      ) : null;
 
       let staffList = [];
       try {
         staffList = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
       } catch {}
-      const foundInStaff = staffList.find((s: any) =>
-        String(s.email || '').trim().toLowerCase() === normalizedInput ||
-        String(s.staffId || '').trim().toLowerCase() === normalizedInput ||
-        String(s.staff_id || '').trim().toLowerCase() === normalizedInput
-      );
+      const staffArray = Array.isArray(staffList) ? staffList : (staffList ? Object.values(staffList) : []);
+      const foundInStaff = staffArray.length > 0 ? staffArray.find((s: any) =>
+        s && typeof s === 'object' && (
+          String(s.email || '').trim().toLowerCase() === normalizedInput ||
+          String(s.staffId || '').trim().toLowerCase() === normalizedInput ||
+          String(s.staff_id || '').trim().toLowerCase() === normalizedInput
+        )
+      ) : null;
 
       if (!userExists && !foundInStaff && normalizedInput !== 'admin' && !normalizedInput.includes('munyaka')) {
         try {
