@@ -475,7 +475,41 @@ const Login: React.FC = () => {
         setStaffAuthError('Please enter your access code (e.g. MUN-1234).');
         return;
       }
-  
+
+      // ── Enforce Whitelist Check on Staff Login ─────────────────────────────
+      const registeredUsers = JSON.parse(localStorage.getItem('munyaka_user_accounts') || localStorage.getItem('munyaka_users') || '[]');
+      const normalizedInput = trimmedId.toLowerCase();
+      const registeredUsersArray = Array.isArray(registeredUsers) ? registeredUsers : Object.values(registeredUsers);
+
+      const userExists = registeredUsersArray.find((registeredUser: any) =>
+        (registeredUser.email && String(registeredUser.email).trim().toLowerCase() === normalizedInput) ||
+        (registeredUser.username && String(registeredUser.username).trim().toLowerCase() === normalizedInput) ||
+        (registeredUser.staffId && String(registeredUser.staffId).trim().toLowerCase() === normalizedInput) ||
+        (registeredUser.staff_id && String(registeredUser.staff_id).trim().toLowerCase() === normalizedInput)
+      );
+
+      let staffList = [];
+      try {
+        staffList = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
+      } catch {}
+      const foundInStaff = staffList.find((s: any) =>
+        String(s.email || '').trim().toLowerCase() === normalizedInput ||
+        String(s.staffId || '').trim().toLowerCase() === normalizedInput ||
+        String(s.staff_id || '').trim().toLowerCase() === normalizedInput
+      );
+
+      if (!userExists && !foundInStaff && normalizedInput !== 'admin' && !normalizedInput.includes('munyaka')) {
+        showError("Access Denied: Your account is not registered in the system staff directory. Please contact the System Administrator.");
+        setStaffAuthError("Access Denied: Your account is not registered in the system staff directory. Please contact the System Administrator.");
+        return;
+      }
+
+      if (userExists && (userExists.status === 'Inactive' || userExists.isActive === false || userExists.is_active === false)) {
+        showError("Access Suspended: Your account is currently inactive. Contact the System Administrator.");
+        setStaffAuthError("Access Suspended: Your account is currently inactive. Contact the System Administrator.");
+        return;
+      }
+
       setIsStaffVerifying(true);
       setStaffAuthError('');
 

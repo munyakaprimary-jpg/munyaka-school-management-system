@@ -368,6 +368,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (inputEmail: string, inputPass: string): Promise<boolean> => {
     await new Promise(resolve => setTimeout(resolve, 300));
 
+    // ── Enforce Whitelist Check on Login ────────────────────────────────────
+    const registeredUsers = JSON.parse(localStorage.getItem('munyaka_user_accounts') || localStorage.getItem(USERS_STORAGE_KEY) || '[]');
+    const normalizedInput = inputEmail.trim().toLowerCase();
+
+    // Check if email or username/staffId exists in registered users list
+    const registeredUsersArray = Array.isArray(registeredUsers) ? registeredUsers : Object.values(registeredUsers);
+    const userExists = registeredUsersArray.find((registeredUser: any) =>
+      (registeredUser.email && String(registeredUser.email).trim().toLowerCase() === normalizedInput) ||
+      (registeredUser.username && String(registeredUser.username).trim().toLowerCase() === normalizedInput) ||
+      (registeredUser.staffId && String(registeredUser.staffId).trim().toLowerCase() === normalizedInput) ||
+      (registeredUser.staff_id && String(registeredUser.staff_id).trim().toLowerCase() === normalizedInput)
+    );
+
+    // Allow master admin bypass or pre-configured admin accounts if not in custom user_accounts
+    const isMasterAdminBypass =
+      normalizedInput === 'admin' ||
+      normalizedInput === 'admin@munyaka.sc.ke' ||
+      normalizedInput === 'sysadmin@munyaka.sc.ke' ||
+      normalizedInput === 'jamesndiki@gmail.com' ||
+      normalizedInput === 'jndiki@munyaka.sc.ke';
+
+    if (!userExists && !isMasterAdminBypass) {
+      // Check staff directory as well
+      let staffList = [];
+      try {
+        staffList = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
+      } catch {}
+      const foundInStaff = staffList.find((s: any) =>
+        String(s.email || '').trim().toLowerCase() === normalizedInput ||
+        String(s.staffId || '').trim().toLowerCase() === normalizedInput ||
+        String(s.staff_id || '').trim().toLowerCase() === normalizedInput
+      );
+
+      if (!foundInStaff) {
+        showError("Access Denied: Your account is not registered in the system staff directory. Please contact the System Administrator.");
+        return false;
+      }
+    }
+
+    if (userExists && (userExists.status === 'Inactive' || userExists.isActive === false || userExists.is_active === false)) {
+      showError("Access Suspended: Your account is currently inactive. Contact the System Administrator.");
+      return false;
+    }
+
     const cleanInput = String(inputEmail || '').trim().toLowerCase();
     const cleanPass = String(inputPass || '').trim();
 
