@@ -217,10 +217,17 @@ export function normalizeStaffAccessCode(code: string | undefined | null, index:
  */
 export function getLearners(): Learner[] {
   try {
-    const data = localStorage.getItem('munyaka_app_learners_v1') || localStorage.getItem('munyaka_learners');
+    let data = localStorage.getItem('munyaka_app_learners_v1') || localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+    if (!data || data === '[]') {
+      const legacy = localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+      if (legacy && legacy !== '[]') {
+        data = legacy;
+        localStorage.setItem('munyaka_app_learners_v1', legacy);
+      }
+    }
     if (!data) return [];
     const parsed = JSON.parse(data);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed) || parsed.length === 0) return [];
     return parsed.filter((l: any) => {
       if (!l) return false;
       const fn = String(l.fullName || l.name || '').trim();
@@ -229,9 +236,9 @@ export function getLearners(): Learner[] {
       id: l.id || `learner_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       admissionNo: l.admissionNo || l.admNo || l.admissionNumber || '',
       fullName: l.fullName || l.name || l.studentName || '',
-      grade: l.grade || 'Grade 4',
+      grade: l.grade || l.gradeLevel || 'Grade 4',
       stream: l.stream || 'Blue',
-      guardian: l.guardian || l.parentName || '—',
+      guardian: l.guardian || l.parentName || l.parentGuardian || '—',
       phone: l.phone || l.phoneNumber || '+254',
       location: l.location || 'Eldoret',
     }));
