@@ -20,22 +20,75 @@ export interface Learner {
   createdAt: string;
 }
 
-// 1. Strict Learner Getter (Guards against empty/poisoned seeds)
+// 1. Strict Learner Getter (Guards against empty/poisoned seeds & unifies legacy keys)
 export const getStoredLearners = (): Learner[] => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.LEARNERS);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed.filter(
-          (l: any) => l && l.name && l.name !== 'Unnamed Learner' && l.name !== 'Unknown Learner'
-        );
+    const keys = [
+      STORAGE_KEYS.LEARNERS,
+      'munyaka_app_learners_v1',
+      'school_learners_data',
+      'munyaka_learners',
+      'munyaka_students',
+      'munyaka_central_db'
+    ];
+    let allRaw: any[] = [];
+    const seenIds = new Set<string>();
+    const seenAdmins = new Set<string>();
+
+    for (const key of keys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        const list = Array.isArray(parsed)
+          ? parsed
+          : (parsed?.learners || parsed?.students || parsed?.munyaka_learners || []);
+        if (Array.isArray(list)) {
+          for (const l of list) {
+            if (!l) continue;
+            const name = String(l.fullName || l.name || l.studentName || `${l.firstName || ''} ${l.lastName || ''}`).trim();
+            if (!name || name === 'undefined undefined' || name === 'null null' || name === 'Unnamed Learner') continue;
+            const id = String(l.id || l._id || '');
+            const adm = String(l.admissionNo || l.admNo || l.admissionNumber || '');
+            
+            if (id && seenIds.has(id)) continue;
+            if (adm && seenAdmins.has(adm)) continue;
+            
+            if (id) seenIds.add(id);
+            if (adm) seenAdmins.add(adm);
+            
+            allRaw.push(l);
+          }
+        }
+      } catch (err) {
+        console.error(`[centralStorage.ts] Error reading key ${key}:`, err);
       }
+    }
+
+    if (allRaw.length > 0) {
+      try {
+        const normalized = allRaw.map((l: any) => ({
+          ...l,
+          id: l.id || l._id || l.admissionNo || l.admissionNumber || `learner_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          admNo: l.admNo || l.admissionNo || l.admissionNumber || '',
+          name: l.fullName || l.name || l.studentName || `${l.firstName || ''} ${l.lastName || ''}`.trim() || '',
+          grade: l.grade || l.gradeLevel || 'Grade 4',
+          stream: l.stream || 'Blue',
+          gender: l.gender || l.sex || '—',
+          dob: l.dob || l.dateOfBirth || '—',
+          parentName: l.parentName || l.parentGuardian || l.guardian || '—',
+          phone: l.phone || l.phoneNumber || '+254',
+          createdAt: l.createdAt || new Date().toISOString(),
+        }));
+        localStorage.setItem(STORAGE_KEYS.LEARNERS, JSON.stringify(normalized));
+        localStorage.setItem('school_learners_data', JSON.stringify(normalized));
+        return normalized;
+      } catch (e) {}
     }
   } catch (e) {
     console.error('Failed to parse learners:', e);
   }
-  return []; // Clean empty array fallback only
+  return [];
 };
 
 // 2. Safe Learner Save Routine
