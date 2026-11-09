@@ -30,6 +30,9 @@ export interface Learner {
   [key: string]: any;
 }
 
+import { STORAGE_KEYS, getLearners as getStorageLearners, saveLearners as saveStorageLearners } from '@/utils/storage';
+import type { Learner } from '@/types/learners';
+
 const STORAGE_KEY = STORAGE_KEYS.LEARNERS;
 
 export const formatLearnerDoc = (l: any): Learner => {
@@ -73,11 +76,8 @@ export const formatLearnerDoc = (l: any): Learner => {
 export const learnerService = {
   async getLearners(): Promise<Learner[]> {
     try {
-      let data = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
-      if (!data) return [];
-      const parsed = JSON.parse(data);
-      if (!Array.isArray(parsed)) return [];
-      return parsed.map(formatLearnerDoc);
+      const learners = getStorageLearners();
+      return learners.map(formatLearnerDoc);
     } catch (e) {
       console.error('Error fetching learners:', e);
       return [];
@@ -95,13 +95,7 @@ export const learnerService = {
     } else {
       learners.unshift(formatted);
     }
-    const serialized = JSON.stringify(learners);
-    localStorage.setItem(STORAGE_KEY, serialized);
-    localStorage.setItem('school_learners_data', serialized);
-    localStorage.setItem('munyaka_learners', serialized);
-    localStorage.setItem('munyaka_students', serialized);
-    window.dispatchEvent(new Event('munyaka_learners_updated'));
-    window.dispatchEvent(new Event('munyaka:data-changed'));
+    saveStorageLearners(learners);
     return formatted;
   },
 
@@ -109,13 +103,7 @@ export const learnerService = {
     try {
       let learners = await this.getLearners();
       learners = learners.filter(l => l.id !== id && l.admissionNumber !== id && l.admNo !== id);
-      const serialized = JSON.stringify(learners);
-      localStorage.setItem(STORAGE_KEY, serialized);
-      localStorage.setItem('school_learners_data', serialized);
-      localStorage.setItem('munyaka_learners', serialized);
-      localStorage.setItem('munyaka_students', serialized);
-      window.dispatchEvent(new Event('munyaka_learners_updated'));
-      window.dispatchEvent(new Event('munyaka:data-changed'));
+      saveStorageLearners(learners);
       return true;
     } catch (e) {
       console.error('Error deleting learner:', e);
