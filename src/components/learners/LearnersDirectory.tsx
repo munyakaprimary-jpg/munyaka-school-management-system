@@ -344,21 +344,19 @@ export default function LearnersDirectory() {
                       {learner.admissionNo || learner.admissionNumber || learner.admNo || '—'}
                     </td>
                     <td className="py-4 px-6 font-mono text-xs text-slate-700 font-semibold">
-                      {learner.idValue || learner.birthCertificateNo || learner.birthCertNo || learner.assessmentNo || learner.assessmentNumber || '—'}
+                      {learner.idValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertificateNo || learner.birthCertNo || '—'}
                     </td>
                     <td className="py-4 px-6 font-bold text-slate-900">
                       {learner.fullName || learner.name || learner.studentName || '—'}
                     </td>
-                    <td className="py-4 px-6">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
-                        {learner.gradeAndStream || `${learner.gradeLevel || learner.grade || ''} (${learner.stream || ''})`.trim() || '—'}
-                      </span>
+                    <td className="py-4 px-6 text-sm text-slate-600 font-medium">
+                      {learner.gradeLevel || learner.grade || '—'} {learner.stream ? `(${learner.stream})` : ''}
                     </td>
-                    <td className="py-4 px-6 text-xs font-medium text-slate-600">
+                    <td className="py-4 px-6 text-sm text-slate-600">
                       {learner.gender || learner.sex || '—'}
                     </td>
-                    <td className="py-4 px-6 text-sm text-slate-700 font-medium">
-                      {learner.parentName || learner.parentGuardian || learner.guardian || '—'}
+                    <td className="py-4 px-6 text-sm text-slate-600">
+                      {learner.parentGuardian || learner.parentName || learner.guardian || '—'}
                     </td>
                     <td className="py-4 px-6 text-right">
                       <Button

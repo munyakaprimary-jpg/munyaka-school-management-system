@@ -127,6 +127,12 @@ const StudentProfile = () => {
                   <span>Birth Cert No: <strong>{student?.birthCertificateNo}</strong></span>
                 </div>
               )}
+              {!student?.assessmentNo && !student?.birthCertificateNo && (student as any)?.idValue && (
+                <div className="flex items-center gap-3 text-sm text-slate-600">
+                  <Hash size={16} className="text-slate-400" />
+                  <span>Identifier No: <strong>{(student as any)?.idValue}</strong></span>
+                </div>
+              )}
               {student?.dob && (
                 <div className="flex items-center gap-3 text-sm text-slate-600">
                   <Calendar size={16} className="text-slate-400" />
