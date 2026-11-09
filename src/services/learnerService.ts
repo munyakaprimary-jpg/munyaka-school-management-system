@@ -30,8 +30,10 @@ export interface Learner {
   [key: string]: any;
 }
 
-import { STORAGE_KEYS, getLearners as getStorageLearners, saveLearners as saveStorageLearners } from '@/utils/storage';
-import type { Learner } from '@/types/learners';
+import { STORAGE_KEYS as APP_STORAGE_KEYS, getLearners as getStorageLearners, saveLearners as saveStorageLearners } from '@/utils/storage';
+// import type { Learner } from '@/types/learners';
+
+
 
 const STORAGE_KEY = STORAGE_KEYS.LEARNERS;
 
