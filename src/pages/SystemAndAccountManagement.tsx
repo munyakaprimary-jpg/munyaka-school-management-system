@@ -225,6 +225,24 @@ const SystemAndAccountManagement = () => {
     showSuccess("User account provisioned successfully.");
   };
 
+  const handleResetUserAccounts = () => {
+    if (window.confirm("Are you sure you want to reset all registered user accounts? This will restore only the default System Admin account.")) {
+      const defaultAdmin = [{
+        id: 'user-admin-default',
+        name: 'System Admin',
+        email: 'admin@munyaka.sc.ke',
+        username: 'admin',
+        role: 'SYSTEM ADMINISTRATOR',
+        status: 'Active'
+      }];
+      
+      localStorage.setItem('munyaka_user_accounts', JSON.stringify(defaultAdmin));
+      localStorage.setItem('munyaka_users', JSON.stringify(defaultAdmin));
+      window.dispatchEvent(new Event('storage'));
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">

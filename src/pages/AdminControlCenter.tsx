@@ -474,6 +474,24 @@ export default function AdminControlCenter() {
 
   const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [];
 
+  const handleResetUserAccounts = () => {
+    if (window.confirm("Are you sure you want to reset all registered user accounts? This will restore only the default System Admin account.")) {
+      const defaultAdmin = [{
+        id: 'user-admin-default',
+        name: 'System Admin',
+        email: 'admin@munyaka.sc.ke',
+        username: 'admin',
+        role: 'SYSTEM ADMINISTRATOR',
+        status: 'Active'
+      }];
+      
+      localStorage.setItem('munyaka_user_accounts', JSON.stringify(defaultAdmin));
+      localStorage.setItem('munyaka_users', JSON.stringify(defaultAdmin));
+      window.dispatchEvent(new Event('storage'));
+      window.location.reload();
+    }
+  };
+
   return (
       <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 pb-36">
       {/* Page-level header */}
