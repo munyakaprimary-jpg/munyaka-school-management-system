@@ -218,23 +218,65 @@ export function normalizeStaffAccessCode(code: string | undefined | null, index:
  */
 export function getLearners(): Learner[] {
   try {
-    let raw = localStorage.getItem('munyaka_app_learners_v1') || localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
-    if (!raw || raw === '[]') {
-      const legacy = localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
-      if (legacy && legacy !== '[]') {
-        raw = legacy;
-        localStorage.setItem('munyaka_app_learners_v1', legacy);
+    const keys = ['munyaka_app_learners_v1', 'school_learners_data', 'munyaka_learners', 'munyaka_students'];
+    let allRaw: any[] = [];
+    const seenIds = new Set<string>();
+    const seenAdmins = new Set<string>();
+
+    for (const key of keys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          for (const l of parsed) {
+            if (!l) continue;
+            const name = String(l.fullName || l.name || l.studentName || '').trim();
+            if (!name) continue;
+            const id = String(l.id || l._id || '');
+            const adm = String(l.admissionNo || l.admNo || l.admissionNumber || '');
+            
+            // Deduplicate by ID or Admission Number
+            if (id && seenIds.has(id)) continue;
+            if (adm && seenAdmins.has(adm)) continue;
+            
+            if (id) seenIds.add(id);
+            if (adm) seenAdmins.add(adm);
+            
+            allRaw.push(l);
+          }
+        }
+      } catch (err) {
+        console.error(`[storage.ts] Error reading key ${key}:`, err);
       }
     }
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return [];
-    return parsed.filter((l: any) => {
-      if (!l) return false;
-      const fn = String(l.fullName || l.name || '').trim();
-      return fn.length > 0;
-    });
+
+    // Backup original state before normalizing
+    try {
+      localStorage.setItem('munyaka_learners_backup_' + Date.now(), JSON.stringify(allRaw));
+      if (allRaw.length > 0) {
+        localStorage.setItem('munyaka_app_learners_v1', JSON.stringify(allRaw));
+      }
+    } catch (e) {}
+
+    return allRaw.map((l: any) => ({
+      ...l,
+      id: l.id || l._id || l.admissionNo || l.admissionNumber || `learner_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      admissionNo: l.admissionNo || l.admNo || l.admissionNumber || '',
+      admissionNumber: l.admissionNumber || l.admissionNo || l.admNo || '',
+      fullName: l.fullName || l.name || l.studentName || `${l.firstName || ''} ${l.lastName || ''}`.trim() || '',
+      name: l.name || l.fullName || l.studentName || '',
+      grade: l.grade || l.gradeLevel || 'Grade 4',
+      gradeLevel: l.gradeLevel || l.grade || 'Grade 4',
+      stream: l.stream || 'Blue',
+      guardian: l.guardian || l.parentName || l.parentGuardian || '—',
+      parentName: l.parentName || l.parentGuardian || l.guardian || '—',
+      phone: l.phone || l.phoneNumber || '+254',
+      phoneNumber: l.phoneNumber || l.phone || '+254',
+      location: l.location || 'Eldoret',
+    }));
   } catch (e) {
+    console.error('[storage.ts] getLearners error:', e);
     return [];
   }
 }
