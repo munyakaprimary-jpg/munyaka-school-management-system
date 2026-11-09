@@ -374,19 +374,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const normalizedInput = inputEmail.trim().toLowerCase();
 
     // Match against registered staff/user by email, username, or staffId
-    const registeredUsersArray = Array.isArray(registeredUsers) ? registeredUsers : Object.values(registeredUsers);
-    const staffRegistryArray = Array.isArray(staffRegistry) ? staffRegistry : Object.values(staffRegistry);
+    const registeredUsersArray = Array.isArray(registeredUsers) ? registeredUsers : (registeredUsers ? Object.values(registeredUsers) : []);
+    const staffRegistryArray = Array.isArray(staffRegistry) ? staffRegistry : (staffRegistry ? Object.values(staffRegistry) : []);
 
-    const matchedAccount = registeredUsersArray.find((u: any) =>
-      (u.email && String(u.email).trim().toLowerCase() === normalizedInput) ||
-      (u.username && String(u.username).trim().toLowerCase() === normalizedInput) ||
-      (u.staffId && String(u.staffId).trim().toLowerCase() === normalizedInput) ||
-      (u.staff_id && String(u.staff_id).trim().toLowerCase() === normalizedInput)
-    ) || staffRegistryArray.find((s: any) =>
-      (s.email && String(s.email).trim().toLowerCase() === normalizedInput) ||
-      (s.staffId && String(s.staffId).trim().toLowerCase() === normalizedInput) ||
-      (s.staff_id && String(s.staff_id).trim().toLowerCase() === normalizedInput)
-    );
+    const matchedAccount = registeredUsersArray.length > 0 ? registeredUsersArray.find((u: any) =>
+      u && typeof u === 'object' && (
+        (u.email && String(u.email).trim().toLowerCase() === normalizedInput) ||
+        (u.username && String(u.username).trim().toLowerCase() === normalizedInput) ||
+        (u.staffId && String(u.staffId).trim().toLowerCase() === normalizedInput) ||
+        (u.staff_id && String(u.staff_id).trim().toLowerCase() === normalizedInput)
+      )
+    ) : null || (staffRegistryArray.length > 0 ? staffRegistryArray.find((s: any) =>
+      s && typeof s === 'object' && (
+        (s.email && String(s.email).trim().toLowerCase() === normalizedInput) ||
+        (s.staffId && String(s.staffId).trim().toLowerCase() === normalizedInput) ||
+        (s.staff_id && String(s.staff_id).trim().toLowerCase() === normalizedInput)
+      )
+    ) : null);
 
     // Allow master admin bypass or pre-configured admin accounts if not in custom user_accounts
     const isMasterAdminBypass =
