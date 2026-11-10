@@ -421,19 +421,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (matchedStaff) {
       // Check if login is enabled
-      if ((matchedStaff as any).loginEnabled === false) {
+      if (matchedStaff.loginEnabled === false) {
         showError("Login access has been disabled for this staff member. Contact the System Administrator.");
         return false;
       }
 
       // Check status
-      if ((matchedStaff as any).status === 'Suspended') {
-        showError(`Account is suspended. Contact the System Administrator.`);
+      if (matchedStaff.status === 'Inactive' || matchedStaff.status === 'Suspended') {
+        showError(`Account is ${matchedStaff.status.toLowerCase()}. Contact the System Administrator.`);
         return false;
       }
 
       // Verify access code / password
-      const storedCode = String((matchedStaff as any).accessCode || (matchedStaff as any).tempAccessCode || (matchedStaff as any).password || '').trim();
+      const storedCode = String(matchedStaff.accessCode || matchedStaff.tempAccessCode || matchedStaff.password || '').trim();
       const storedCodeNorm = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
       const cleanPassNorm = cleanPass.toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -448,7 +448,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
 
-      const rawRole = String((matchedStaff as any).systemRole || (matchedStaff as any).role || 'staff').trim().toUpperCase();
+      const rawRole = String(matchedStaff.systemRole || matchedStaff.role || 'staff').trim().toUpperCase();
       const normalizedRole: UserRole = rawRole.includes('TEACHER') && !rawRole.includes('NON') ? 'teacher' :
                                         rawRole.includes('ADMIN') ? 'admin' :
                                         rawRole.includes('OWNER') || rawRole.includes('SUPER') ? 'owner' :
@@ -458,18 +458,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                                         rawRole.includes('DRIVER') ? 'driver' : 'staff';
 
       const loggedUser: User = {
-        id: (matchedStaff as any).id || 'staff-' + Date.now(),
-        name: (matchedStaff as any).name || (matchedStaff as any).fullName || 'Staff Member',
-        email: (matchedStaff as any).email || `${cleanInput}@munyaka.sc.ke`,
-        phone: (matchedStaff as any).phone || '+254 700 000 000',
+        id: matchedStaff.id || 'staff-' + Date.now(),
+        name: matchedStaff.name || matchedStaff.fullName || 'Staff Member',
+        email: matchedStaff.email || `${cleanInput}@munyaka.sc.ke`,
+        phone: matchedStaff.phone || '+254 700 000 000',
         role: normalizedRole,
-        title: (matchedStaff as any).title || (matchedStaff as any).category || (matchedStaff as any).designation || 'Staff',
-        identifier: (matchedStaff as any).tscNumber || (matchedStaff as any).nationalId || (matchedStaff as any).id,
-        avatar: (matchedStaff as any).avatar || String((matchedStaff as any).name || (matchedStaff as any).fullName || 'ST').split(' ').map((n: string) => n[0] || '').join('').substring(0, 2).toUpperCase(),
-        assignedClass: (matchedStaff as any).assignedGrade || (matchedStaff as any).assignedClass || '',
-        assignedStream: (matchedStaff as any).assignedStream || (matchedStaff as any).assigned_stream || (matchedStaff as any).stream || '',
-        department: (matchedStaff as any).department || (matchedStaff as any).category || '',
-        staff_id: (matchedStaff as any).staffId || ''
+        title: matchedStaff.title || matchedStaff.category || matchedStaff.designation || 'Staff',
+        identifier: matchedStaff.tscNumber || matchedStaff.nationalId || matchedStaff.id,
+        avatar: matchedStaff.avatar || String(matchedStaff.name || matchedStaff.fullName || 'ST').split(' ').map((n: string) => n[0] || '').join('').substring(0, 2).toUpperCase(),
+        assignedClass: matchedStaff.assignedGrade || matchedStaff.assignedClass || '',
+        assignedStream: matchedStaff.assignedStream || matchedStaff.assigned_stream || matchedStaff.stream || '',
+        department: matchedStaff.department || matchedStaff.category || '',
+        staff_id: matchedStaff.staffId || ''
       };
 
       setUser(loggedUser);
