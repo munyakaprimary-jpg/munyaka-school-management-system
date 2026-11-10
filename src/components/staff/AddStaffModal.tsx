@@ -239,29 +239,6 @@ export function AddStaffModal({ isOpen, onClose, onStaffAdded }: AddStaffModalPr
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="accessCode" className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Secure Access Code
-                </Label>
-                <button
-                  type="button"
-                  onClick={handleGenerateNewCode}
-                  className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition-colors"
-                >
-                  <RefreshCw className="w-3 h-3 animate-spin-hover" /> Generate New
-                </button>
-              </div>
-              <div className="relative">
-                <Input
-                  id="accessCode"
-                  value={accessCode}
-                  onChange={(e) => setAccessCode(e.target.value)}
-                  required
-                  className="font-mono font-bold tracking-widest text-indigo-700 bg-indigo-50/50 rounded-xl border-indigo-200 focus:border-indigo-500"
-                />
-              </div>
-            </div>
           </div>
 
           {/* Assigned Grades Checkboxes */}
