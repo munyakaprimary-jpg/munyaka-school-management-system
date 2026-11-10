@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { X, UserPlus } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
-const SYSTEM_ROLES = [
-  { id: 'HOI', label: 'HOI (Head of Institution / Principal)' },
-  { id: 'DHOI', label: 'DHOI (Deputy Head of Institution)' },
+export const SYSTEM_ROLES = [
+  { id: 'HOI (Head of Institution / Principal)', label: 'HOI (Head of Institution / Principal)' },
+  { id: 'DHOI (Deputy Head of Institution)', label: 'DHOI (Deputy Head of Institution)' },
   { id: 'Class Teacher', label: 'Class Teacher' },
   { id: 'Subject Teacher', label: 'Subject Teacher' },
   { id: 'ICT Teacher', label: 'ICT Teacher' },
