@@ -93,6 +93,7 @@ export interface StaffMember {
   createdAt?: string;
   // New authentication fields
   password?: string;
+  passwordHash?: string;
   lastPasswordChange?: string;
   loginEnabled?: boolean;
 }
@@ -703,18 +704,6 @@ export default function StaffRegistry() {
     localStorage.setItem('munyaka_staff_v2', JSON.stringify(newList));
     localStorage.setItem('munyaka_staff_directory', JSON.stringify(newList));
     localStorage.setItem('munyaka_staff_db', JSON.stringify(newList));
-  };
-
-  const handleTopScroll = () => {
-    if (topScrollRef.current && bottomScrollRef.current) {
-      bottomScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
-    }
-  };
-
-  const handleBottomScroll = () => {
-    if (topScrollRef.current && bottomScrollRef.current) {
-      topScrollRef.current.scrollLeft = bottomScrollRef.current.scrollLeft;
-    }
   };
 
   // Extract unique learning areas names for subject pill grid
