@@ -168,6 +168,16 @@ export default function Students() {
   const assignedTeacherStream = !isAdmin ? (resolvedStream || 'BLUE') : 'all';
 
   const [students, setStudents] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_learners_directory');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(formatLearnerDoc);
+        }
+      }
+    } catch (e) {}
+
     const loaded = getStoredLearners();
     if (loaded.length > 0) {
       return loaded.map(formatLearnerDoc);
@@ -179,41 +189,67 @@ export default function Students() {
     return [];
   });
 
-  // Real-Time Firestore Subscription & local storage sync
+  // Mount & Focus Reload and Persistent Save Action
   useEffect(() => {
+    const reloadFromLocalStorage = () => {
+      try {
+        const saved = localStorage.getItem('munyaka_learners_directory');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setStudents(parsed.map(formatLearnerDoc));
+            return;
+          }
+        }
+        const loaded = getStoredLearners();
+        if (loaded && loaded.length > 0) {
+          setStudents(loaded.map(formatLearnerDoc));
+        }
+      } catch (e) {
+        console.error('Error reloading learners from localStorage:', e);
+      }
+    };
+
+    reloadFromLocalStorage();
+
+    window.addEventListener('focus', reloadFromLocalStorage);
+    window.addEventListener('storage', reloadFromLocalStorage);
+
     let unsubscribe: (() => void) | undefined;
     try {
       unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
-              if (!snapshot.empty) {
-                const list = snapshot.docs.map(formatLearnerDoc);
-                setStudents(list);
-              }
-            }, (err) => {
-              console.warn("Firestore learners snapshot offline or error:", err);
-            });
-          } catch (e) {
-            console.warn("Firestore collection subscription failed:", e);
-          }
-      
-          const handleStudentsUpdated = () => {
-            const loaded = CentralDataService.getLearners() || [];
-            setStudents(loaded.map(formatLearnerDoc));
-          };
-          const handleLearnersUpdated = () => {
-            const loaded = CentralDataService.getLearners();
-            setStudents(loaded.map(formatLearnerDoc));
-          };
-          const handleDataChanged = () => {
-            const loaded = CentralDataService.getLearners();
-            setStudents(loaded.map(formatLearnerDoc));
-          };
-      
-          window.addEventListener('students-updated', handleStudentsUpdated);
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map(formatLearnerDoc);
+          setStudents(list);
+          try {
+            localStorage.setItem('munyaka_learners_directory', JSON.stringify(list));
+          } catch {}
+        }
+      }, (err) => {
+        console.warn("Firestore learners snapshot offline or error:", err);
+      });
+    } catch (e) {
+      console.warn("Firestore collection subscription failed:", e);
+    }
+
+    const handleStudentsUpdated = () => {
+      reloadFromLocalStorage();
+    };
+    const handleLearnersUpdated = () => {
+      reloadFromLocalStorage();
+    };
+    const handleDataChanged = () => {
+      reloadFromLocalStorage();
+    };
+
+    window.addEventListener('students-updated', handleStudentsUpdated);
     window.addEventListener('learners-updated', handleLearnersUpdated);
     window.addEventListener('munyaka:data-changed', handleDataChanged);
 
     return () => {
       if (unsubscribe) unsubscribe();
+      window.removeEventListener('focus', reloadFromLocalStorage);
+      window.removeEventListener('storage', reloadFromLocalStorage);
       window.removeEventListener('students-updated', handleStudentsUpdated);
       window.removeEventListener('learners-updated', handleLearnersUpdated);
       window.removeEventListener('munyaka:data-changed', handleDataChanged);
