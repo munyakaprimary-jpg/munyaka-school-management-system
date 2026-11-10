@@ -189,21 +189,44 @@ export default function Students() {
     return [];
   });
 
-  // Mount & Focus Reload and Persistent Save Action
+  // Mount & Focus Reload, One-Time Data Cleanup Migration, and Persistent Save Action
   useEffect(() => {
     const reloadFromLocalStorage = () => {
       try {
-        const saved = localStorage.getItem('munyaka_learners_directory');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            setStudents(parsed.map(normalizeLearner));
+        let rawData = localStorage.getItem('munyaka_learners_directory');
+        if (!rawData) {
+          for (const key of ['munyaka_students_db', 'munyaka_learners', 'munyaka_students', 'munyaka_students_directory']) {
+            const data = localStorage.getItem(key);
+            if (data) {
+              rawData = data;
+              break;
+            }
+          }
+        }
+
+        if (rawData) {
+          const parsed = JSON.parse(rawData);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const normalizedList = parsed.map(normalizeLearner);
+            setStudents(normalizedList);
+            // One-time data cleanup migration: re-save normalized records back to localStorage permanently
+            try {
+              localStorage.setItem('munyaka_learners_directory', JSON.stringify(normalizedList));
+              localStorage.setItem('munyaka_students_db', JSON.stringify(normalizedList));
+              localStorage.setItem('munyaka_learners', JSON.stringify(normalizedList));
+              CentralDataService.saveLearners(normalizedList);
+            } catch {}
             return;
           }
         }
+
         const loaded = getStoredLearners();
         if (loaded && loaded.length > 0) {
-          setStudents(loaded.map(normalizeLearner));
+          const normalizedList = loaded.map(normalizeLearner);
+          setStudents(normalizedList);
+          try {
+            localStorage.setItem('munyaka_learners_directory', JSON.stringify(normalizedList));
+          } catch {}
         }
       } catch (e) {
         console.error('Error reloading learners from localStorage:', e);

@@ -39,15 +39,15 @@ const STORAGE_KEY = STORAGE_KEYS.LEARNERS;
 
 export const normalizeLearner = (item: any): Learner => {
   if (!item) return {} as Learner;
-  const admissionNo = item.admissionNo || item.adm_no || item.admission_no || item.admNo || '—';
-  const assessmentNo = item.assessmentNo || item.assessment_no || item.birth_cert_no || item.birthCertificateNo || item.birthCertNo || item.idValue || '—';
-  const fullName = item.fullName || item.name || item.full_name || item.studentName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Unregistered Name';
-  const grade = item.grade || item.class || item.grade_level || 'Unassigned';
-  const stream = item.stream || item.stream_name || 'Unassigned Stream';
+  const admissionNo = item.admissionNo || item.adm_no || item.admission_no || item.admissionNumber || item.admNo || item.id || '—';
+  const assessmentNo = item.assessmentNo || item.assessment_no || item.birth_cert_no || item.assessmentNumber || item.birthCertificateNo || item.birthCertNo || item.idValue || '—';
+  const fullName = item.fullName || item.name || item.full_name || item.studentName || item.student_name || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Unregistered Learner';
+  const grade = item.grade || item.class || item.grade_level || item.class_name || 'Grade 6';
+  const stream = item.stream || item.stream_name || item.streamName || 'BLUE';
   const gender = item.gender || item.sex || 'Male';
   const dob = item.dob || item.date_of_birth || item.birthDate || '—';
   const guardianName = item.guardianName || item.parent_name || item.guardian_name || item.parentName || item.guardian || '—';
-  const guardianPhone = item.guardianPhone || item.phone || item.parent_phone || item.phoneNumber || item.parentPhone || '—';
+  const guardianPhone = item.guardianPhone || item.phone || item.parent_phone || item.phone_number || item.phoneNumber || item.parentPhone || '—';
 
   return {
     ...item,
