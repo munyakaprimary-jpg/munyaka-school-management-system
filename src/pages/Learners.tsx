@@ -189,8 +189,9 @@ export default function Students() {
     return [];
   });
 
-  // Mount & Focus Reload, One-Time Data Cleanup Migration, and Persistent Save Action
+  // Mount & Focus Reload, One-Time Data Cleanup Migration, and Event listeners
   useEffect(() => {
+    let hasMigrated = false;
     const reloadFromLocalStorage = () => {
       try {
         let rawData = localStorage.getItem('munyaka_learners_directory');
@@ -209,13 +210,16 @@ export default function Students() {
           if (Array.isArray(parsed) && parsed.length > 0) {
             const normalizedList = parsed.map(normalizeLearner);
             setStudents(normalizedList);
-            // One-time data cleanup migration: re-save normalized records back to localStorage permanently
-            try {
-              localStorage.setItem('munyaka_learners_directory', JSON.stringify(normalizedList));
-              localStorage.setItem('munyaka_students_db', JSON.stringify(normalizedList));
-              localStorage.setItem('munyaka_learners', JSON.stringify(normalizedList));
-              CentralDataService.saveLearners(normalizedList);
-            } catch {}
+            // One-time data cleanup migration on mount only
+            if (!hasMigrated) {
+              hasMigrated = true;
+              try {
+                localStorage.setItem('munyaka_learners_directory', JSON.stringify(normalizedList));
+                localStorage.setItem('munyaka_students_db', JSON.stringify(normalizedList));
+                localStorage.setItem('munyaka_learners', JSON.stringify(normalizedList));
+                CentralDataService.saveLearners(normalizedList);
+              } catch {}
+            }
             return;
           }
         }
@@ -224,9 +228,12 @@ export default function Students() {
         if (loaded && loaded.length > 0) {
           const normalizedList = loaded.map(normalizeLearner);
           setStudents(normalizedList);
-          try {
-            localStorage.setItem('munyaka_learners_directory', JSON.stringify(normalizedList));
-          } catch {}
+          if (!hasMigrated) {
+            hasMigrated = true;
+            try {
+              localStorage.setItem('munyaka_learners_directory', JSON.stringify(normalizedList));
+            } catch {}
+          }
         }
       } catch (e) {
         console.error('Error reloading learners from localStorage:', e);
@@ -235,7 +242,11 @@ export default function Students() {
 
     reloadFromLocalStorage();
 
-    window.addEventListener('focus', reloadFromLocalStorage);
+    const handleWindowFocus = () => {
+      reloadFromLocalStorage();
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
     window.addEventListener('storage', reloadFromLocalStorage);
 
     let unsubscribe: (() => void) | undefined;
@@ -271,7 +282,7 @@ export default function Students() {
 
     return () => {
       if (unsubscribe) unsubscribe();
-      window.removeEventListener('focus', reloadFromLocalStorage);
+      window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('storage', reloadFromLocalStorage);
       window.removeEventListener('students-updated', handleStudentsUpdated);
       window.removeEventListener('learners-updated', handleLearnersUpdated);
@@ -354,12 +365,8 @@ export default function Students() {
   const availableGrades = gradesConfig.grades.length > 0 ? gradesConfig.grades : ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
   const availableStreams = gradesConfig.streams.length > 0 ? gradesConfig.streams : ['BLUE', 'RED', 'GREEN', 'YELLOW'];
 
-  // Persist students through centralized data service
-    useEffect(() => {
-      try {
-        CentralDataService.saveLearners(students);
-      } catch {}
-    }, [students]);
+  // Persist students through centralized data service only in response to actions or state initialization (without triggering render loops)
+  // Removed automatic effect writing to prevent infinite loop cycles
 
   const resetForm = () => {
     setEditingId(null);
