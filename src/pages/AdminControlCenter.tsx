@@ -5,21 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Plus, Shield, Trash2, RefreshCw, Upload, Download } from 'lucide-react';
+import { Users, Plus, Shield, Trash2, RefreshCw, Upload, Download, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
 import { getStaffMaster } from '@/services/staffMasterService';
 
 export const AdminControlCenter: React.FC = () => {
   const [staff, setStaff] = useState<any[]>([]);
-  const [showAddStaff, setShowAddStaff] = useState(false);
-  const [newStaff, setNewStaff] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    role: 'teacher',
-    staff_id: '',
-    password: ''
-  });
 
   useEffect(() => {
     loadStaff();
@@ -45,28 +37,7 @@ export const AdminControlCenter: React.FC = () => {
     }
   };
 
-  const handleCreateStaff = () => {
-    if (!newStaff.name || !newStaff.email) {
-      showError('Please fill in name and email.');
-      return;
-    }
-    const created = {
-      id: `usr-${Date.now()}`,
-      name: newStaff.name,
-      email: newStaff.email,
-      phone: newStaff.phone,
-      role: newStaff.role.toUpperCase(),
-      staffId: newStaff.staff_id || `STF-${Math.floor(Math.random() * 9000 + 1000)}`,
-      status: 'Active',
-      createdAt: new Date().toISOString()
-    };
-    const updated = [...staff, created];
-    setStaff(updated);
-    // Note: Staff creation should be done via Staff & Teacher Registry for full profile
-    setShowAddStaff(false);
-    setNewStaff({ name: '', email: '', phone: '', role: 'teacher', staff_id: '', password: '' });
-    showSuccess('Staff record created. Use Staff & Teacher Registry for full profile management.');
-  };
+  const handleCreateStaff = () => {};
 
   const handleDeleteStaff = (id: string) => {
     if (confirm('Are you sure you want to delete this staff record? This will revoke their login access.')) {
@@ -172,99 +143,22 @@ export const AdminControlCenter: React.FC = () => {
                 <Users className="w-5 h-5 text-indigo-600" />
                 <CardTitle className="text-lg">Staff Records (Unified Auth)</CardTitle>
               </div>
-              <div className="flex items-center gap-2">
-                <Dialog open={showAddStaff} onOpenChange={setShowAddStaff}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add Staff
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="rounded-3xl">
-                    <DialogHeader>
-                      <DialogTitle>Add New Staff Record</DialogTitle>
-                      <DialogDescription>Create a basic staff record. Use Staff & Teacher Registry for full profile management.</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div>
-                        <Label>Full Name</Label>
-                        <Input
-                          value={newStaff.name}
-                          onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
-                          placeholder="John Kamau"
-                          className="rounded-xl mt-1"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>Email</Label>
-                          <Input
-                            type="email"
-                            value={newStaff.email}
-                            onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
-                            placeholder="john@school.sc.ke"
-                            className="rounded-xl mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label>Phone</Label>
-                          <Input
-                            value={newStaff.phone}
-                            onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })}
-                            placeholder="+254 700 000 000"
-                            className="rounded-xl mt-1"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>Role</Label>
-                          <Select value={newStaff.role} onValueChange={(v) => setNewStaff({ ...newStaff, role: v })}>
-                            <SelectTrigger className="rounded-xl mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="head_teacher">Head Teacher</SelectItem>
-                              <SelectItem value="teacher">Teacher</SelectItem>
-                              <SelectItem value="bursar">Bursar</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label>Staff ID</Label>
-                          <Input
-                            value={newStaff.staff_id}
-                            onChange={(e) => setNewStaff({ ...newStaff, staff_id: e.target.value })}
-                            placeholder="T001"
-                            className="rounded-xl mt-1"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Password</Label>
-                        <Input
-                          type="password"
-                          value={newStaff.password}
-                          onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
-                          placeholder="Enter password"
-                          className="rounded-xl mt-1"
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowAddStaff(false)} className="rounded-xl">
-                        Cancel
-                      </Button>
-                      <Button onClick={handleCreateStaff} className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
-                        Create Staff Record
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+              <div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="rounded-xl text-xs gap-1 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border-indigo-200 cursor-pointer"
+                >
+                  <Link to="/staff-registry">
+                    Go to Staff Registry <ExternalLink size={12} />
+                  </Link>
+                </Button>
               </div>
             </div>
-            <CardDescription>Staff records serve as the unified authentication source. Manage full profiles in Staff & Teacher Registry.</CardDescription>
+            <CardDescription>
+              Unified authentication source. Create new staff profiles and manage access in the Staff & Teacher Registry.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-[300px] overflow-y-auto">
