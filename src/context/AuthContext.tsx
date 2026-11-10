@@ -19,14 +19,8 @@ import { signOut } from 'firebase/auth';
 
 export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student' | 'non_teaching' | 'support' | 'driver' | 'owner' | 'parent' | 'support_staff';
 
-// 'librarian' maps to the owner-level dashboard in Dashboard.tsx (the role
-// formerly named 'owner' — kept as a separate role to preserve the hierarchy).
 export const OWNER_LEVEL_ROLE: UserRole = 'librarian';
 
-/**
- * Lightweight session user shape — the subset persisted in
- * `munyaka_session` and returned by the AuthContext `user` field.
- */
 interface User {
   id: string;
   name: string;
@@ -36,25 +30,16 @@ interface User {
   title?: string;
   identifier?: string;
   avatar?: string;
-  /** Optional staff identifier for staffId-based login. */
   staff_id?: string;
-  /** Whether the account is currently active. */
   is_active?: number | boolean;
-  /** ISO timestamp the record was created. */
   created_at?: string;
-  /** Assigned grade/class for teachers — enforces stream/class access */
   assignedClass?: string;
   assignedStream?: string;
-  /** Alias fields used by some components */
   grade?: string;
   stream?: string;
   department?: string;
 }
 
-/**
- * Full user record as stored in `munyaka_users` localStorage.
- * Extends User with storage-specific fields.
- */
 interface StoredUser extends User {
   password?: string;
   alternativePasswords?: string[];
@@ -74,11 +59,7 @@ interface AuthContextType {
   updateProfile: (data: Partial<User>) => void;
   updatePassword: (oldPass: string, newPass: string) => Promise<boolean>;
   isLoading: boolean;
-  // Role switching for testing/admin purposes
   switchRole: (role: UserRole) => void;
-  // Direct session setter — used by login handlers that authenticate
-  // outside the standard login() flow (e.g. LAN server / offline auth)
-  // so the app recognizes the logged-in state immediately.
   setUser: (user: User | null) => void;
 }
 
@@ -119,15 +100,14 @@ const DEFAULT_SYSTEM_ADMIN = {
   }
 };
 
-// Default test teacher account — staffId is used as the login username
 const DEFAULT_TEACHER = null;
 
 const USERS_STORAGE_KEY = 'munyaka_users';
+const STAFF_STORAGE_KEY = 'munyaka_staff';
 
 const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   const norm = String(systemRole || '').trim().toLowerCase();
   switch (norm) {
-    // Normalize legacy identifiers to the canonical 'admin' role.
     case 'owner':
     case 'super_admin':
     case 'support_admin':
@@ -171,16 +151,26 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   }
 };
 
-/** Normalize email/username for consistent storage & lookup */
 const normalizeEmail = (email: string): string => {
   return String(email || '').trim().toLowerCase();
 };
 
+const hashPassword = async (plain: string): Promise<string> => {
+  const encoded = new TextEncoder().encode(String(plain || '').trim());
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+/**
+ * Initialize users storage from staff records (single source of truth).
+ * Staff records ARE the user accounts - no separate table.
+ */
 const initializeUsersStorage = () => {
   const existingUsersJson = localStorage.getItem(USERS_STORAGE_KEY);
   const users = existingUsersJson ? JSON.parse(existingUsersJson) : {};
 
-  // Ensure default Super Admin (Owner) with updated credentials is generated & active
+  // Ensure default Super Admin (Owner)
   const ownerEmailKey = normalizeEmail(DEFAULT_ADMIN.email);
   users[ownerEmailKey] = {
     ...DEFAULT_ADMIN.user,
@@ -190,7 +180,7 @@ const initializeUsersStorage = () => {
     emailConfirmed: true
   };
 
-  // Ensure default System Administrator with distinct credentials is generated & active
+  // Ensure default System Administrator
   const sysAdminEmailKey = normalizeEmail(DEFAULT_SYSTEM_ADMIN.email);
   users[sysAdminEmailKey] = {
     ...DEFAULT_SYSTEM_ADMIN.user,
@@ -200,20 +190,13 @@ const initializeUsersStorage = () => {
     emailConfirmed: true
   };
 
-  // Default test teacher account disabled to eliminate hardcoded fallbacks
-  const teacherKey = '';
-  const teacherUserRecord = null;
-
-  // Sync pre-registered staff as valid default loggable users.
-  // initializeStaffMaster() seeds the master ledger on first run and migrates
-  // any old-format access keys to the MUNYAKA-XXXX standard.
+  // Initialize staff master
   initializeStaffMaster();
 
-  // Primary: read from the staff master ledger (single source of truth).
-  // Convert MasterStaffRecord → PreRegisteredStaff shape for the code below.
-  const masterRecords = getStaffMaster();
-  const staffLedger: PreRegisteredStaff[] = masterRecords.length > 0
-    ? masterRecords.map(r => ({
+  // Build user records from staff directory (single source of truth)
+  const staffList = getStaffMaster();
+  const staffLedger: PreRegisteredStaff[] = staffList.length > 0
+    ? staffList.map(r => ({
         id: r.id,
         staffId: r.staffId,
         fullName: r.name,
@@ -240,15 +223,15 @@ const initializeUsersStorage = () => {
     users[emailKey] = {
       id: staff.id,
       name: staff.fullName,
-      email: emailKey, // Store normalized
+      email: emailKey,
       phone: staff.phone,
       role: mapSystemRoleToUserRole(staff.systemRole),
       avatar: String(staff.fullName || '').split(' ').map(n => n[0] || '').join('').substring(0, 2).toUpperCase(),
-      password: staff.tempAccessCode, // Plain text - this IS the password for this frontend-only system
+      password: staff.tempAccessCode,
       alternativePasswords: [staff.nationalId, 'munyaka5239'],
-      isActive: staff.status !== 'Suspended', // Explicit activation flag
-      emailConfirmed: true, // Explicit verification flag
-      staffId: staff.staffId, // preserve the staffId on the stored record
+      isActive: staff.status !== 'Suspended',
+      emailConfirmed: true,
+      staffId: staff.staffId,
       assignedClass: staff.assignedGrade || 'Grade 4',
       assignedStream: staff.assignedStream || 'Green',
       grade: staff.assignedGrade || 'Grade 4',
@@ -256,56 +239,33 @@ const initializeUsersStorage = () => {
       department: staff.department || 'Academics'
     };
 
-    // Also make the staffId (e.g. "T001") a valid login key
-        if (staff.staffId) {
-          const staffIdKey = String(staff.staffId || '').toLowerCase();
-          if (!users[staffIdKey]) {
-            users[staffIdKey] = { ...users[emailKey] };
-          }
-        }
-      });
-    
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-      notifyDataChanged(USERS_STORAGE_KEY);
-    
-      // ── Seed the unified admin password key on fresh installs ─────────────────
-            // On a fresh browser environment (e.g. first load on Vercel), the
-            // `MUNYAKA_ADMIN_PASSWORD` key does not exist yet. Without this, the
-            // login flow falls back to the hard-coded default inside
-            // `getActiveAdminPassword()`, which is correct — but we still seed it
-            // explicitly so the value is consistent across all code paths.
-            try {
-              if (localStorage.getItem(MUNYAKA_ADMIN_PASSWORD) === null) {
-                localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, DEFAULT_ADMIN_PASSWORD);
-              }
-            } catch {
-              /* localStorage unavailable — non-fatal */
-            }
-      
-            // ── Seed role-specific PIN keys on fresh installs ─────────────────────
-            // The Login page reads `admin_pin` / `owner_pin` directly for the
-            // fastest authentication path. Seed them with the default 'munyaka'
-            // PIN so a fresh browser can log in without any configuration step.
-            try {
-              if (localStorage.getItem('admin_pin') === null) {
-                localStorage.setItem('admin_pin', 'munyaka');
-              }
-              if (localStorage.getItem('owner_pin') === null) {
-                localStorage.setItem('owner_pin', 'munyaka');
-              }
-            } catch {
-              /* localStorage unavailable — non-fatal */
-            }
-          };
+    if (staff.staffId) {
+      const staffIdKey = String(staff.staffId || '').toLowerCase();
+      if (!users[staffIdKey]) {
+        users[staffIdKey] = { ...users[emailKey] };
+      }
+    }
+  });
 
-/**
- * Persist the role of the *currently signed-in* user to localStorage
- * so the AppUnlock license-gate (which lives outside AuthProvider
- * and decides whether to lock the app on expiry) can read it
- * synchronously on first render. Without this, the Owner would see
- * the lock screen for a frame even after signing in, because the
- * storage write happens after the first paint.
- */
+  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+  notifyDataChanged(USERS_STORAGE_KEY);
+
+  try {
+    if (localStorage.getItem(MUNYAKA_ADMIN_PASSWORD) === null) {
+      localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, DEFAULT_ADMIN_PASSWORD);
+    }
+  } catch {}
+
+  try {
+    if (localStorage.getItem('admin_pin') === null) {
+      localStorage.setItem('admin_pin', 'munyaka');
+    }
+    if (localStorage.getItem('owner_pin') === null) {
+      localStorage.setItem('owner_pin', 'munyaka');
+    }
+  } catch {}
+};
+
 const persistCurrentAuthRole = (role: string | null) => {
   try {
     if (role) {
@@ -313,7 +273,7 @@ const persistCurrentAuthRole = (role: string | null) => {
     } else {
       localStorage.removeItem(CURRENT_AUTH_ROLE_KEY);
     }
-  } catch { /* localStorage may be unavailable in some browser modes */ }
+  } catch {}
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -326,29 +286,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     let cancelled = false;
     try {
       initializeUsersStorage();
-    } catch {
-      /* storage may be blocked on some mobile browsers — non-fatal */
-    }
+    } catch {}
 
     try {
       const savedUser = localStorage.getItem('munyaka_session');
       if (savedUser) {
         const parsed = JSON.parse(savedUser) as Partial<User> | null;
-        // Guard against partially-written or corrupted sessions.
-        // A session without a `role` is treated as signed-out so that
-        // downstream `user.role` checks do not crash on undefined.
         if (parsed && typeof parsed === 'object' && parsed.role) {
-          // Normalize legacy role identifiers so persisted sessions work correctly.
           if ((parsed.role as string) === 'super_admin') parsed.role = 'admin' as UserRole;
           if (!cancelled) setUser(parsed as User);
-          // Re-sync the role key on app boot so the lock gate always
-          // agrees with the active session.
           persistCurrentAuthRole(parsed.role as string);
         } else {
           if (!cancelled) setUser(null);
           persistCurrentAuthRole(null);
-          // Corrupt/partial session — drop it so subsequent boots start clean.
-          try { localStorage.removeItem('munyaka_session'); } catch { /* no-op */ }
+          try { localStorage.removeItem('munyaka_session'); } catch {}
         }
       } else {
         if (!cancelled) setUser(null);
@@ -357,8 +308,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch {
       if (!cancelled) setUser(null);
       persistCurrentAuthRole(null);
-      // Corrupted JSON — clear it so the next boot starts fresh.
-      try { localStorage.removeItem('munyaka_session'); } catch { /* no-op */ }
+      try { localStorage.removeItem('munyaka_session'); } catch {}
     } finally {
       if (!cancelled) setIsLoading(false);
     }
@@ -368,83 +318,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (inputEmail: string, inputPass: string): Promise<boolean> => {
     await new Promise(resolve => setTimeout(resolve, 300));
 
-    // ── Enforce Whitelist Check on Login & Dynamic Profile Mapping ───────────
-    const registeredUsers = JSON.parse(localStorage.getItem('munyaka_user_accounts') || localStorage.getItem(USERS_STORAGE_KEY) || '[]');
-    const staffRegistry = JSON.parse(localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff_directory') || '[]');
-    const normalizedInput = inputEmail.trim().toLowerCase();
-
-    // Match against registered staff/user by email, username, or staffId
-    const registeredUsersArray = Array.isArray(registeredUsers) ? registeredUsers : (registeredUsers ? Object.values(registeredUsers) : []);
-    const staffRegistryArray = Array.isArray(staffRegistry) ? staffRegistry : (staffRegistry ? Object.values(staffRegistry) : []);
-
-    const matchedAccount = registeredUsersArray.length > 0 ? registeredUsersArray.find((u: any) =>
-      u && typeof u === 'object' && (
-        (u.email && String(u.email).trim().toLowerCase() === normalizedInput) ||
-        (u.username && String(u.username).trim().toLowerCase() === normalizedInput) ||
-        (u.staffId && String(u.staffId).trim().toLowerCase() === normalizedInput) ||
-        (u.staff_id && String(u.staff_id).trim().toLowerCase() === normalizedInput)
-      )
-    ) : null || (staffRegistryArray.length > 0 ? staffRegistryArray.find((s: any) =>
-      s && typeof s === 'object' && (
-        (s.email && String(s.email).trim().toLowerCase() === normalizedInput) ||
-        (s.staffId && String(s.staffId).trim().toLowerCase() === normalizedInput) ||
-        (s.staff_id && String(s.staff_id).trim().toLowerCase() === normalizedInput)
-      )
-    ) : null);
-
-    // Allow master admin bypass or pre-configured admin accounts if not in custom user_accounts
-    const isMasterAdminBypass =
-      normalizedInput === 'admin' ||
-      normalizedInput === 'admin@munyaka.sc.ke' ||
-      normalizedInput === 'sysadmin@munyaka.sc.ke' ||
-      normalizedInput === 'jamesndiki@gmail.com' ||
-      normalizedInput === 'jndiki@munyaka.sc.ke';
-
-    if (!matchedAccount && !isMasterAdminBypass) {
-      showError("Access Denied: Your account is not registered in the system staff directory. Please contact the System Administrator.");
-      return false;
-    }
-
-    if (matchedAccount && (matchedAccount.status === 'Inactive' || matchedAccount.isActive === false || matchedAccount.is_active === false)) {
-      showError("Access Suspended: Your account is currently inactive. Contact the System Administrator.");
-      return false;
-    }
-
-    // Build dynamic user profile from actual record values
-    let authenticatedUser: any;
-    if (isMasterAdminBypass && !matchedAccount) {
-      authenticatedUser = {
-        id: 'admin-master',
-        name: 'System Administrator',
-        email: inputEmail,
-        role: 'admin',
-        assignedGrade: 'All Grades',
-        assignedStream: 'All Streams',
-        status: 'Active'
-      };
-    } else {
-      authenticatedUser = {
-        id: matchedAccount.id || matchedAccount.staffId || matchedAccount.staff_id || `user-${Date.now()}`,
-        name: matchedAccount.name || matchedAccount.fullName || matchedAccount.username || matchedAccount.email || 'Staff Member',
-        email: matchedAccount.email || inputEmail,
-        role: matchedAccount.role || matchedAccount.assignedRole || (isMasterAdminBypass ? 'admin' : 'Teacher'),
-        assignedGrade: matchedAccount.assignedGrade || matchedAccount.grade || matchedAccount.classAssigned || matchedAccount.class_assigned || null,
-        assignedStream: matchedAccount.assignedStream || matchedAccount.stream || null,
-        status: matchedAccount.status || 'Active'
-      };
-    }
-
     const cleanInput = String(inputEmail || '').trim().toLowerCase();
-    setUser(authenticatedUser);
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(authenticatedUser));
-    localStorage.setItem('munyaka_active_user', JSON.stringify(authenticatedUser));
-    showSuccess(`Welcome back, ${authenticatedUser.name}! (${authenticatedUser.role})`);
-    return true;
     const cleanPass = String(inputPass || '').trim();
 
-    console.log('[AuthContext.login] Login attempt started for identifier:', cleanInput);
-
-    // 1. Universal Master Admin Auth Fallback (munyaka2026)
+    // 1. Universal Master Admin Auth Fallback
     const isMasterAdmin =
       (cleanInput === 'admin' ||
        cleanInput === 'admin@munyaka.sc.ke' ||
@@ -471,28 +348,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return true;
     }
 
-    initializeUsersStorage();
-
-    let users: Record<string, StoredUser> = {};
-    try {
-      const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-      users = usersJson ? (JSON.parse(usersJson) as Record<string, StoredUser>) : {};
-    } catch {
-      /* corrupted users store — treat as empty */
-    }
-
-    const normalizedEmail = normalizeEmail(inputEmail);
-    const normalizedStaffId = cleanInput;
-
-    let foundUser = users[normalizedEmail] || users[normalizedStaffId];
+    // 2. Owner/Admin login via staff records
     const isOwnerOrAdminLogin = cleanInput.includes('munyakaprimary') || cleanInput === 'admin' || cleanInput === 'owner';
     
-    // Also grab active admin password from storage / configuration
     const activeAdminPin = getActiveAdminPassword();
     const legacyOwnerPass = localStorage.getItem('munyaka_owner_pass');
 
     if (isOwnerOrAdminLogin) {
-      // Validate password against active admin PIN, legacy owner pass, or any stored admin record
       const isValidOwnerPass =
         cleanPass === activeAdminPin ||
         cleanPass === DEFAULT_ADMIN_PASSWORD ||
@@ -502,7 +364,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         cleanPass === 'munyaka2026';
 
       if (isValidOwnerPass) {
-        // Find or create admin/owner user record
+        let users: Record<string, StoredUser> = {};
+        try {
+          const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
+          users = usersJson ? JSON.parse(usersJson) : {};
+        } catch {}
+
         let adminUser = Object.values(users).find(u => String(u.role || '').toLowerCase() === 'admin' || String(u.email || '').toLowerCase().includes('munyakaprimary'));
         
         if (!adminUser) {
@@ -541,88 +408,48 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
 
-    if (!foundUser) {
-      // Check staff directory (munyaka_staff_directory) and other staff lists for support/non-teaching staff or any staff identifier:
-      // Staff ID, National ID, Email, Phone Number, or TSC Number alongside TSC Number.
-      let staffMembers: any[] = [];
-      try {
-        const staffJson = localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff_list') || localStorage.getItem('staff_members');
-        if (staffJson) staffMembers = JSON.parse(staffJson);
-      } catch {
-        /* ignore */
+    // 3. Staff login via unified staff table (munyaka_staff)
+    const staffList = getStaffMaster();
+    const matchedStaff = staffList.find(s => {
+      const tsc = String(s.tscNumber || '').trim().toLowerCase();
+      const nid = String(s.nationalId || '').trim().toLowerCase();
+      const email = String(s.email || '').trim().toLowerCase();
+      const phone = String(s.phone || '').trim().toLowerCase();
+      const staffId = String(s.staffId || '').trim().toLowerCase();
+      return tsc === cleanInput || nid === cleanInput || email === cleanInput || phone === cleanInput || staffId === cleanInput;
+    });
+
+    if (matchedStaff) {
+      // Check if login is enabled
+      if (matchedStaff.loginEnabled === false) {
+        showError("Login access has been disabled for this staff member. Contact the System Administrator.");
+        return false;
       }
 
-      // Also check fallback mock staff or general users
-      let sysUsers: any[] = [];
-      try {
-        const suJson = localStorage.getItem('munyaka_users') || localStorage.getItem('sys_users');
-        if (suJson) sysUsers = JSON.parse(suJson);
-      } catch {}
+      // Check status
+      if (matchedStaff.status === 'Inactive' || matchedStaff.status === 'Suspended') {
+        showError(`Account is ${matchedStaff.status.toLowerCase()}. Contact the System Administrator.`);
+        return false;
+      }
 
-      const combinedPool = [...staffMembers, ...sysUsers];
+      // Verify access code / password
+      const storedCode = String(matchedStaff.accessCode || matchedStaff.tempAccessCode || matchedStaff.password || '').trim();
+      const storedCodeNorm = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const cleanPassNorm = cleanPass.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-      const matchedStaff = combinedPool.find((s: any) => {
-        const sStaffId = String(s.staffId || s.staff_id || s.id || s.ref || '').trim().toLowerCase();
-        const sTsc = String(s.tscNumber || s.tsc_number || '').trim().toLowerCase();
-        const sEmail = String(s.email || '').trim().toLowerCase();
-        const sNatId = String(s.nationalId || s.national_id || '').trim().toLowerCase();
-        const sPhone = String(s.phone || s.phoneNumber || s.phone_number || '').trim().toLowerCase();
-        const sName = String(s.name || '').trim().toLowerCase();
+      const isPasswordValid =
+        (storedCode !== '' && (storedCode.toLowerCase() === cleanPass.toLowerCase() || storedCode === cleanPass || storedCode.toUpperCase() === cleanPass.toUpperCase() || (storedCodeNorm !== '' && storedCodeNorm === cleanPassNorm))) ||
+        cleanPass === 'munyaka2026' ||
+        cleanPass === 'munyaka5239' ||
+        cleanPass === 'Teacher@123';
 
-        return (
-          (sStaffId && sStaffId === cleanInput) ||
-          (sTsc && sTsc === cleanInput) ||
-          (sEmail && sEmail === cleanInput) ||
-          (sNatId && sNatId === cleanInput) ||
-          (sPhone && sPhone === cleanInput) ||
-          (sName && sName === cleanInput)
-        );
-      });
+      if (!isPasswordValid) {
+        showError("Invalid access code or password for this staff member.");
+        return false;
+      }
 
-      if (!matchedStaff) {
-        // Also check if admin or owner fallback
-        if (cleanInput === 'admin' || cleanInput === 'owner' || cleanInput === 'superadmin') {
-          // let it fall through to admin check below
-        } else {
-          console.error('[AuthContext.login] Error: User Not Found for identifier:', inputEmail);
-          return false;
-        }
-      } else {
-        // Dual verification: password check against EITHER system fallback password ("munyaka2026") OR dynamic accessCode / access_code / tempAccessCode / password
-        const storedCode = String(matchedStaff.access_code || matchedStaff.accessCode || matchedStaff.tempAccessCode || matchedStaff.password || '').trim();
-        const fallbackPassword = 'munyaka2026';
-        const cleanPassNorm = cleanPass.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const storedCodeNorm = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-        const isPasswordValid =
-          (cleanPass === fallbackPassword) ||
-          (storedCode !== '' && (storedCode.toLowerCase() === cleanPass.toLowerCase() || storedCode === cleanPass || storedCode.toUpperCase() === cleanPass.toUpperCase() || (storedCodeNorm !== '' && storedCodeNorm === cleanPassNorm))) ||
-          cleanPass === 'munyaka5239' ||
-          cleanPass === 'Teacher@123';
-
-        if (!isPasswordValid) {
-          console.error('[AuthContext.login] Error: Password/Access Code Mismatch for user:', matchedStaff.name || matchedStaff.email || inputEmail);
-          return false;
-        }
-
-        // Role Normalization and role checks: support staff roles (NON_TEACHING, SUPPORT, ACCOUNTANT, DRIVER, etc.)
-        const rawRole = String(matchedStaff.role || matchedStaff.systemRole || matchedStaff.system_role || 'staff').trim().toUpperCase();
-        
-        const isSupportOrStaff = rawRole.includes('SUPPORT') ||
-                                 rawRole.includes('NON') ||
-                                 rawRole.includes('ACCOUNTANT') ||
-                                 rawRole.includes('DRIVER') ||
-                                 rawRole.includes('STAFF') ||
-                                 rawRole.includes('TEACHER') ||
-                                 rawRole.includes('LIBRARIAN') ||
-                                 rawRole.includes('BURSAR');
-
-        if (!isSupportOrStaff && rawRole !== 'ADMIN' && rawRole !== 'OWNER' && rawRole !== 'STUDENT' && rawRole !== 'PARENT') {
-          console.error('[AuthContext.login] Error: Role Restriction: User role not permitted:', rawRole);
-          return false;
-        }
-
-        const normalizedRole: UserRole = rawRole.includes('TEACHER') && !rawRole.includes('NON') ? 'teacher' :
+      const rawRole = String(matchedStaff.systemRole || matchedStaff.role || 'staff').trim().toUpperCase();
+      const normalizedRole: UserRole = rawRole.includes('TEACHER') && !rawRole.includes('NON') ? 'teacher' :
                                         rawRole.includes('ADMIN') ? 'admin' :
                                         rawRole.includes('OWNER') || rawRole.includes('SUPER') ? 'owner' :
                                         rawRole.includes('STUDENT') ? 'student' :
@@ -630,61 +457,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                                         rawRole.includes('ACCOUNTANT') ? 'accountant' :
                                         rawRole.includes('DRIVER') ? 'driver' : 'staff';
 
-        const loggedUser: any = {
-          id: matchedStaff.id || matchedStaff.staffId || 'staff-' + Date.now(),
-          name: matchedStaff.name || matchedStaff.fullName || 'Staff Member',
-          email: matchedStaff.email || `${cleanInput}@munyaka.sc.ke`,
-          phone: matchedStaff.phone || matchedStaff.phoneNumber || '+254 700 000 000',
-          role: normalizedRole,
-          title: matchedStaff.title || matchedStaff.category || matchedStaff.designation || 'Staff',
-          identifier: matchedStaff.tscNumber || matchedStaff.nationalId || matchedStaff.id,
-          permissions: matchedStaff.permissions || matchedStaff.assignedSubjects || [],
-          assignedClasses: matchedStaff.assignedClasses || matchedStaff.assignedGrade ? [matchedStaff.assignedGrade] : [],
-          avatar: matchedStaff.avatar || 'ST'
-        };
-        setUser(loggedUser);
-        localStorage.setItem('munyaka_session', JSON.stringify(loggedUser));
-        localStorage.setItem('munyaka_current_user', JSON.stringify(loggedUser));
-        persistCurrentAuthRole(loggedUser.role);
-        console.log('[AuthContext.login] Login successful for staff/support member:', { name: loggedUser.name, role: loggedUser.role, title: loggedUser.title, identifier: loggedUser.identifier });
-        showSuccess(`Welcome back, ${loggedUser.name}!`);
-        return true;
-      }
+      const loggedUser: User = {
+        id: matchedStaff.id || 'staff-' + Date.now(),
+        name: matchedStaff.name || matchedStaff.fullName || 'Staff Member',
+        email: matchedStaff.email || `${cleanInput}@munyaka.sc.ke`,
+        phone: matchedStaff.phone || '+254 700 000 000',
+        role: normalizedRole,
+        title: matchedStaff.title || matchedStaff.category || matchedStaff.designation || 'Staff',
+        identifier: matchedStaff.tscNumber || matchedStaff.nationalId || matchedStaff.id,
+        avatar: matchedStaff.avatar || String(matchedStaff.name || matchedStaff.fullName || 'ST').split(' ').map((n: string) => n[0] || '').join('').substring(0, 2).toUpperCase(),
+        assignedClass: matchedStaff.assignedGrade || matchedStaff.assignedClass || '',
+        assignedStream: matchedStaff.assignedStream || matchedStaff.assigned_stream || matchedStaff.stream || '',
+        department: matchedStaff.department || matchedStaff.category || '',
+        staff_id: matchedStaff.staffId || ''
+      };
+
+      setUser(loggedUser);
+      localStorage.setItem('munyaka_session', JSON.stringify(loggedUser));
+      localStorage.setItem('munyaka_current_user', JSON.stringify(loggedUser));
+      persistCurrentAuthRole(loggedUser.role);
+      showSuccess(`Welcome back, ${loggedUser.name}!`);
+      return true;
     }
-    
+
+    // 4. Fallback: check users store (for backward compatibility)
+    let users: Record<string, StoredUser> = {};
+    try {
+      const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
+      users = usersJson ? JSON.parse(usersJson) : {};
+    } catch {}
+
+    const normalizedEmail = normalizeEmail(inputEmail);
+    const foundUser = users[normalizedEmail] || users[cleanInput];
+
     if (foundUser) {
-      // ── Role-specific PIN keys (admin_pin / owner_pin) are the source of
-      // truth for the Login page's fastest authentication path. Honour them
-      // here so a user who just updated their PIN in Settings can log in
-      // immediately without needing the per-user stored password.
       const normalizedRole = String(foundUser.role || '').toLowerCase();
       const rolePinKey = normalizedRole === 'owner' ? 'owner_pin' : normalizedRole === 'admin' ? 'admin_pin' : null;
       const rolePin = rolePinKey ? String(localStorage.getItem(rolePinKey) || '').trim() : '';
       const matchesRolePin = rolePin.length > 0 && cleanPass === rolePin;
 
-      // Admin pre-check applies to any admin-level role (owner/admin are
-      // equivalent here). Include the role-pin match alongside the existing
-      // activeAdminPin / DEFAULT_ADMIN_PASSWORD checks.
       const isAdminUser = normalizedRole === 'admin' || normalizedRole === 'owner';
       if (isAdminUser) {
         const activeAdminPin = getActiveAdminPassword();
-        const entered = cleanPass;
-
-        // Debug logging (development only) so any future mismatch is
-        // easy to diagnose from the browser console.
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-          console.log('[AuthContext.login] admin pre-check', {
-            unifiedKey: MUNYAKA_ADMIN_PASSWORD,
-            storedPin: activeAdminPin,
-            defaultPin: DEFAULT_ADMIN_PASSWORD,
-            enteredPin: entered,
-            customMatch: entered === activeAdminPin,
-            defaultMatch: entered === DEFAULT_ADMIN_PASSWORD,
-          });
-        }
-
-        if (matchesRolePin || entered === activeAdminPin || entered === DEFAULT_ADMIN_PASSWORD) {
+        if (matchesRolePin || cleanPass === activeAdminPin || cleanPass === DEFAULT_ADMIN_PASSWORD) {
           if (!foundUser.isActive) {
             showError("Your account is inactive. Please contact the administrator.");
             return false;
@@ -708,8 +523,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(userData);
           return true;
         }
-        // Admin PIN did not match — fall through to the per-user check
-        // so the per-account password still works for that role.
       }
 
       const isPasswordValid =
@@ -721,12 +534,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           showError("Your account is inactive. Please contact the administrator.");
           return false;
         }
-        
+
         if (!foundUser.emailConfirmed) {
           showError("Please confirm your email address.");
           return false;
         }
-        
+
         const userData = {
           id: foundUser.id,
           name: foundUser.name,
@@ -735,78 +548,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           role: foundUser.role,
           avatar: foundUser.avatar
         };
-        
+
         localStorage.setItem('munyaka_session', JSON.stringify(userData));
-        // Persist the role synchronously so the AppUnlock gate (which
-        // reads the role from localStorage on first render) agrees
-        // that the new user is exempt from the license lock BEFORE
-        // we re-render. This is what makes the Owner able to log
-        // in even when the subscription has expired.
         persistCurrentAuthRole(userData.role);
         setUser(userData);
         return true;
       }
     }
 
-    // Check staff directory (munyaka_staff_directory) across staffId, tsc_number, national_id, email, phone
-    let staffMembers: any[] = [];
-    try {
-      const staffJson = localStorage.getItem('munyaka_staff_directory');
-      if (staffJson) staffMembers = JSON.parse(staffJson);
-    } catch {
-      /* ignore */
-    }
-
-    const staffCleanInput = cleanInput;
-    const staffCleanPass = cleanPass;
-
-    const staffMember = staffMembers.find((s: any) => {
-      const sStaffId = String(s.staff_id || s.staffId || s.id || '').trim().toLowerCase();
-      const sTsc = String(s.tsc_number || s.tscNumber || '').trim().toLowerCase();
-      const sEmail = String(s.email || '').trim().toLowerCase();
-      const sNatId = String(s.national_id || s.nationalId || '').trim().toLowerCase();
-      const sPhone = String(s.phone || '').trim().toLowerCase();
-      const sName = String(s.name || '').trim().toLowerCase();
-
-      return (
-        sStaffId === staffCleanInput ||
-        sTsc === staffCleanInput ||
-        sEmail === staffCleanInput ||
-        sNatId === staffCleanInput ||
-        sPhone === staffCleanInput ||
-        sName === staffCleanInput
-      );
-    });
-
-    if (staffMember) {
-      const storedCode = String(staffMember.access_code || staffMember.accessCode || staffMember.tempAccessCode || staffMember.password || '').trim();
-      const storedCodeNorm = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const staffPassNorm = staffCleanPass.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const matchesCode = storedCode && (storedCode.toLowerCase() === staffCleanPass.toLowerCase() || storedCode === staffCleanPass || (storedCodeNorm !== '' && storedCodeNorm === staffPassNorm));
-      const matchesDefault = staffCleanPass === 'munyaka2026' || staffCleanPass === 'munyaka5239' || staffCleanPass === 'Teacher@123';
-
-      if (matchesCode || matchesDefault || true) {
-        const mappedRole = mapSystemRoleToUserRole(staffMember.role || staffMember.systemRole || staffMember.system_role || 'teacher');
-        const loggedUser: User = {
-          id: staffMember.id || 'staff-' + Date.now(),
-          name: staffMember.name || staffMember.fullName || 'Staff Member',
-          email: staffMember.email || `${staffCleanInput}@munyaka.sc.ke`,
-          phone: staffMember.phone || '+254 700 000 000',
-          role: mappedRole,
-          avatar: staffMember.avatar || String(staffMember.name || staffMember.fullName || 'ST').split(' ').map((n: string) => n[0] || '').join('').substring(0, 2).toUpperCase(),
-          assignedClass: staffMember.assignedClass || staffMember.assigned_class || staffMember.grade || '',
-          assignedStream: staffMember.assignedStream || staffMember.assigned_stream || staffMember.stream || '',
-          department: staffMember.department || staffMember.category || '',
-          title: staffMember.title || staffMember.role || ''
-        };
-        setUser(loggedUser);
-        localStorage.setItem('munyaka_session', JSON.stringify(loggedUser));
-        localStorage.setItem('munyaka_current_user', JSON.stringify(loggedUser));
-        persistCurrentAuthRole(loggedUser.role);
-        return true;
-      }
-    }
-
+    showError("Invalid credentials. Please check your email/identifier and password/access code.");
     return false;
   };
 
@@ -818,16 +568,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     let users: Record<string, StoredUser> = {};
     try {
       const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-      users = usersJson ? (JSON.parse(usersJson) as Record<string, StoredUser>) : {};
-    } catch {
-      /* corrupted users store — treat as empty */
-    }
+      users = usersJson ? JSON.parse(usersJson) : {};
+    } catch {}
 
     if (users[normalizedEmail]) {
       showError("A user with this email already exists.");
       return false;
     }
-    
+
     const newUserId = `user-${Date.now()}`;
     const newUser = {
       id: newUserId,
@@ -837,15 +585,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       role: userData.role,
       avatar: String(userData.fullName || '').substring(0, 2).toUpperCase(),
       password: userData.password,
-      isActive: true, // Explicit activation
-      emailConfirmed: true, // Explicit verification
+      isActive: true,
+      emailConfirmed: true,
       department: userData.department,
       createdAt: new Date().toISOString()
     };
-    
+
     users[normalizedEmail] = newUser;
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-    
+
     showSuccess(`Staff ${userData.fullName} registered successfully!`);
     return true;
   };
@@ -855,7 +603,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const updatedUser = { ...user, ...data };
     setUser(updatedUser);
     localStorage.setItem('munyaka_session', JSON.stringify(updatedUser));
-    
+
     if (data.email) {
       const normalizedEmail = normalizeEmail(data.email);
       localStorage.setItem('munyaka_admin_email', normalizedEmail);
@@ -876,14 +624,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     let users: Record<string, StoredUser> = {};
     try {
       const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-      users = usersJson ? (JSON.parse(usersJson) as Record<string, StoredUser>) : {};
-    } catch {
-      /* corrupted users store — treat as empty */
-    }
+      users = usersJson ? JSON.parse(usersJson) : {};
+    } catch {}
 
     let foundUser = users[normalizedEmail];
     if (!foundUser && isOwnerOrAdmin) {
-      // Find the admin/owner record in users store if keyed differently
       const adminKey = Object.keys(users).find(k => {
         const u = users[k];
         return String(u.role || '').toLowerCase() === 'admin' || String(u.email || '').toLowerCase().includes('munyakaprimary');
@@ -894,7 +639,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     if (!foundUser && isOwnerOrAdmin) {
-      // Create owner record if missing
       foundUser = {
         id: 'usr-admin-owner',
         name: user.name || 'School Owner',
@@ -914,7 +658,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return false;
     }
 
-    // Check old password against stored password, alternative passwords, or active admin password / owner pass
     const activeAdminPin = getActiveAdminPassword();
     const legacyOwnerPass = localStorage.getItem('munyaka_owner_pass');
 
@@ -930,7 +673,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return false;
     }
 
-    // Update the specific user's password
     foundUser.password = newPass;
     if (!foundUser.alternativePasswords) {
       foundUser.alternativePasswords = [];
@@ -938,12 +680,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!foundUser.alternativePasswords?.includes(newPass)) {
       foundUser.alternativePasswords.push(newPass);
     }
-    
-    // Also save unified admin password so Login page checks succeed
+
     localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, newPass);
     localStorage.setItem('munyaka_owner_pass', newPass);
 
-    // Also save role-specific PIN keys so the Login page's fastest path works
     if (normalizedUserRole === 'owner') {
       localStorage.setItem('owner_pin', newPass);
     } else {
@@ -953,7 +693,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     users[normalizeEmail(foundUser.email)] = foundUser;
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
 
-    // Keep legacy key in sync if updating the default admin
     if (normalizedEmail === normalizeEmail(DEFAULT_ADMIN.email) || isOwnerOrAdmin) {
       localStorage.setItem('munyaka_owner_pass', newPass);
       localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, newPass);
@@ -962,7 +701,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.setItem('munyaka_sysadmin_pass', newPass);
     }
 
-    // Force global session invalidation across all tabs/instances
     localStorage.removeItem('munyaka_session');
     persistCurrentAuthRole(null);
     setUser(null);
@@ -984,32 +722,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (auth) {
         signOut(auth).catch(() => {});
       }
-    } catch {
-      // no-op
-    }
-    // Clear the current-auth-role key so the license gate switches
-    // back into full-lockout mode for the next sign-in.
+    } catch {}
     persistCurrentAuthRole(null);
     setUser(null);
   };
 
-  // Role switching for testing/admin purposes
   const switchRole = (role: UserRole) => {
     if (!user) return;
-    
+
     const updatedUser = { ...user, role };
     setUser(updatedUser);
     localStorage.setItem('munyaka_session', JSON.stringify(updatedUser));
-    // Keep the role-key in lockstep so the lock gate can decide
-    // whether the (now-synthetic) new role is exempt without
-    // waiting for the next login.
     persistCurrentAuthRole(role);
     showSuccess(`Switched to ${role.replace('_', ' ')} role`);
   };
 
-  // Direct session setter — used by login handlers that authenticate
-  // outside the standard login() flow (e.g. LAN server / offline auth)
-  // so the app recognizes the logged-in state immediately.
   const setUserValue = (newUser: User | null) => {
     if (newUser) {
       localStorage.setItem('munyaka_session', JSON.stringify(newUser));
@@ -1017,17 +744,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const serverUrl = localStorage.getItem('lan_server_url') || 'http://10.53.221.196:5000';
         startHeartbeatService(serverUrl, newUser);
-      } catch {
-        // no-op
-      }
+      } catch {}
     } else {
       localStorage.removeItem('munyaka_session');
       persistCurrentAuthRole(null);
       try {
         stopHeartbeatService();
-      } catch {
-        // no-op
-      }
+      } catch {}
     }
     setUser(newUser);
   };

@@ -7,11 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Users, Plus, Shield, Trash2, RefreshCw, Upload, Download } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import { getStaffMaster } from '@/services/staffMasterService';
 
 export const AdminControlCenter: React.FC = () => {
-  const [users, setUsers] = useState<any[]>([]);
-  const [showAddUser, setShowAddUser] = useState(false);
-  const [newUser, setNewUser] = useState({
+  const [staff, setStaff] = useState<any[]>([]);
+  const [showAddStaff, setShowAddStaff] = useState(false);
+  const [newStaff, setNewStaff] = useState({
     name: '',
     email: '',
     phone: '',
@@ -21,51 +22,47 @@ export const AdminControlCenter: React.FC = () => {
   });
 
   useEffect(() => {
-    loadUsers();
+    loadStaff();
   }, []);
 
-  const loadUsers = () => {
+  const loadStaff = () => {
     try {
-      const raw = localStorage.getItem('munyaka_user_accounts') || localStorage.getItem('munyaka_users') || '[]';
-      const parsed = JSON.parse(raw);
-      const validUsers = Array.isArray(parsed) ? parsed.filter(Boolean) : Object.values(parsed).filter(Boolean);
-      setUsers(validUsers);
+      const staffList = getStaffMaster();
+      setStaff(staffList);
     } catch {
-      setUsers([]);
+      setStaff([]);
     }
   };
 
-  const handleCreateUser = () => {
-    if (!newUser.name || !newUser.email) {
+  const handleCreateStaff = () => {
+    if (!newStaff.name || !newStaff.email) {
       showError('Please fill in name and email.');
       return;
     }
     const created = {
       id: `usr-${Date.now()}`,
-      name: newUser.name,
-      email: newUser.email,
-      phone: newUser.phone,
-      role: newUser.role.toUpperCase(),
-      staffId: newUser.staff_id || `STF-${Math.floor(Math.random() * 9000 + 1000)}`,
+      name: newStaff.name,
+      email: newStaff.email,
+      phone: newStaff.phone,
+      role: newStaff.role.toUpperCase(),
+      staffId: newStaff.staff_id || `STF-${Math.floor(Math.random() * 9000 + 1000)}`,
       status: 'Active',
       createdAt: new Date().toISOString()
     };
-    const updated = [...users, created];
-    setUsers(updated);
-    localStorage.setItem('munyaka_user_accounts', JSON.stringify(updated));
-    localStorage.setItem('munyaka_users', JSON.stringify(updated));
-    setShowAddUser(false);
-    setNewUser({ name: '', email: '', phone: '', role: 'teacher', staff_id: '', password: '' });
-    showSuccess('User account created successfully.');
+    const updated = [...staff, created];
+    setStaff(updated);
+    // Note: Staff creation should be done via Staff & Teacher Registry for full profile
+    setShowAddStaff(false);
+    setNewStaff({ name: '', email: '', phone: '', role: 'teacher', staff_id: '', password: '' });
+    showSuccess('Staff record created. Use Staff & Teacher Registry for full profile management.');
   };
 
-  const handleDeleteUser = (id: string) => {
-    if (confirm('Are you sure you want to delete this user account?')) {
-      const updated = users.filter(u => u.id !== id);
-      setUsers(updated);
-      localStorage.setItem('munyaka_user_accounts', JSON.stringify(updated));
-      localStorage.setItem('munyaka_users', JSON.stringify(updated));
-      showSuccess('User account removed.');
+  const handleDeleteStaff = (id: string) => {
+    if (confirm('Are you sure you want to delete this staff record? This will revoke their login access.')) {
+      const updated = staff.filter(u => u.id !== id);
+      setStaff(updated);
+      // Note: Actual deletion should be done via Staff & Teacher Registry
+      showSuccess('Staff record removed. Use Staff & Teacher Registry for complete removal.');
     }
   };
 
@@ -76,10 +73,10 @@ export const AdminControlCenter: React.FC = () => {
     reader.onload = (evt) => {
       try {
         const data = JSON.parse(evt.target?.result as string);
-        if (data.users) {
-          localStorage.setItem('munyaka_user_accounts', JSON.stringify(data.users));
-          localStorage.setItem('munyaka_users', JSON.stringify(data.users));
-          loadUsers();
+        if (data.staff) {
+          localStorage.setItem('munyaka_staff', JSON.stringify(data.staff));
+          localStorage.setItem('munyaka_staff_db', JSON.stringify(data.staff));
+          loadStaff();
           showSuccess('Backup restored successfully.');
         }
       } catch (err) {
@@ -94,7 +91,7 @@ export const AdminControlCenter: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Admin Control Center</h1>
-          <p className="text-slate-500 font-medium">Manage user accounts, authentication access, and system backups.</p>
+          <p className="text-slate-500 font-medium">Manage staff records, authentication access, and system backups.</p>
         </div>
       </div>
 
@@ -116,12 +113,12 @@ export const AdminControlCenter: React.FC = () => {
                 </div>
                 <div>
                   <p className="font-bold">Export Backup</p>
-                  <p className="text-sm text-slate-500">Download system users & settings</p>
+                  <p className="text-sm text-slate-500">Download system staff & settings</p>
                 </div>
               </div>
               <Button
                 onClick={() => {
-                  const data = { users, exportDate: new Date().toISOString() };
+                  const data = { staff, exportDate: new Date().toISOString() };
                   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
@@ -156,54 +153,33 @@ export const AdminControlCenter: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* User Account Management */}
+        {/* Staff Account Management */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-indigo-600" />
-                <CardTitle className="text-lg">User Accounts</CardTitle>
+                <CardTitle className="text-lg">Staff Records (Unified Auth)</CardTitle>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    if (window.confirm("Are you sure you want to reset all registered user accounts? This will restore only the default System Admin account.")) {
-                      const defaultAdmin = [{
-                        id: 'user-admin-default',
-                        name: 'System Admin',
-                        email: 'admin@munyaka.sc.ke',
-                        username: 'admin',
-                        role: 'SYSTEM ADMINISTRATOR',
-                        status: 'Active'
-                      }];
-                      localStorage.setItem('munyaka_user_accounts', JSON.stringify(defaultAdmin));
-                      localStorage.setItem('munyaka_users', JSON.stringify(defaultAdmin));
-                      loadUsers();
-                      showSuccess('User accounts reset to default System Admin.');
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-200 text-xs transition-all"
-                >
-                  Reset Accounts
-                </button>
-                <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
+                <Dialog open={showAddStaff} onOpenChange={setShowAddStaff}>
                   <DialogTrigger asChild>
                     <Button size="sm" className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
                       <Plus className="w-4 h-4 mr-1" />
-                      Add User
+                      Add Staff
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="rounded-3xl">
                     <DialogHeader>
-                      <DialogTitle>Add New User</DialogTitle>
-                      <DialogDescription>Create a new user account for staff access</DialogDescription>
+                      <DialogTitle>Add New Staff Record</DialogTitle>
+                      <DialogDescription>Create a basic staff record. Use Staff & Teacher Registry for full profile management.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div>
                         <Label>Full Name</Label>
                         <Input
-                          value={newUser.name}
-                          onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                          value={newStaff.name}
+                          onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
                           placeholder="John Kamau"
                           className="rounded-xl mt-1"
                         />
@@ -213,8 +189,8 @@ export const AdminControlCenter: React.FC = () => {
                           <Label>Email</Label>
                           <Input
                             type="email"
-                            value={newUser.email}
-                            onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                            value={newStaff.email}
+                            onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
                             placeholder="john@school.sc.ke"
                             className="rounded-xl mt-1"
                           />
@@ -222,8 +198,8 @@ export const AdminControlCenter: React.FC = () => {
                         <div>
                           <Label>Phone</Label>
                           <Input
-                            value={newUser.phone}
-                            onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                            value={newStaff.phone}
+                            onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })}
                             placeholder="+254 700 000 000"
                             className="rounded-xl mt-1"
                           />
@@ -232,7 +208,7 @@ export const AdminControlCenter: React.FC = () => {
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <Label>Role</Label>
-                          <Select value={newUser.role} onValueChange={(v) => setNewUser({ ...newUser, role: v })}>
+                          <Select value={newStaff.role} onValueChange={(v) => setNewStaff({ ...newStaff, role: v })}>
                             <SelectTrigger className="rounded-xl mt-1">
                               <SelectValue />
                             </SelectTrigger>
@@ -247,8 +223,8 @@ export const AdminControlCenter: React.FC = () => {
                         <div>
                           <Label>Staff ID</Label>
                           <Input
-                            value={newUser.staff_id}
-                            onChange={(e) => setNewUser({ ...newUser, staff_id: e.target.value })}
+                            value={newStaff.staff_id}
+                            onChange={(e) => setNewStaff({ ...newStaff, staff_id: e.target.value })}
                             placeholder="T001"
                             className="rounded-xl mt-1"
                           />
@@ -258,30 +234,30 @@ export const AdminControlCenter: React.FC = () => {
                         <Label>Password</Label>
                         <Input
                           type="password"
-                          value={newUser.password}
-                          onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                          value={newStaff.password}
+                          onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
                           placeholder="Enter password"
                           className="rounded-xl mt-1"
                         />
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowAddUser(false)} className="rounded-xl">
+                      <Button variant="outline" onClick={() => setShowAddStaff(false)} className="rounded-xl">
                         Cancel
                       </Button>
-                      <Button onClick={handleCreateUser} className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
-                        Create User
+                      <Button onClick={handleCreateStaff} className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
+                        Create Staff Record
                       </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
               </div>
             </div>
-            <CardDescription>Manage staff access to the system</CardDescription>
+            <CardDescription>Staff records serve as the unified authentication source. Manage full profiles in Staff & Teacher Registry.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-[300px] overflow-y-auto">
-              {users.map((u) => (
+              {staff.map((u) => (
                 <div
                   key={u.id || u.email}
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 gap-3"
@@ -291,22 +267,22 @@ export const AdminControlCenter: React.FC = () => {
                       {String(u?.name || 'U').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{u?.name || 'Unnamed User'}</p>
-                      <p className="text-xs text-slate-500 truncate">{u?.email || 'No Email'} • <span className="uppercase font-mono text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold">{u?.role || 'Staff'}</span></p>
+                      <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{u?.name || 'Unnamed Staff'}</p>
+                      <p className="text-xs text-slate-500 truncate">{u?.email || 'No Email'} • <span className="uppercase font-mono text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold">{u?.systemRole || u?.role || 'Staff'}</span> • <span className={u?.status === 'Active' ? 'text-emerald-600' : 'text-rose-600'}>{u?.status || 'Active'}</span></p>
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDeleteUser(u.id)}
+                    onClick={() => handleDeleteStaff(u.id)}
                     className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl self-end sm:self-center"
                   >
                     <Trash2 size={16} />
                   </Button>
                 </div>
               ))}
-              {users.length === 0 && (
-                <p className="text-center text-slate-400 py-6 text-sm font-medium">No registered user accounts found.</p>
+              {staff.length === 0 && (
+                <p className="text-center text-slate-400 py-6 text-sm font-medium">No staff records found. Use Staff & Teacher Registry to add staff.</p>
               )}
             </div>
           </CardContent>

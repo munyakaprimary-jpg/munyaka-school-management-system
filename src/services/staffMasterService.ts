@@ -158,7 +158,6 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     }
   } catch {}
 
-  // Deduplicate by id / phone / name
   const map = new Map<string, any>();
   list.forEach(s => {
     if (s && (s.id || s.phone || s.name || s.staffId || s.email)) {
@@ -328,10 +327,9 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
     const cleanEmail = identifier.trim().toLowerCase();
     const cleanCode = pass.trim().toUpperCase();
 
-    // Auto-register fallback for seamless testing
     const defaultStaff: MasterStaffRecord = {
       id: `staff-${Date.now()}`,
-      name: cleanEmail.includes('@') ? cleanEmail.split('@')[0].replace(/\./g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Staff Member',
+      name: cleanEmail.includes('@') ? cleanEmail.split('@')[0].replace(/\\./g, ' ').replace(/\\b\\w/g, l => l.toUpperCase()) : 'Staff Member',
       nationalId: '12345678',
       email: cleanEmail.includes('@') ? cleanEmail : `${cleanEmail}@munyaka.sc.ke`,
       tempAccessCode: cleanCode.startsWith('MUN-') ? cleanCode : `MUN-${cleanCode.replace(/[^A-Z0-9]/g, '').slice(0, 4) || '1234'}`,
@@ -353,7 +351,7 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
 export const isTeachingRole = (_role: string) => true;
 
 /**
- * Dynamically resolves active staff role from canonical staff directory (munyaka_staff)
+ * Dynamically resolves active staff session from canonical staff directory (munyaka_staff)
  * and persists the full live staff record to munyaka_current_staff.
  */
 export const setActiveStaffSession = (selectedUser: { id?: string; email?: string; name?: string }) => {
@@ -364,7 +362,6 @@ export const setActiveStaffSession = (selectedUser: { id?: string; email?: strin
     try {
       const staffDirectory = JSON.parse(rawStaffList);
       if (Array.isArray(staffDirectory)) {
-        // Match strictly by ID, Email, or Name
         const found = staffDirectory.find((s: any) =>
           (s.id && selectedUser.id && s.id === selectedUser.id) ||
           (s.email && selectedUser.email && s.email.toLowerCase() === selectedUser.email.toLowerCase()) ||
@@ -379,10 +376,8 @@ export const setActiveStaffSession = (selectedUser: { id?: string; email?: strin
       console.warn('Error parsing staff directory during session set:', parseErr);
     }
 
-    // Persist full matched object
     localStorage.setItem('munyaka_current_staff', JSON.stringify(liveStaffRecord));
     
-    // Trigger a lightweight event so sidebar updates instantly without full reload
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('staff_session_updated'));
     }

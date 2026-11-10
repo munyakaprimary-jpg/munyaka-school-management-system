@@ -95,24 +95,20 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  // Dynamically fetch active registered user profile
-  const getActiveUserRole = () => {
-    if (!user) return 'STAFF';
-
-    const registeredUsers = JSON.parse(localStorage.getItem('munyaka_user_accounts') || '[]');
-    const staffRegistry = JSON.parse(localStorage.getItem('munyaka_staff_registry') || '[]');
-
-    const match = registeredUsers.find((u: any) =>
-      (u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()) ||
-      (u.username && user.name && u.username.toLowerCase() === user.name.toLowerCase()) ||
-      (u.name && user.name && u.name.toLowerCase() === user.name.toLowerCase())
-    ) || staffRegistry.find((s: any) =>
-      (s.email && user.email && s.email.toLowerCase() === user.email.toLowerCase()) ||
-      (s.name && user.name && s.name.toLowerCase() === user.name.toLowerCase())
-    );
-
-    return match?.role || match?.assignedRole || user.role || 'STAFF';
-  };
+  // Dynamically fetch active registered user profile from unified staff table
+    const getActiveUserRole = () => {
+      if (!user) return 'STAFF';
+  
+      const staffRegistry = JSON.parse(localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || '[]');
+  
+      const match = staffRegistry.find((s: any) =>
+        (s.email && user.email && s.email.toLowerCase() === user.email.toLowerCase()) ||
+        (s.name && user.name && s.name.toLowerCase() === user.name.toLowerCase()) ||
+        (s.id && user.id && s.id === user.id)
+      );
+  
+      return match?.role || match?.assignedRole || match?.rbacRole || user.role || 'STAFF';
+    };
 
   const activeRole = getActiveUserRole();
   const displayName = currentStaff.name || currentStaff.fullName || user?.name || (user as any)?.username || 'Staff Member';

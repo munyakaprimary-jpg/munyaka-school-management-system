@@ -9,6 +9,7 @@ import { signInWithEmailAndPassword, updatePassword, sendPasswordResetEmail } fr
 import { doc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { saveAdminPassword } from '@/services/adminCredentials';
+import { getStaffMaster } from '@/services/staffMasterService';
 
 interface ForgotPasswordModalProps {
   open: boolean;
@@ -57,6 +58,21 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
       const isAdminMatch = ADMIN_EMAILS.some(ae => ae.toLowerCase() === trimmed);
       if (isAdminMatch) {
         setStep('admin_reset');
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if this is a staff email in the unified staff table
+      const staffList = getStaffMaster();
+      const staffExists = staffList.some(s => 
+        String(s.email || '').trim().toLowerCase() === trimmed ||
+        String(s.staffId || '').trim().toLowerCase() === trimmed
+      );
+
+      if (staffExists) {
+        // Staff password reset - generate new access code and password
+        toast.info('Staff account found. Please contact the System Administrator to reset your access code via the Staff & Teacher Registry.');
+        setStep('success');
         setIsLoading(false);
         return;
       }
@@ -206,6 +222,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
                 />
                 <p className="text-xs text-slate-500 mt-1.5">
                   Enter your registered account email or administrator username. Administrator accounts allow direct credential reset.
+                  Staff accounts should contact the System Administrator for password resets via the Staff & Teacher Registry.
                 </p>
               </div>
 

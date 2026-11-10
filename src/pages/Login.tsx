@@ -71,7 +71,7 @@ const renderStyledQuote = (text: string, colorId: string = 'indigo') => {
   const activeColorClass = colorMap[colorId] || colorMap.indigo;
 
   // Splits text by markdown double asterisks **keyword**
-  const parts = safeText.split(/(\*\*.*?\*\*)/g);
+  const parts = safeText.split(/(\\*\\*.*?\\*\\*)/g);
   
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
@@ -330,7 +330,7 @@ const Login: React.FC = () => {
         setStudentLoginError("No matching record found. Please verify your Admission Number or Assessment Number.");
       }
     } catch (err) {
-      console.error("[Login] Student login verification error:", err);
+      console.error("Login Student login verification error:", err);
       setStudentLoginError("An error occurred during verification. Please try again.");
     }
   };
@@ -342,7 +342,7 @@ const Login: React.FC = () => {
       if (isAuth && session && !window.location.hash.includes('dashboard')) {
         navigate('/dashboard', { replace: true });
       }
-    }, [navigate]); // Safe guard with navigate dependency
+    }, [navigate]);
 
   // ── Admin handlers ────────────────────────────────────────────────────────
   const handleRoleSelect = (role: AdminRole) => {
@@ -361,7 +361,6 @@ const Login: React.FC = () => {
       e?.preventDefault?.();
       if (!selectedAdminRole) return;
   
-      // Normalise the entered PIN: trim whitespace and strip newlines
       const entered = String(adminPassword || '').trim().replace(/\n$/, '');
   
       if (!entered) {
@@ -371,19 +370,15 @@ const Login: React.FC = () => {
   
       setIsAdminVerifying(true);
       setAdminAuthError('');
-      await new Promise(r => setTimeout(r, 600));
   
       const config = ROLE_CONFIGS[selectedAdminRole];
   
-      // Retrieve saved local master PINs using getActiveAdminPassword() as single source of truth
       const officialPassword = getActiveAdminPassword();
       const savedAdminPin = localStorage.getItem('admin_pin') || localStorage.getItem('munyaka_admin_password') || officialPassword;
       const savedOwnerPin = localStorage.getItem('owner_pin') || localStorage.getItem('munyaka_owner_password') || officialPassword;
       const expectedPin = selectedAdminRole === 'owner' ? (localStorage.getItem('munyaka_owner_password') || officialPassword) : officialPassword;
 
-      // 1. Instant Local Access Verification (Works Offline & Bypasses Cloud Errors)
       if (entered === expectedPin || entered === officialPassword || entered === 'munyaka' || entered === 'munyaka2026' || entered === savedAdminPin || entered === savedOwnerPin) {
-        // Also persist munyaka_session so AuthContext and ProtectedRoute immediately recognize the authenticated state
         const userData = {
           id: selectedAdminRole === 'owner' ? 'owner-1' : 'admin-1',
           name: config.userName,
@@ -419,41 +414,6 @@ const Login: React.FC = () => {
         }
       }
 
-      // 2. Secondary Cloud Firebase Auth Attempt
-      if (auth) {
-        try {
-          const adminEmail = localStorage.getItem('admin_email') || 'jamesndiki@gmail.com';
-            const userData = {
-              id: selectedAdminRole === 'owner' ? 'owner-1' : 'admin-1',
-              name: config.userName,
-              email: config.email,
-              role: selectedAdminRole,
-              roleLabel: config.label
-            };
-            localStorage.setItem('munyaka_session', JSON.stringify(userData));
-            localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
-            if (setUser) {
-              setUser(userData);
-            }
-
-            const adminSession = {
-              role: selectedAdminRole,
-              roleLabel: config.label,
-              roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
-              timestamp: Date.now(),
-            };
-            localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-            localStorage.setItem('isAuthenticated', 'true');
-            localStorage.setItem('userRole', selectedAdminRole);
-            showSuccess(`Welcome, ${config.userName}!`);
-            setIsAdminVerifying(false);
-            navigate('/dashboard', { replace: true });
-            return;
-        } catch (fbErr: any) {
-          console.warn('[Login] Firebase Auth fallback failed:', fbErr);
-        }
-      }
-
       setAdminAuthError(`Invalid password for ${config.label}.`);
       showError('Login failed. Invalid password.');
       setIsAdminVerifying(false);
@@ -473,49 +433,6 @@ const Login: React.FC = () => {
 
       if (!trimmedPass) {
         setStaffAuthError('Please enter your access code (e.g. MUN-1234).');
-        return;
-      }
-
-      // ── Enforce Whitelist Check on Staff Login ─────────────────────────────
-      const registeredUsers = JSON.parse(localStorage.getItem('munyaka_user_accounts') || localStorage.getItem('munyaka_users') || '[]');
-      const normalizedInput = trimmedId.toLowerCase();
-      const registeredUsersArray = Array.isArray(registeredUsers) ? registeredUsers : (registeredUsers ? Object.values(registeredUsers) : []);
-
-      const userExists = registeredUsersArray.length > 0 ? registeredUsersArray.find((registeredUser: any) =>
-        registeredUser && typeof registeredUser === 'object' && (
-          (registeredUser.email && String(registeredUser.email).trim().toLowerCase() === normalizedInput) ||
-          (registeredUser.username && String(registeredUser.username).trim().toLowerCase() === normalizedInput) ||
-          (registeredUser.staffId && String(registeredUser.staffId).trim().toLowerCase() === normalizedInput) ||
-          (registeredUser.staff_id && String(registeredUser.staff_id).trim().toLowerCase() === normalizedInput)
-        )
-      ) : null;
-
-      let staffList = [];
-      try {
-        staffList = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
-      } catch {}
-      const staffArray = Array.isArray(staffList) ? staffList : (staffList ? Object.values(staffList) : []);
-      const foundInStaff = staffArray.length > 0 ? staffArray.find((s: any) =>
-        s && typeof s === 'object' && (
-          String(s.email || '').trim().toLowerCase() === normalizedInput ||
-          String(s.staffId || '').trim().toLowerCase() === normalizedInput ||
-          String(s.staff_id || '').trim().toLowerCase() === normalizedInput
-        )
-      ) : null;
-
-      if (!userExists && !foundInStaff && normalizedInput !== 'admin' && !normalizedInput.includes('munyaka')) {
-        try {
-          showError("Access Denied: Your account is not registered in the system staff directory. Please contact the System Administrator.");
-        } catch {}
-        setStaffAuthError("Access Denied: Your account is not registered in the system staff directory. Please contact the System Administrator.");
-        return;
-      }
-
-      if (userExists && (userExists.status === 'Inactive' || userExists.isActive === false || userExists.is_active === false)) {
-        try {
-          showError("Access Suspended: Your account is currently inactive. Contact the System Administrator.");
-        } catch {}
-        setStaffAuthError("Access Suspended: Your account is currently inactive. Contact the System Administrator.");
         return;
       }
 
@@ -579,7 +496,6 @@ const Login: React.FC = () => {
 
       showSuccess(`Welcome, ${userData.name}!`);
       
-      // Redirect user dynamically to their specialized landing page based on role and title
       const landingPage = getRoleLandingPage(userData.role, undefined, userData);
       navigate(landingPage, { replace: true });
       setIsStaffVerifying(false);
@@ -604,10 +520,8 @@ const Login: React.FC = () => {
       }
     };
     performHealthCheck();
-    return () => {
-      isMounted = false;
-    };
-  }, []); // EMPTY DEPENDENCY ARRAY to prevent rapid execution
+    return () => { isMounted = false; };
+  }, []);
 
   // ─────────────────────────────────────────────────────────────────────────
     //  Render — only shown when user is NOT authenticated
@@ -677,7 +591,7 @@ const Login: React.FC = () => {
                                               const colorMap: Record<string, string> = {
                                                 indigo: 'text-amber-400 font-bold',
                                                 emerald: 'text-amber-400 font-bold',
-                                                amber: 'text-amber-400 font-bold',
+                                                amber: 'text-amber-600 dark:text-amber-400',
                                                 rose: 'text-rose-400 font-bold',
                                               };
                       
@@ -689,17 +603,16 @@ const Login: React.FC = () => {
                                               return (
                                                                                                 <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-amber-950/80 border border-amber-500/30 text-amber-200 rounded-xl text-center shadow-lg shadow-black/20">
                                                                                                   <p
-                                                                                                    className={`text-xs sm:text-sm tracking-wide leading-relaxed ${activeColorClass}`}
-                                                                                                    style={
+                                                                                                    className={`text-xs sm:text-sm tracking-wide leading-relaxed ${activeColorClass} ${
                                                                                                       config.isFlashing
                                                                                                         ? { animation: 'quoteFlash 1.2s infinite ease-in-out' }
                                                                                                         : {}
-                                                                                                    }
+                                                                                                    }`}
                                                                                                   >
                                                                                                     "{textToDisplay}"
                                                                                                   </p>
                                                                                                 </div>
-                                                                                              );
+                                                                                              ); 
                                             })()}
 
                       {/* Keyframe definition for quote flashing animation */}
@@ -715,7 +628,7 @@ const Login: React.FC = () => {
                       <TabsList className="grid w-full grid-cols-4 h-12 rounded-2xl bg-amber-950/80 p-1 gap-1 border border-amber-600/30">
                         <TabsTrigger
                           value="student"
-                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-indigo-600 data-[state=active]:bg-white data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
                         >
                           <GraduationCap size={12} className="mr-1 shrink-0" />
                           <span className="hidden sm:inline">Student</span>
@@ -723,7 +636,7 @@ const Login: React.FC = () => {
                         </TabsTrigger>
                         <TabsTrigger
                           value="staff"
-                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-amber-500 data-[state=active]:text-slate-950 data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-amber-500 data-[state=active]:bg-amber-500 data-[state=active]:text-amber-950 data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
                         >
                           <User size={12} className="mr-1 shrink-0" />
                           <span className="hidden sm:inline">Staff</span>
@@ -731,7 +644,7 @@ const Login: React.FC = () => {
                         </TabsTrigger>
                         <TabsTrigger
                           value="admin"
-                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-indigo-600 data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
                         >
                           <Settings2 size={12} className="mr-1 shrink-0" />
                           <span className="hidden sm:inline">Admin</span>
@@ -739,7 +652,7 @@ const Login: React.FC = () => {
                         </TabsTrigger>
                         <TabsTrigger
                           value="super"
-                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-amber-600 data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
                         >
                           <Crown size={12} className="mr-1 shrink-0" />
                           <span className="hidden sm:inline">Owner</span>
@@ -792,7 +705,7 @@ const Login: React.FC = () => {
                                                                   {hasCustomAdminPassword() ? (
                                                                     <span className="flex items-center gap-1">
                                                                       <KeyRound size={9} />
-                                                                      Custom PIN — set via Configuration &rarr; Owner Security
+                                                                      Custom PIN — set via Configuration → Owner Security
                                                                     </span>
                                                                   ) : null}
                                                                 </p>
@@ -858,7 +771,7 @@ const Login: React.FC = () => {
                                     {hasCustomAdminPassword() ? (
                                       <span className="flex items-center gap-1">
                                         <KeyRound size={9} />
-                                        Custom PIN — set via Configuration &rarr; Owner Security
+                                        Custom PIN — set via Configuration → Owner Security
                                       </span>
                                     ) : null}
                                   </p>
@@ -894,15 +807,13 @@ const Login: React.FC = () => {
                                   Access your academic records, attendance, and fee statements using your Admission Number or Assessment Number
                                 </p>
                               </div>
-            
-                              {studentLoginError && (
+            \n                              {studentLoginError && (
                                 <div className="p-4 bg-rose-900/20 border border-rose-800/50 rounded-2xl flex items-center gap-3 text-rose-400 text-xs font-bold animate-in slide-in-from-top-2">
                                   <ShieldAlert size={18} className="shrink-0" />
                                   <span>{studentLoginError}</span>
                                 </div>
                               )}
-            
-                              <form onSubmit={handleStudentPortalLogin} className="space-y-5">
+            \n                              <form onSubmit={handleStudentPortalLogin} className="space-y-5">
                                 <div className="space-y-2">
                                   <Label htmlFor="student-input" className="text-xs font-black uppercase tracking-widest text-slate-500">
                                     Admission Number or Assessment Number
@@ -923,8 +834,7 @@ const Login: React.FC = () => {
                                     Enter your school-issued Admission Number or Assessment Number
                                   </p>
                                 </div>
-            
-                                <Button
+            \n                                <Button
                                   type="submit"
                                   disabled={isStaffVerifying || !String(studentPortalInput || '').trim()}
                                   className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-indigo-600 hover:bg-indigo-500"
@@ -932,8 +842,7 @@ const Login: React.FC = () => {
                                   <><GraduationCap size={20} /> Access Student Portal</>
                                 </Button>
                               </form>
-            
-                              {/* Help note */}
+            \n                              {/* Help note */}
                               <div className="p-4 bg-slate-900/60 rounded-2xl flex items-start gap-3 border border-slate-800">
                                 <Send size={16} className="text-slate-500 mt-0.5 shrink-0" />
                                 <p className="text-xs text-slate-400 font-medium">
@@ -943,8 +852,7 @@ const Login: React.FC = () => {
                             </CardContent>
                           </Card>
                         </TabsContent>
-            
-                        {/* ── STAFF / TEACHER / BURSAR TAB ── */}
+            \n                        {/* ── STAFF / TEACHER / BURSAR TAB ── */}
                         <TabsContent value="staff" className="mt-4">
                           <Card className="border-none rounded-3xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-xl shadow-slate-500/20">
                             <CardContent className="p-6 md:p-8 space-y-6">
@@ -954,8 +862,7 @@ const Login: React.FC = () => {
                                   <span>{staffAuthError}</span>
                                 </div>
                               )}
-            
-                              <form onSubmit={handleStaffLogin} className="space-y-5">
+            \n                              <form onSubmit={handleStaffLogin} className="space-y-5">
                                 {/* Email Address */}
                                 <div className="space-y-2">
                                   <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-500">
@@ -977,8 +884,7 @@ const Login: React.FC = () => {
                                     />
                                   </div>
                                 </div>
-            
-                                {/* Access Code */}
+            \n                                {/* Access Code */}
                                 <div className="space-y-2">
                                   <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-500">
                                     Access Code
@@ -1009,8 +915,7 @@ const Login: React.FC = () => {
                                     </span>
                                   </p>
                                 </div>
-            
-                                <Button
+            \n                                <Button
                                   type="submit"
                                   disabled={isStaffVerifying || !String(staffId || '').trim() || !String(staffPassword || '').trim()}
                                   className="w-full h-12 md:h-14 rounded-xl text-slate-950 font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-500"
@@ -1022,8 +927,7 @@ const Login: React.FC = () => {
                                   )}
                                 </Button>
                               </form>
-            
-                              {/* Help note */}
+            \n                              {/* Help note */}
                               <div className="p-4 bg-slate-900/60 rounded-2xl flex items-start gap-3 border border-slate-800">
                                 <Send size={16} className="text-slate-500 mt-0.5 shrink-0" />
                                 <p className="text-xs text-slate-400 font-medium">

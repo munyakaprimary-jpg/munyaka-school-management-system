@@ -489,7 +489,7 @@ export default function FirestoreSyncTab() {
       const usersDocs = (usersSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       
       // Also combine local registered staff as user accounts directly if cloud collection is empty or to ensure direct mapping
-      const rawData = localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_users') || '[]';
+      const rawData = localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || '[]';
       let parsed = [];
       try {
         parsed = JSON.parse(rawData);

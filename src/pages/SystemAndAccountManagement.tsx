@@ -271,123 +271,26 @@ const SystemAndAccountManagement = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* --- TAB 1: PORTAL LOGINS --- */}
+        {/* --- TAB 1: PORTAL LOGINS (Staff & Teacher Registry is now the unified auth source) --- */}
         <TabsContent value="logins" className="space-y-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'Total Users', value: userStats.total, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-              { label: 'Active Teachers', value: userStats.teachers, icon: UserPlus, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-              { label: 'Active Students', value: userStats.students, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-              { label: 'Suspended', value: userStats.suspended, icon: Ban, color: 'text-rose-600', bg: 'bg-rose-50' },
-            ].map((s, i) => (
-              <Card key={i} className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-                <div className="flex items-center gap-4">
-                  <div className={cn("p-3 rounded-2xl", s.bg)}>
-                    <s.icon className={s.color} size={24} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{s.label}</p>
-                    <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{s.value}</h3>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-              <div className="flex flex-1 gap-4 w-full">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <Input 
-                    placeholder="Search by name or email..." 
-                    className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                  />
-                </div>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold">
-                    <SelectValue placeholder="All Roles" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="Admin">Administrators</SelectItem>
-                    <SelectItem value="Teacher">Teachers</SelectItem>
-                    <SelectItem value="Student">Students</SelectItem>
-                  </SelectContent>
-                </Select>
+          <div className="p-6 bg-indigo-50 rounded-2xl border border-indigo-100">
+            <div className="flex items-start gap-3">
+              <ShieldCheck size={20} className="text-indigo-600 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-slate-900">Unified Authentication</h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  All staff login credentials are now managed through the <strong>Staff & Teacher Registry</strong>.
+                  User accounts are no longer stored in a separate table.
+                </p>
               </div>
-              <Button 
-                className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100"
-                onClick={() => setIsAddUserOpen(true)}
-              >
-                <UserPlus size={18} /> Add User Account
-              </Button>
             </div>
-          </Card>
-
-          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-                      <CardContent className="p-0">
-                        <div className="overflow-x-auto custom-scrollbar">
-                          <table className="w-full text-sm text-left min-w-[800px]">
-                            <thead className="text-slate-500 border-b bg-slate-50/50">
-                              <tr>
-                                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">User Identity</th>
-                                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Role</th>
-                                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Username / Email</th>
-                                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Last Login</th>
-                                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center whitespace-nowrap">Status</th>
-                                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right whitespace-nowrap">Actions</th>
-                              </tr>
-                            </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {users.map((user) => (
-                      <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-8 py-5 max-w-[200px]">
-                          <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">{user.name}</p>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter truncate">ID: {user.id}</p>
-                        </td>
-                        <td className="px-8 py-5 whitespace-nowrap">
-                          <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-600 font-bold px-2.5 py-0.5">{user.role}</Badge>
-                        </td>
-                        <td className="px-8 py-5 font-medium text-slate-600 max-w-[220px]">
-                          <span className="block truncate" title={user.username}>{user.username}</span>
-                        </td>
-                        <td className="px-8 py-5 font-medium text-slate-400 italic whitespace-nowrap">{user.lastLogin}</td>
-                        <td className="px-8 py-5 text-center whitespace-nowrap">
-                          <Badge className={cn("rounded-xl border-none font-bold text-[10px] uppercase px-3 py-1",
-                            user.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600")}>
-                            {user.status}
-                          </Badge>
-                        </td>
-                        <td className="px-8 py-5 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="rounded-xl h-9 px-3 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 gap-1.5"
-                              onClick={() => handleResetPassword(user.name)}
-                            >
-                              <Key size={14} /> Reset
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className={cn("rounded-xl h-9 w-9", user.status === 'Active' ? "text-rose-500 hover:bg-rose-50" : "text-emerald-600 hover:bg-emerald-50")}
-                              onClick={() => handleToggleUserStatus(user.id)}
-                            >
-                              {user.status === 'Active' ? <Ban size={16} /> : <CheckCircle2 size={16} />}
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+          </div>
+          <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200">
+            <p className="text-sm text-slate-500">
+              To manage staff login credentials, access codes, passwords, and account status, please visit the{' '}
+              <strong>Staff & Teacher Registry</strong> section.
+            </p>
+          </div>
         </TabsContent>
 
         {/* --- TAB 2: NETWORK USAGE --- */}
