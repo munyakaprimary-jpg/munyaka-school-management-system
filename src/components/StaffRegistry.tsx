@@ -76,6 +76,9 @@ export interface StaffMember {
   category: StaffCategoryRole;
   title: string;
   rbacRole: string;
+  role?: string;
+  designation?: string;
+  assignedRole?: string;
   tscNumber?: string;
   nationalId?: string;
   email: string;
@@ -300,7 +303,10 @@ export default function StaffRegistry() {
           name: staff.name || 'Unnamed Staff',
           category: cat,
           title: staff.title || cat,
-          rbacRole: staff.rbacRole || mapRoleLabelToRbacKey(cat),
+          rbacRole: staff.rbacRole || staff.role || staff.designation || staff.assignedRole || mapRoleLabelToRbacKey(cat),
+          role: staff.role || staff.rbacRole || cat,
+          designation: staff.designation || staff.title || cat,
+          assignedRole: staff.assignedRole || staff.rbacRole || cat,
           tscNumber: staff.tscNumber || (cat !== 'Bursar' && cat !== 'Store Master' ? '327775' : undefined),
           nationalId: staff.nationalId || (cat === 'Bursar' || cat === 'Store Master' ? '31452981' : undefined),
           email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
@@ -653,6 +659,9 @@ export default function StaffRegistry() {
       category,
       title,
       rbacRole: rbacRoleKey,
+      role: rbacRoleKey,
+      designation: title,
+      assignedRole: rbacRoleKey,
       email: fullEmail,
       phone: phone.trim() || '+254 712 345 678',
       tscNumber: isTeachingStaff ? tscNumber.trim() : undefined,
@@ -879,6 +888,7 @@ export default function StaffRegistry() {
   };
 
   const formatRoleLabel = (roleKey: string) => {
+    if (!roleKey) return 'Staff Member';
     const norm = String(roleKey || '').toLowerCase().trim();
     if (norm === 'library_teacher' || norm === 'librarian') return 'Library Teacher';
     if (norm === 'ict_teacher' || norm === 'ict') return 'ICT Teacher';
@@ -889,7 +899,10 @@ export default function StaffRegistry() {
     if (norm === 'bursar' || norm === 'accountant') return 'Bursar';
     if (norm === 'store_master' || norm === 'storekeeper') return 'Store Master';
     if (norm === 'lab_teacher') return 'Lab Teacher';
-    return roleKey.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    if (norm === 'admin') return 'Administrator';
+    if (norm === 'owner') return 'School Owner';
+    if (norm === 'support_staff') return 'Support Staff';
+    return String(roleKey).split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   };
 
   return (
@@ -1033,8 +1046,8 @@ export default function StaffRegistry() {
 
                       {/* Column 2: Dedicated Role Badge */}
                       <td className="py-3.5 px-3 max-w-[170px]">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
-                          {formatRoleLabel(staff.rbacRole || staff.category)}
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200" title={`Category: ${staff.category} | Role: ${staff.rbacRole || staff.role || staff.designation || 'Staff'}`}>
+                          {formatRoleLabel(staff.rbacRole || staff.role || staff.designation || staff.category || 'Staff Member')}
                         </span>
                       </td>
 
