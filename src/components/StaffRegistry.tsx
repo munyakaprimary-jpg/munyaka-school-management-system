@@ -1457,29 +1457,6 @@ export default function StaffRegistry() {
                 </div>
               </div>
 
-              {/* Secure Portal Access Code Row */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                  <Fingerprint className="w-4 h-4 text-indigo-500 animate-pulse" /> Secure Access Code
-                </span>
-                <p className="text-[11px] text-slate-500">Provide this code to the staff member so they can authenticate and record marks under their profile.</p>
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="text" 
-                    readOnly
-                    value={accessCode}
-                    className="bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-mono font-bold tracking-wider text-slate-800 text-center w-36 select-all focus:outline-none focus:ring-0"
-                  />
-                  <button 
-                    type="button"
-                    onClick={generateSecureCode}
-                    className="px-3 py-2 bg-white hover:bg-slate-100 border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-800 transition-all flex items-center gap-1.5 shadow-sm"
-                  >
-                    Generate New Code
-                  </button>
-                </div>
-              </div>
-
               {/* Password Row */}
               <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl space-y-2">
                 <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
@@ -1488,11 +1465,11 @@ export default function StaffRegistry() {
                 <p className="text-[11px] text-slate-500">Auto-generated secure password for staff login. Share securely with the staff member.</p>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
-                    <input 
+                    <input
                       type={showPassword === 'modal' ? 'text' : 'password'}
                       readOnly
                       value={password}
-                      className="bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-mono font-bold tracking-wider text-slate-800 text-center select-all focus:outline-none focus:ring-0 pr-10"
+                      className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-mono font-bold tracking-wider text-slate-800 text-center select-all focus:outline-none focus:ring-0 pr-10"
                     />
                     <button
                       type="button"
@@ -1502,7 +1479,7 @@ export default function StaffRegistry() {
                       {showPassword === 'modal' ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  <button 
+                  <button
                     type="button"
                     onClick={generateSecurePassword}
                     className="px-3 py-2 bg-white hover:bg-slate-100 border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-800 transition-all flex items-center gap-1.5 shadow-sm"
