@@ -989,12 +989,12 @@ export default function StaffRegistry() {
           <div className="h-2 min-w-[1300px]"></div>
         </div>
 
-        <div 
+        <div
           ref={bottomScrollRef}
           onScroll={handleBottomScroll}
           className="overflow-x-auto custom-scrollbar"
         >
-          <table className="w-full text-left border-collapse min-w-[1300px]">
+          <table className="w-full text-left border-collapse min-w-[950px]">
             <thead>
               <tr className="border-b border-slate-150 bg-slate-50/70 text-slate-600 text-xs font-semibold uppercase tracking-wider">
                 <th className="py-3.5 px-4 min-w-[200px] whitespace-nowrap">STAFF MEMBER</th>
@@ -1005,14 +1005,12 @@ export default function StaffRegistry() {
                 <th className="py-3.5 px-3 min-w-[180px] whitespace-nowrap">Assigned Classes</th>
                 <th className="py-3.5 px-3 text-center whitespace-nowrap">Status</th>
                 <th className="py-3.5 px-4 min-w-[130px] text-center whitespace-nowrap">Access Code</th>
-                <th className="py-3.5 px-4 min-w-[130px] text-center whitespace-nowrap">Login Access</th>
-                <th className="py-3.5 px-4 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm text-slate-600">
               {filteredStaff.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <AlertCircle className="w-8 h-8 text-slate-300" />
                       <span className="font-medium text-slate-500">No staff members found matching criteria</span>
@@ -1023,7 +1021,6 @@ export default function StaffRegistry() {
               ) : (
                 filteredStaff.map((staff, idx) => {
                   const statusConfig = getStatusBadgeConfig(staff.status);
-                  const loginEnabled = staff.loginEnabled !== false;
 
                   return (
                     <tr
@@ -1178,106 +1175,6 @@ export default function StaffRegistry() {
                               <Copy className="w-3 h-3" />
                             </button>
                           )}
-                        </div>
-                      </td>
-
-                      {/* Column: Login Access Status */}
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${loginEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full bg-current mr-1.5 ${loginEnabled ? 'animate-pulse' : ''}`}></span>
-                            {loginEnabled ? 'Enabled' : 'Disabled'}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Column: Actions with Dropdown Menu */}
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => handleOpenEditModal(staff)}
-                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg transition-all"
-                            title="Edit profile"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          
-                          {/* Account Management Dropdown */}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-lg transition-all" title="Account actions">
-                                <MoreVertical className="w-4 h-4" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
-                              <DropdownMenuItem 
-                                className="flex items-center gap-2 text-indigo-600"
-                                onClick={() => {
-                                  handleCopyCode(staff.accessCode || staff.teacherCode || staff.code || staff.tempAccessCode);
-                                }}
-                              >
-                                <Key className="w-4 h-4" />
-                                Copy Access Code
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="flex items-center gap-2"
-                                onClick={() => {
-                                  if (staff.password && staff.password !== '••••••••') {
-                                    handleCopyPassword(staff);
-                                  } else {
-                                    toast.info('Password is masked. Reset to generate a new one.');
-                                  }
-                                }}
-                              >
-                                <Lock className="w-4 h-4" />
-                                {staff.password && staff.password !== '••••••••' ? 'Copy Password' : 'Password Masked'}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                className="flex items-center gap-2 text-amber-600"
-                                onClick={() => handleResetPassword(staff)}
-                              >
-                                <RotateCcw className="w-4 h-4" />
-                                Reset Password
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="flex items-center gap-2 text-blue-600"
-                                onClick={() => {
-                                  const newEmail = prompt('Enter new email (username only, @munyaka.sc.ke will be added):', staff.email.split('@')[0]);
-                                  if (newEmail && newEmail.trim()) {
-                                    handleUpdateEmail(staff, newEmail.trim());
-                                  }
-                                }}
-                              >
-                                <Mail className="w-4 h-4" />
-                                Update Email
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="flex items-center gap-2"
-                                onClick={() => handleToggleLoginAccess(staff)}
-                              >
-                                {loginEnabled ? (
-                                  <>
-                                    <BellOff className="w-4 h-4 text-rose-600" />
-                                    Disable Login Access
-                                  </>
-                                ) : (
-                                  <>
-                                    <Bell className="w-4 h-4 text-emerald-600" />
-                                    Enable Login Access
-                                  </>
-                                )}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                className="flex items-center gap-2 text-rose-600"
-                                onClick={() => handleDeleteStaff(staff.id)}
-                              >
-                                <UserX className="w-4 h-4" />
-                                Remove Staff & Revoke Access
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
