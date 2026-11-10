@@ -32,7 +32,7 @@ import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { showSuccess, showError } from '@/utils/toast';
 import { CentralDataService } from '@/services/centralDataService';
-import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
+import { generateLearnerId, formatLearnerDoc, normalizeLearner, findExistingLearner } from '@/services/learnerService';
 import { getStoredLearners as getCentralStoredLearners, saveLearnerRecord as saveLearner } from '@/utils/centralStorage';
 import { checkGradePermission } from '@/utils/gradePermissionGuard';
 import { migrateExistingAdmissionNumbers } from '@/utils/migrateExistingAdmissionNumbers';
@@ -173,20 +173,18 @@ export default function Students() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          // Sanitize or migrate existing corrupt records if any
-          const cleaned = parsed.map(formatLearnerDoc);
-          return cleaned;
+          return parsed.map(normalizeLearner);
         }
       }
     } catch (e) {}
 
     const loaded = getStoredLearners();
     if (loaded.length > 0) {
-      return loaded.map(formatLearnerDoc);
+      return loaded.map(normalizeLearner);
     }
     const central = CentralDataService.getLearners() || [];
     if (central.length > 0) {
-      return central.map(formatLearnerDoc);
+      return central.map(normalizeLearner);
     }
     return [];
   });
@@ -199,13 +197,13 @@ export default function Students() {
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed)) {
-            setStudents(parsed.map(formatLearnerDoc));
+            setStudents(parsed.map(normalizeLearner));
             return;
           }
         }
         const loaded = getStoredLearners();
         if (loaded && loaded.length > 0) {
-          setStudents(loaded.map(formatLearnerDoc));
+          setStudents(loaded.map(normalizeLearner));
         }
       } catch (e) {
         console.error('Error reloading learners from localStorage:', e);
@@ -221,7 +219,7 @@ export default function Students() {
     try {
       unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
         if (!snapshot.empty) {
-          const list = snapshot.docs.map(formatLearnerDoc);
+          const list = snapshot.docs.map(normalizeLearner);
           setStudents(list);
           try {
             localStorage.setItem('munyaka_learners_directory', JSON.stringify(list));

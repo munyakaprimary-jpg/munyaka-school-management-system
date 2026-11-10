@@ -37,38 +37,43 @@ import { STORAGE_KEYS as APP_STORAGE_KEYS, getLearners as getStorageLearners, sa
 
 const STORAGE_KEY = STORAGE_KEYS.LEARNERS;
 
-export const formatLearnerDoc = (l: any): Learner => {
-  if (!l) return {} as Learner;
-  const fullName = l.fullName || l.name || l.studentName || `${l.firstName || ''} ${l.lastName || ''}`.trim() || '';
-  const admissionNo = l.admissionNo || l.admissionNumber || l.admNo || '';
-  const identifierValue = l.idValue || l.identifierValue || l.assessmentNo || l.assessmentNumber || l.birthCertNo || l.birthCertificateNo || '';
-  const grade = l.grade || l.gradeLevel || '';
-  const stream = l.stream || '';
-  const gender = l.gender || l.sex || '';
-  const dob = l.dob || l.dateOfBirth || '';
-  const guardianName = l.guardianName || l.parentName || l.parentGuardian || '';
-  const guardianPhone = l.guardianPhone || l.phoneNumber || l.phone || l.parentPhone || '';
+export const normalizeLearner = (item: any): Learner => {
+  if (!item) return {} as Learner;
+  const admissionNo = item.admissionNo || item.adm_no || item.admission_no || item.admNo || '—';
+  const assessmentNo = item.assessmentNo || item.assessment_no || item.birth_cert_no || item.birthCertificateNo || item.birthCertNo || item.idValue || '—';
+  const fullName = item.fullName || item.name || item.full_name || item.studentName || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Unregistered Name';
+  const grade = item.grade || item.class || item.grade_level || 'Unassigned';
+  const stream = item.stream || item.stream_name || 'Unassigned Stream';
+  const gender = item.gender || item.sex || 'Male';
+  const dob = item.dob || item.date_of_birth || item.birthDate || '—';
+  const guardianName = item.guardianName || item.parent_name || item.guardian_name || item.parentName || item.guardian || '—';
+  const guardianPhone = item.guardianPhone || item.phone || item.parent_phone || item.phoneNumber || item.parentPhone || '—';
 
   return {
-    ...l,
-    id: l.id || l._id || admissionNo || `MUN-${Date.now()}`,
-    admissionNo: admissionNo || '',
-    admissionNumber: admissionNo || '',
-    assessmentNo: l.assessmentNo || l.assessmentNumber || (l.identifierType === 'assessment' || !l.birthCertificateNo ? identifierValue : ''),
-    assessmentNumber: l.assessmentNumber || l.assessmentNo || '',
-    fullName: fullName || '',
-    name: fullName || '',
-    grade: grade || '',
-    gradeLevel: grade || '',
-    stream: stream || '',
-    gender: gender || '',
-    dob: dob || '',
-    dateOfBirth: dob || '',
-    guardianName: guardianName || '',
-    parentName: guardianName || '',
-    guardianPhone: guardianPhone || '',
-    phoneNumber: guardianPhone || ''
+    ...item,
+    id: item.id || item._id || admissionNo,
+    admissionNo,
+    admissionNumber: admissionNo,
+    assessmentNo,
+    assessmentNumber: assessmentNo,
+    fullName,
+    name: fullName,
+    grade,
+    gradeLevel: grade,
+    stream,
+    gender,
+    sex: gender,
+    dob,
+    dateOfBirth: dob,
+    guardianName,
+    parentName: guardianName,
+    guardianPhone,
+    phoneNumber: guardianPhone
   };
+};
+
+export const formatLearnerDoc = (l: any): Learner => {
+  return normalizeLearner(l);
 };
 
 export const learnerService = {
