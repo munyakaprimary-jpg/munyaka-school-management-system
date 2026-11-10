@@ -28,7 +28,8 @@ export const AdminControlCenter: React.FC = () => {
     try {
       const raw = localStorage.getItem('munyaka_user_accounts') || localStorage.getItem('munyaka_users') || '[]';
       const parsed = JSON.parse(raw);
-      setUsers(Array.isArray(parsed) ? parsed : Object.values(parsed));
+      const validUsers = Array.isArray(parsed) ? parsed.filter(Boolean) : Object.values(parsed).filter(Boolean);
+      setUsers(validUsers);
     } catch {
       setUsers([]);
     }
