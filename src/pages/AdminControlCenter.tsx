@@ -18,7 +18,6 @@ import {
   Download, 
   ExternalLink,
   MoreVertical,
-  Key,
   Lock,
   RotateCcw,
   Mail,
@@ -66,15 +65,6 @@ export const AdminControlCenter: React.FC = () => {
     localStorage.setItem('munyaka_staff_db', JSON.stringify(updatedList));
     localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
     localStorage.setItem('munyaka_staff_registry', JSON.stringify(updatedList));
-  };
-
-  const handleCopyCode = (code: string) => {
-    if (!code) {
-      showError('No access code available.');
-      return;
-    }
-    navigator.clipboard.writeText(code);
-    showSuccess(`Copied access code: ${code}`);
   };
 
   const handleCopyPassword = (u: any) => {
@@ -240,14 +230,13 @@ export const AdminControlCenter: React.FC = () => {
               </div>
             </div>
             <CardDescription>
-              Unified authentication source. View credentials, access codes, passwords, and manage security access directly from each card.
+              Unified authentication source. View emails, passwords, and manage security access directly from each card.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
               {staff.map((u) => {
                 const loginEnabled = u.loginEnabled !== false;
-                const accessCode = u.accessCode || u.teacherCode || u.code || u.tempAccessCode || u.id || '—';
                 const passwordValue = u.password || u.temp_password || 'Munyaka2025!';
                 const cardKey = u.id || u.email;
                 const isRevealed = !!revealedPasswords[cardKey];
@@ -276,8 +265,6 @@ export const AdminControlCenter: React.FC = () => {
                           <span className="uppercase font-mono text-[10px] bg-slate-200/70 text-slate-700 dark:bg-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md font-bold">
                             {u?.designation || u?.assignedRole || u?.role || u?.systemRole || 'Subject Teacher'}
                           </span>
-                          <span>•</span>
-                          <span>Code: <span className="font-mono font-bold text-indigo-600">{accessCode}</span></span>
                           <span>•</span>
                           <span className="inline-flex items-center gap-1 bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
                             <span>Password:</span>
@@ -312,13 +299,6 @@ export const AdminControlCenter: React.FC = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56">
-                          <DropdownMenuItem 
-                            className="flex items-center gap-2 text-indigo-600 cursor-pointer"
-                            onClick={() => handleCopyCode(accessCode)}
-                          >
-                            <Key className="w-4 h-4" />
-                            Copy Access Code
-                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="flex items-center gap-2 cursor-pointer"
                             onClick={() => handleCopyPassword(u)}

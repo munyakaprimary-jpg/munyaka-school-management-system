@@ -1004,7 +1004,6 @@ export default function StaffRegistry() {
                 <th className="py-3.5 px-3 min-w-[180px] whitespace-nowrap">Subjects</th>
                 <th className="py-3.5 px-3 min-w-[180px] whitespace-nowrap">Assigned Classes</th>
                 <th className="py-3.5 px-3 text-center whitespace-nowrap">Status</th>
-                <th className="py-3.5 px-4 min-w-[130px] text-center whitespace-nowrap">Access Code</th>
                 <th className="py-3.5 px-4 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
@@ -1163,24 +1162,6 @@ export default function StaffRegistry() {
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-150 px-2 py-1 rounded-lg">
-                          <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
-                            {staff.accessCode || staff.teacherCode || staff.code || staff.tempAccessCode || staff.id || '—'}
-                          </span>
-                          {(staff.accessCode || staff.teacherCode || staff.code || staff.tempAccessCode) && (
-                            <button
-                              onClick={() => handleCopyCode(staff.accessCode || staff.teacherCode || staff.code || staff.tempAccessCode)}
-                              className="p-1 hover:bg-white rounded hover:text-indigo-600 text-slate-400 border border-transparent hover:border-slate-200 transition-all"
-                              title="Copy code to clipboard"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Column: Actions with Edit Button Only */}
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
                           <button
