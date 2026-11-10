@@ -172,8 +172,10 @@ export default function Students() {
       const saved = localStorage.getItem('munyaka_learners_directory');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map(formatLearnerDoc);
+        if (Array.isArray(parsed)) {
+          // Sanitize or migrate existing corrupt records if any
+          const cleaned = parsed.map(formatLearnerDoc);
+          return cleaned;
         }
       }
     } catch (e) {}
@@ -532,28 +534,29 @@ export default function Students() {
       const studentData = {
         ...existingRecord,
         id: targetId,
-        name: fullName.trim(),
         fullName: fullName.trim(),
+        name: fullName.trim(),
+        admissionNo: admissionNumber || (existingRecord as any)?.admissionNo || (existingRecord as any)?.admissionNumber || generateAdmissionNumber(grade),
         admissionNumber: admissionNumber || (existingRecord as any)?.admissionNumber || (existingRecord as any)?.admissionNo || generateAdmissionNumber(grade),
-        admNo: admissionNumber || existingRecord?.admNo || generateAdmissionNumber(grade),
         idType: idType,
         idValue: cleanValue,
-        assessmentNumber: idType === 'assessment' ? cleanValue : '',
-        assessmentNo: idType === 'assessment' ? cleanValue : '',
-        birthCertificateNo: idType === 'birthCert' ? cleanValue : '',
-        birthCertNo: idType === 'birthCert' ? cleanValue : '',
-        dateOfBirth,
+        assessmentNo: idType === 'assessment' ? cleanValue : (existingRecord?.assessmentNo || ''),
+        assessmentNumber: idType === 'assessment' ? cleanValue : (existingRecord?.assessmentNumber || ''),
+        birthCertificateNo: idType === 'birthCert' ? cleanValue : (existingRecord?.birthCertificateNo || ''),
+        birthCertNo: idType === 'birthCert' ? cleanValue : (existingRecord?.birthCertNo || ''),
         dob: dateOfBirth,
+        dateOfBirth: dateOfBirth,
         birthDate: dateOfBirth,
         gender,
         sex: gender,
-        gradeLevel: grade,
         grade,
+        gradeLevel: grade,
         class: grade,
         stream,
+        guardianName: parentName.trim(),
         parentName: parentName.trim(),
         parentGuardian: parentName.trim(),
-        guardian: parentName.trim(),
+        guardianPhone: phoneNumber.trim(),
         phoneNumber: phoneNumber.trim(),
         parentPhone: phoneNumber.trim(),
         phone: phoneNumber.trim(),
@@ -924,12 +927,12 @@ export default function Students() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {filteredStudents.map((student, idx) => {
-                    const sId = student.id || student._id || student.admissionNumber || student.admNo || `row-${idx}`;
-                    const sName = student.fullName || student.name || student.learnerName || student.studentName || (student.firstName || student.lastName ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : '') || '';
-                    const sAdm = student.admissionNumber || student.admNo || '—';
-                    const sAss = student.assessmentNo || student.assessmentNumber || student.assessment || student.assNo || '—';
+                    const sId = student.id || student._id || student.admissionNo || student.admissionNumber || `row-${idx}`;
+                    const sName = student.fullName || student.name || student.learnerName || student.studentName || '';
+                    const sAdm = student.admissionNo || student.admissionNumber || '—';
+                    const sAss = student.assessmentNo || student.assessmentNumber || student.idValue || '—';
                     const sGender = student.gender || 'Male';
-                    const sDobRaw = student.dateOfBirth || student.dob || student.birthDate || '';
+                    const sDobRaw = student.dob || student.dateOfBirth || '';
                     let sDob = '—';
                     if (sDobRaw) {
                       try {
@@ -955,8 +958,9 @@ export default function Students() {
                         sDob = sDobRaw;
                       }
                     }
-                    const sParent = student.parentName || student.guardian || '—';
-                    const sPhone = student.parentPhone || student.phoneNumber || student.phone || '—';
+                    const sParent = student.guardianName || student.parentName || student.guardian || '—';
+                    const sPhone = student.guardianPhone || student.phoneNumber || student.parentPhone || student.phone || '—';
+                    const sGrade = student.grade || student.gradeLevel || student.class || 'Grade 6';
                     const sStreamRaw = student.stream || 'BLUE';
                     const sStream = /North|South|East|West/i.test(sStreamRaw) ? 'BLUE' : sStreamRaw;
 
@@ -971,7 +975,7 @@ export default function Students() {
                         </td>
                         <td className="px-2.5 py-2 whitespace-nowrap">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                            {student.grade || student.class} ({sStream})
+                            {sGrade} ({sStream})
                           </span>
                         </td>
                         <td className="px-2.5 py-2 text-slate-700 whitespace-nowrap">{sGender}</td>

@@ -40,38 +40,34 @@ const STORAGE_KEY = STORAGE_KEYS.LEARNERS;
 export const formatLearnerDoc = (l: any): Learner => {
   if (!l) return {} as Learner;
   const fullName = l.fullName || l.name || l.studentName || `${l.firstName || ''} ${l.lastName || ''}`.trim() || '';
-  const admissionNumber = l.admissionNumber || l.admissionNo || l.admNo || '';
+  const admissionNo = l.admissionNo || l.admissionNumber || l.admNo || '';
   const identifierValue = l.idValue || l.identifierValue || l.assessmentNo || l.assessmentNumber || l.birthCertNo || l.birthCertificateNo || '';
-  const gradeLevel = l.gradeLevel || l.grade || '';
+  const grade = l.grade || l.gradeLevel || '';
   const stream = l.stream || '';
   const gender = l.gender || l.sex || '';
-  const dateOfBirth = l.dateOfBirth || l.dob || '';
-  const parentName = l.parentName || l.parentGuardian || '';
-  const phoneNumber = l.phoneNumber || l.phone || '';
+  const dob = l.dob || l.dateOfBirth || '';
+  const guardianName = l.guardianName || l.parentName || l.parentGuardian || '';
+  const guardianPhone = l.guardianPhone || l.phoneNumber || l.phone || l.parentPhone || '';
 
   return {
     ...l,
-    id: l.id || l._id || admissionNumber || `MUN-${Date.now()}`,
-    admissionNumber: admissionNumber || l.admissionNumber || '',
-    admissionNo: admissionNumber || l.admissionNo || '',
-    idValue: identifierValue || l.idValue || '',
-    identifierValue: identifierValue || l.identifierValue || '',
-    identifierType: l.identifierType || (l.birthCertificateNo || l.birthCertNo ? 'birthCert' : 'assessment'),
+    id: l.id || l._id || admissionNo || `MUN-${Date.now()}`,
+    admissionNo: admissionNo || '',
+    admissionNumber: admissionNo || '',
     assessmentNo: l.assessmentNo || l.assessmentNumber || (l.identifierType === 'assessment' || !l.birthCertificateNo ? identifierValue : ''),
-    birthCertNo: l.birthCertNo || l.birthCertificateNo || (l.identifierType === 'birthCert' || l.birthCertificateNo ? identifierValue : ''),
-    birthCertificateNo: l.birthCertificateNo || l.birthCertNo || identifierValue || '',
-    fullName: fullName || l.fullName || l.name || '',
-    name: fullName || l.name || l.fullName || '',
-    gradeLevel: gradeLevel || l.gradeLevel || '',
-    grade: gradeLevel || l.grade || '',
-    stream: stream || l.stream || '',
-    gender: gender || l.gender || '',
-    dateOfBirth: dateOfBirth || l.dateOfBirth || l.dob || '',
-    dob: dateOfBirth || l.dob || l.dateOfBirth || '',
-    parentName: parentName || l.parentName || l.parentGuardian || '',
-    parentGuardian: parentName || l.parentGuardian || l.parentName || '',
-    phoneNumber: phoneNumber || l.phoneNumber || l.phone || '',
-    phone: phoneNumber || l.phone || l.phoneNumber || ''
+    assessmentNumber: l.assessmentNumber || l.assessmentNo || '',
+    fullName: fullName || '',
+    name: fullName || '',
+    grade: grade || '',
+    gradeLevel: grade || '',
+    stream: stream || '',
+    gender: gender || '',
+    dob: dob || '',
+    dateOfBirth: dob || '',
+    guardianName: guardianName || '',
+    parentName: guardianName || '',
+    guardianPhone: guardianPhone || '',
+    phoneNumber: guardianPhone || ''
   };
 };
 
