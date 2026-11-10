@@ -295,6 +295,9 @@ export default function Students() {
   const [streamFilter, setStreamFilter] = useState(() => (!isAdmin ? assignedTeacherStream : 'all'));
   const [genderFilter, setGenderFilter] = useState('all');
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [selectedStudentForTransfer, setSelectedStudentForTransfer] = useState<any | null>(null);
@@ -651,6 +654,29 @@ export default function Students() {
     setAuthPassword('');
     setAuthError('');
     setIsVerifying(false);
+  };
+
+  const handleBulkDeleteConfirm = () => {
+    try {
+      const remainingList = students.filter(s => {
+        const sId = s.id || s._id || s.admissionNo || s.admissionNumber;
+        return !selectedIds.includes(sId);
+      });
+
+      setStudents(remainingList);
+      try {
+        localStorage.setItem('munyaka_learners_directory', JSON.stringify(remainingList));
+        localStorage.setItem('munyaka_students_db', JSON.stringify(remainingList));
+        localStorage.setItem('munyaka_learners', JSON.stringify(remainingList));
+        CentralDataService.saveLearners(remainingList);
+      } catch {}
+
+      setSelectedIds([]);
+      setIsBulkDeleteModalOpen(false);
+      showSuccess(`Successfully deleted ${selectedIds.length} learner records.`);
+    } catch (err: any) {
+      showError("Failed to delete selected learners: " + (err?.message || 'Unknown error'));
+    }
   };
 
   const filteredStudents = useMemo(() => {
