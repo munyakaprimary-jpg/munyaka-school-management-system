@@ -33,7 +33,7 @@ import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { showSuccess, showError } from '@/utils/toast';
 import { CentralDataService } from '@/services/centralDataService';
 import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
-import { getStoredLearners, saveLearnerRecord as saveLearner } from '@/utils/centralStorage';
+import { getStoredLearners as getCentralStoredLearners, saveLearnerRecord as saveLearner } from '@/utils/centralStorage';
 import { checkGradePermission } from '@/utils/gradePermissionGuard';
 import { migrateExistingAdmissionNumbers } from '@/utils/migrateExistingAdmissionNumbers';
 import { db } from '@/config/firebase';
@@ -54,7 +54,7 @@ const getStoredLearners = () => {
       }
     }
   } catch (e) {}
-  return [];
+  return getCentralStoredLearners() || [];
 };
 
 import { generateCohortAdmissionNumber } from '@/utils/admissionUtils';
