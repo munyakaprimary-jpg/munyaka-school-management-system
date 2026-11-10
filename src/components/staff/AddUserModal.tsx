@@ -3,16 +3,15 @@ import { X, UserPlus } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
 const SYSTEM_ROLES = [
-  { value: 'admin', label: 'System Administrator' },
-  { value: 'head_teacher', label: 'Head Teacher' },
-  { value: 'senior_teacher', label: 'Senior Teacher' },
-  { value: 'class_teacher', label: 'Class Teacher' },
-  { value: 'subject_teacher', label: 'Subject Teacher' },
-  { value: 'ict_teacher', label: 'ICT Teacher' },
-  { value: 'library_teacher', label: 'Library Teacher' },
-  { value: 'bursar', label: 'Bursar' },
-  { value: 'secretary', label: 'Secretary' },
-  { value: 'support_staff', label: 'Support Staff' }
+  { id: 'HOI', label: 'HOI (Head of Institution / Principal)' },
+  { id: 'DHOI', label: 'DHOI (Deputy Head of Institution)' },
+  { id: 'Class Teacher', label: 'Class Teacher' },
+  { id: 'Subject Teacher', label: 'Subject Teacher' },
+  { id: 'ICT Teacher', label: 'ICT Teacher' },
+  { id: 'Library Teacher', label: 'Library Teacher' },
+  { id: 'Lab Teacher', label: 'Lab Teacher' },
+  { id: 'Bursar', label: 'Bursar' },
+  { id: 'Store Master', label: 'Store Master' },
 ];
 
 export default function AddUserModal({ isOpen, onClose, onSubmit }: any) {
@@ -139,7 +138,7 @@ export default function AddUserModal({ isOpen, onClose, onSubmit }: any) {
                 className="w-full px-3.5 py-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition"
               >
                 {SYSTEM_ROLES.map(r => (
-                  <option key={r.value} value={r.value}>
+                  <option key={r.id} value={r.id}>
                     {r.label}
                   </option>
                 ))}
