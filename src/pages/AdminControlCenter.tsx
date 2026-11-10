@@ -24,7 +24,10 @@ import {
   Mail,
   Bell,
   BellOff,
-  UserX
+  UserX,
+  Eye,
+  EyeOff,
+  Copy
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
@@ -32,6 +35,8 @@ import { getStaffMaster } from '@/services/staffMasterService';
 
 export const AdminControlCenter: React.FC = () => {
   const [staff, setStaff] = useState<any[]>([]);
+  // Track revealed passwords by staff id / email
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadStaff();
@@ -73,7 +78,7 @@ export const AdminControlCenter: React.FC = () => {
   };
 
   const handleCopyPassword = (u: any) => {
-    const pwd = u.password || 'Munyaka2025!';
+    const pwd = u.password || u.temp_password || 'Munyaka2025!';
     navigator.clipboard.writeText(pwd);
     showSuccess(`Copied password for ${u.name}`);
   };
@@ -82,7 +87,7 @@ export const AdminControlCenter: React.FC = () => {
     const newPwd = 'Munyaka' + Math.floor(1000 + Math.random() * 9000) + '!';
     const updated = staff.map(item => {
       if ((item.id && item.id === u.id) || item.email === u.email) {
-        return { ...item, password: newPwd, lastPasswordChange: new Date().toISOString() };
+        return { ...item, password: newPwd, temp_password: newPwd, lastPasswordChange: new Date().toISOString() };
       }
       return item;
     });
@@ -123,6 +128,10 @@ export const AdminControlCenter: React.FC = () => {
       persistStaffList(updated);
       showSuccess('Staff record and auth access successfully revoked.');
     }
+  };
+
+  const togglePasswordReveal = (key: string) => {
+    setRevealedPasswords(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,17 +240,21 @@ export const AdminControlCenter: React.FC = () => {
               </div>
             </div>
             <CardDescription>
-              Unified authentication source. Manage login access badges and security credentials directly from each card.
+              Unified authentication source. View credentials, access codes, passwords, and manage security access directly from each card.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
               {staff.map((u) => {
                 const loginEnabled = u.loginEnabled !== false;
                 const accessCode = u.accessCode || u.teacherCode || u.code || u.tempAccessCode || u.id || '—';
+                const passwordValue = u.password || u.temp_password || 'Munyaka2025!';
+                const cardKey = u.id || u.email;
+                const isRevealed = !!revealedPasswords[cardKey];
+
                 return (
                   <div
-                    key={u.id || u.email}
+                    key={cardKey}
                     className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 gap-3 hover:border-indigo-200 transition-all"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -257,13 +270,36 @@ export const AdminControlCenter: React.FC = () => {
                             {loginEnabled ? 'Login Enabled' : 'Login Disabled'}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 truncate mt-0.5">
-                          {u?.email || 'No Email'} •{' '}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1">
+                          <span className="truncate">{u?.email || 'No Email'}</span>
+                          <span>•</span>
                           <span className="uppercase font-mono text-[10px] bg-slate-200/70 text-slate-700 dark:bg-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md font-bold">
                             {u?.designation || u?.assignedRole || u?.role || u?.systemRole || 'Subject Teacher'}
-                          </span>{' '}
-                          • Code: <span className="font-mono font-bold text-indigo-600">{accessCode}</span>
-                        </p>
+                          </span>
+                          <span>•</span>
+                          <span>Code: <span className="font-mono font-bold text-indigo-600">{accessCode}</span></span>
+                          <span>•</span>
+                          <span className="inline-flex items-center gap-1 bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                            <span>Password:</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                              {isRevealed ? passwordValue : '••••••••'}
+                            </span>
+                            <button
+                              onClick={() => togglePasswordReveal(cardKey)}
+                              className="text-slate-400 hover:text-slate-600 p-0.5"
+                              title={isRevealed ? "Hide password" : "Show password"}
+                            >
+                              {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                            <button
+                              onClick={() => handleCopyPassword(u)}
+                              className="text-indigo-500 hover:text-indigo-700 p-0.5"
+                              title="Copy password to clipboard"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                          </span>
+                        </div>
                       </div>
                     </div>
 
