@@ -29,12 +29,14 @@ import {
   Bell,
   BellOff,
   MoreVertical,
+} from 'lucide-react';
+import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from 'lucide-react';
+} from '@/components/ui/dropdown-menu';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MOCK_STAFF } from '../lib/mock-data';
