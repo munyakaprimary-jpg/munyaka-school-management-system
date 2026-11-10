@@ -64,6 +64,24 @@ const generateAdmissionNumber = (studentGrade: string, _admissionYear: string = 
   return generateCohortAdmissionNumber(studentGrade, existingLearners);
 };
 
+// Harmonized grade matcher (supports "1", "Grade 1", "Grade One", etc.)
+const normalizeGradeStr = (val: string) => {
+  if (!val) return '';
+  const lower = val.toLowerCase().trim();
+  const match = lower.match(/(\d+)/);
+  if (match) return match[1];
+  if (lower.includes('one') || lower.includes('1')) return '1';
+  if (lower.includes('two') || lower.includes('2')) return '2';
+  if (lower.includes('three') || lower.includes('3')) return '3';
+  if (lower.includes('four') || lower.includes('4')) return '4';
+  if (lower.includes('five') || lower.includes('5')) return '5';
+  if (lower.includes('six') || lower.includes('6')) return '6';
+  if (lower.includes('seven') || lower.includes('7')) return '7';
+  if (lower.includes('eight') || lower.includes('8')) return '8';
+  if (lower.includes('nine') || lower.includes('9')) return '9';
+  return lower;
+};
+
 // Re-sequence all existing learners with a single continuous unbroken global sequence
 const ensureProperAdmissionNumbers = (list: any[]) => {
   const currentYear = new Date().getFullYear();
