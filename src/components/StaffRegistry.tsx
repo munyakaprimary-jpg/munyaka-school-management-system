@@ -144,9 +144,7 @@ export default function StaffRegistry() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  const [selectedStaffForEmail, setSelectedStaffForEmail] = useState<StaffMember | null>(null);
-  const [newEmailInput, setNewEmailInput] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [showPassword, setShowPassword] = useState<string | null>(null);
 
@@ -555,19 +553,11 @@ export default function StaffRegistry() {
   };
 
   const handleUpdateEmail = (staff: StaffMember, newEmail: string) => {
-    const cleanEmail = newEmail.trim();
-    if (!cleanEmail) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
-    const fullEmail = cleanEmail.includes('@') ? cleanEmail : `${cleanEmail}@munyaka.sc.ke`;
-    const updatedList = staffList.map(s =>
+    const fullEmail = newEmail.includes('@') ? newEmail : `${newEmail}@munyaka.sc.ke`;
+    const updatedList = staffList.map(s => 
       s.id === staff.id ? { ...s, email: fullEmail } : s
     );
-    saveStaffToStorage(updatedList);
-    setIsEmailModalOpen(false);
-    setSelectedStaffForEmail(null);
-    setNewEmailInput('');
+    setStaffList(updatedList);
     toast.success(`Email updated for ${staff.name} to ${fullEmail}`);
   };
 
@@ -1237,12 +1227,13 @@ export default function StaffRegistry() {
                                 <RotateCcw className="w-4 h-4" />
                                 Reset Password
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="flex items-center gap-2 text-blue-600 cursor-pointer"
+                              <DropdownMenuItem 
+                                className="flex items-center gap-2 text-blue-600"
                                 onClick={() => {
-                                  setSelectedStaffForEmail(staff);
-                                  setNewEmailInput(staff.email ? staff.email.split('@')[0] : '');
-                                  setIsEmailModalOpen(true);
+                                  const newEmail = prompt('Enter new email (username only, @munyaka.sc.ke will be added):', staff.email.split('@')[0]);
+                                  if (newEmail && newEmail.trim()) {
+                                    handleUpdateEmail(staff, newEmail.trim());
+                                  }
                                 }}
                               >
                                 <Mail className="w-4 h-4" />
