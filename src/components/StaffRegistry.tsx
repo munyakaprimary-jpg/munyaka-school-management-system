@@ -623,7 +623,7 @@ export default function StaffRegistry() {
       ? (email.includes('@') ? email.trim() : `${email.trim()}@munyaka.sc.ke`)
       : `${fullName.toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`;
 
-    const generatedMunId = accessCode;
+    const generatedMunId = editingStaff ? editingStaff.id : `staff-${Date.now()}`;
     const rbacRoleKey = mapRoleLabelToRbacKey(category);
     const title = category;
     
@@ -631,10 +631,7 @@ export default function StaffRegistry() {
     const passwordHash = await hashPassword(password);
     
     const staffRecord: StaffMember = {
-      id: editingStaff ? editingStaff.id : generatedMunId,
-      accessCode: accessCode,
-      teacherCode: accessCode,
-      code: accessCode,
+      id: generatedMunId,
       name: fullName.trim(),
       fullName: fullName.trim(),
       category,
@@ -658,6 +655,8 @@ export default function StaffRegistry() {
       password: password, // Store plain for admin visibility (in production, only hash)
       passwordHash: passwordHash,
       lastPasswordChange: new Date().toISOString(),
+      loginEnabled: editingStaff ? editingStaff.loginEnabled !== false : true
+    };
       loginEnabled: status === 'Active'
     };
 
