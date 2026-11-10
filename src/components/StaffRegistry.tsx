@@ -298,6 +298,7 @@ export default function StaffRegistry() {
           subjects: cleanSubjects,
           assignedClasses: cleanClasses,
           assignedStreams: cleanStreams,
+          accessCode: staff.accessCode || staff.code || staff.teacherCode || staff.tempAccessCode || `MUN-${Math.floor(1000 + Math.random() * 9000)}`,
           homeroomGrade: staff.homeroomGrade || defaultGrade,
           homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
           allocations: cleanAllocations,
@@ -655,9 +656,8 @@ export default function StaffRegistry() {
       password: password, // Store plain for admin visibility (in production, only hash)
       passwordHash: passwordHash,
       lastPasswordChange: new Date().toISOString(),
-      loginEnabled: editingStaff ? editingStaff.loginEnabled !== false : true
-    };
-      loginEnabled: status === 'Active'
+      loginEnabled: status === 'Active',
+      accessCode: editingStaff?.accessCode || generateRandomCode()
     };
 
     let updatedList: StaffMember[];
@@ -1619,4 +1619,3 @@ export default function StaffRegistry() {
       )}
     </div>
   );
-}
