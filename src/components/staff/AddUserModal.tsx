@@ -2,12 +2,25 @@ import React, { useState } from 'react';
 import { X, UserPlus } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
+const SYSTEM_ROLES = [
+  { value: 'admin', label: 'System Administrator' },
+  { value: 'head_teacher', label: 'Head Teacher' },
+  { value: 'senior_teacher', label: 'Senior Teacher' },
+  { value: 'class_teacher', label: 'Class Teacher' },
+  { value: 'subject_teacher', label: 'Subject Teacher' },
+  { value: 'ict_teacher', label: 'ICT Teacher' },
+  { value: 'library_teacher', label: 'Library Teacher' },
+  { value: 'bursar', label: 'Bursar' },
+  { value: 'secretary', label: 'Secretary' },
+  { value: 'support_staff', label: 'Support Staff' }
+];
+
 export default function AddUserModal({ isOpen, onClose, onSubmit }: any) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
-    role: 'Teacher',
+    role: 'teacher',
     staffId: '',
     password: ''
   });
@@ -23,12 +36,12 @@ export default function AddUserModal({ isOpen, onClose, onSubmit }: any) {
     if (onSubmit) {
       onSubmit(formData);
     } else {
-      // Default persistent save
       try {
         const existing = JSON.parse(localStorage.getItem('munyaka_user_accounts') || '[]');
         const newUser = {
           id: `usr-${Date.now()}`,
           ...formData,
+          role: formData.role.toUpperCase(),
           status: 'Active',
           createdAt: new Date().toISOString()
         };
@@ -125,10 +138,11 @@ export default function AddUserModal({ isOpen, onClose, onSubmit }: any) {
                 onChange={e => setFormData({ ...formData, role: e.target.value })}
                 className="w-full px-3.5 py-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition"
               >
-                <option value="Teacher">Teacher</option>
-                <option value="Admin">Admin</option>
-                <option value="Accountant">Accountant</option>
-                <option value="Head Teacher">Head Teacher</option>
+                {SYSTEM_ROLES.map(r => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
