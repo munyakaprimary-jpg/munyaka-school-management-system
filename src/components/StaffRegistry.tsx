@@ -354,8 +354,7 @@ export default function StaffRegistry() {
     setEmail(rawEmail);
     setPhone(staff.phone);
     setStatus(staff.status);
-    setAccessCode(staff.accessCode || generateRandomCode());
-    setPassword(staff.password || '••••••••'); // masked
+    setPassword(staff.password || staff.tempAccessCode || '••••••••'); // masked
     
     const loadedSubs = staff.subjects || [];
     setSelectedSubjects(loadedSubs);
