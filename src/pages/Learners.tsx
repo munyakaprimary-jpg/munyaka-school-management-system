@@ -42,22 +42,19 @@ import { collection, onSnapshot, addDoc, setDoc, doc, getDocs, deleteDoc } from 
 const STUDENTS_STORAGE_KEY = 'munyaka_learners';
 const API_BASE_URL = '/api';
 
-// Harmonized grade matcher (supports "1", "Grade 1", "Grade One", etc.)
-const normalizeGradeStr = (val: string) => {
-  if (!val) return '';
-  const lower = val.toLowerCase().trim();
-  const match = lower.match(/(\d+)/);
-  if (match) return match[1];
-  if (lower.includes('one') || lower.includes('1')) return '1';
-  if (lower.includes('two') || lower.includes('2')) return '2';
-  if (lower.includes('three') || lower.includes('3')) return '3';
-  if (lower.includes('four') || lower.includes('4')) return '4';
-  if (lower.includes('five') || lower.includes('5')) return '5';
-  if (lower.includes('six') || lower.includes('6')) return '6';
-  if (lower.includes('seven') || lower.includes('7')) return '7';
-  if (lower.includes('eight') || lower.includes('8')) return '8';
-  if (lower.includes('nine') || lower.includes('9')) return '9';
-  return lower;
+const getStoredLearners = () => {
+  try {
+    for (const key of ['munyaka_learners_directory', 'munyaka_students_db', 'munyaka_learners', 'munyaka_students']) {
+      const data = localStorage.getItem(key);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    }
+  } catch (e) {}
+  return [];
 };
 
 import { generateCohortAdmissionNumber } from '@/utils/admissionUtils';
@@ -153,10 +150,16 @@ export default function Students() {
   const assignedTeacherStream = !isAdmin ? (resolvedStream || 'BLUE') : 'all';
 
   const [students, setStudents] = useState<any[]>(() => {
-      // Load from centralized master data service (aggregates across all storage keys)
-      const loaded = CentralDataService.getLearners() || [];
+    const loaded = getStoredLearners();
+    if (loaded.length > 0) {
       return loaded.map(formatLearnerDoc);
-    });
+    }
+    const central = CentralDataService.getLearners() || [];
+    if (central.length > 0) {
+      return central.map(formatLearnerDoc);
+    }
+    return [];
+  });
 
   // Real-Time Firestore Subscription & local storage sync
   useEffect(() => {
@@ -519,8 +522,6 @@ export default function Students() {
         updated = students.map(s => (s.id === editingId || s.admissionNumber === admissionNumber) ? { ...s, ...studentData } : s);
         showSuccess("Learner record updated successfully!");
       } else {
-        // Push newly created learner object directly into React state array for immediate rendering
-        setStudents(prevLearners => [studentData, ...prevLearners]);
         updated = [studentData, ...students];
         showSuccess("Learner successfully added and saved to directory!");
       }
@@ -529,6 +530,10 @@ export default function Students() {
             
             try {
               CentralDataService.saveLearners(updated);
+              localStorage.setItem('munyaka_learners_directory', JSON.stringify(updated));
+              localStorage.setItem('munyaka_students_db', JSON.stringify(updated));
+              localStorage.setItem('munyaka_students', JSON.stringify(updated));
+              localStorage.setItem('munyaka_learners', JSON.stringify(updated));
             } catch {}
       
             setIsModalOpen(false);
