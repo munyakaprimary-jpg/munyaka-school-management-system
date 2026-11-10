@@ -19,7 +19,7 @@ export default function AddUserModal({ isOpen, onClose, onSubmit }: any) {
     name: '',
     email: '',
     phone: '',
-    role: 'teacher',
+    role: 'Subject Teacher',
     staffId: '',
     password: ''
   });
