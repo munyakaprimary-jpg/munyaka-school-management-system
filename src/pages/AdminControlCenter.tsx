@@ -29,6 +29,17 @@ export const AdminControlCenter: React.FC = () => {
     try {
       const staffList = getStaffMaster();
       setStaff(staffList);
+      // Also sync / read from munyaka_staff or munyaka_staff_directory / registry if stored in localStorage
+      const registryList = localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory');
+      if (registryList) {
+        try {
+          const parsed = JSON.parse(registryList);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Merge or prefer registry list so newly assigned positions/roles reflect immediately
+            setStaff(parsed);
+          }
+        } catch {}
+      }
     } catch {
       setStaff([]);
     }
@@ -268,7 +279,13 @@ export const AdminControlCenter: React.FC = () => {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{u?.name || 'Unnamed Staff'}</p>
-                      <p className="text-xs text-slate-500 truncate">{u?.email || 'No Email'} • <span className="uppercase font-mono text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold">{u?.systemRole || u?.role || 'Staff'}</span> • <span className={u?.status === 'Active' ? 'text-emerald-600' : 'text-rose-600'}>{u?.status || 'Active'}</span></p>
+                      <p className="text-xs text-slate-500 truncate">
+                        {u?.email || 'No Email'} •{' '}
+                        <span className="uppercase font-mono text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-md font-bold">
+                          {u?.designation || u?.assignedRole || u?.role || u?.systemRole || 'Subject Teacher'}
+                        </span>{' '}
+                        • <span className={u?.status === 'Active' ? 'text-emerald-600' : 'text-rose-600'}>{u?.status || 'Active'}</span>
+                      </p>
                     </div>
                   </div>
                   <Button
