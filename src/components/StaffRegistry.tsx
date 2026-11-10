@@ -1619,3 +1619,4 @@ export default function StaffRegistry() {
       )}
     </div>
   );
+}
