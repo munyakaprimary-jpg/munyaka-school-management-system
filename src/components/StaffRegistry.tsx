@@ -159,7 +159,6 @@ export default function StaffRegistry() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [status, setStatus] = useState<'Active' | 'On Leave' | 'Inactive'>('Active');
-  const [accessCode, setAccessCode] = useState('');
   const [password, setPassword] = useState('');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [assignedClasses, setAssignedClasses] = useState<string[]>([]);
@@ -186,11 +185,6 @@ export default function StaffRegistry() {
     });
     return Array.from(streamSet);
   }, [assignedClasses, getStreamsForGrade, allGlobalStreams]);
-
-  // Generator for Access Code
-  const generateSecureCode = () => {
-    setAccessCode(generateRandomCode());
-  };
 
   // Generator for Password
   const generateSecurePassword = () => {
@@ -288,16 +282,6 @@ export default function StaffRegistry() {
               stream: defaultStream
             }));
 
-        let code = staff.accessCode || staff.code;
-        if (!code || !code.startsWith('MUN-')) {
-          const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-          let randomPart = '';
-          for (let i = 0; i < 4; i++) {
-            randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
-          }
-          code = `MUN-${randomPart}`;
-        }
-
         return {
           id,
           name: staff.name || 'Unnamed Staff',
@@ -317,17 +301,16 @@ export default function StaffRegistry() {
           homeroomGrade: staff.homeroomGrade || defaultGrade,
           homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
           allocations: cleanAllocations,
-          accessCode: code,
           status: staff.status || 'Active',
           createdAt: staff.createdAt || new Date().toISOString(),
           // New auth fields with defaults
-          password: staff.password || undefined,
+          password: staff.password || staff.tempAccessCode || undefined,
           lastPasswordChange: staff.lastPasswordChange || undefined,
           loginEnabled: staff.loginEnabled !== false // default true
         };
       });
 
-    return harmonizeStaffCodes(sanitized);
+    return sanitized;
   });
 
   useEffect(() => {
@@ -353,7 +336,6 @@ export default function StaffRegistry() {
     setHomeroomStream('');
     setAllocations([]);
     setActiveSubjectForAllocation(null);
-    generateSecureCode();
     setPassword(generateRandomPassword());
     setIsModalOpen(true);
   };
