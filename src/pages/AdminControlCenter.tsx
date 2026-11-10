@@ -287,11 +287,11 @@ export const AdminControlCenter: React.FC = () => {
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-10 h-10 shrink-0 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 font-bold text-sm">
-                      {String(u.name || 'U').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                      {String(u?.name || 'U').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{u.name}</p>
-                      <p className="text-xs text-slate-500 truncate">{u.email} • <span className="uppercase font-mono text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold">{u.role}</span></p>
+                      <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{u?.name || 'Unnamed User'}</p>
+                      <p className="text-xs text-slate-500 truncate">{u?.email || 'No Email'} • <span className="uppercase font-mono text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md font-bold">{u?.role || 'Staff'}</span></p>
                     </div>
                   </div>
                   <Button
