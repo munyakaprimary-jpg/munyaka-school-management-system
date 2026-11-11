@@ -942,6 +942,34 @@ export default function Students() {
 
       {/* Learners Table Container with Top Horizontal Scrollbar */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+        {/* Bulk Actions Sticky Toolbar */}
+        {selectedIds.length > 0 && (
+          <div className="bg-indigo-50 border-b border-indigo-100 px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center bg-indigo-600 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+                {selectedIds.length} selected
+              </span>
+              <span className="text-xs font-medium text-indigo-950">Learner records selected for bulk actions</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsBulkDeleteModalOpen(true)}
+                className="h-9 px-3 rounded-xl text-xs font-bold gap-1.5 shadow-sm bg-red-600 hover:bg-red-700 text-white">
+                <Trash2 size={14} /> Delete Selected ({selectedIds.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedIds([])}
+                className="h-9 px-3 rounded-xl text-xs font-semibold border-indigo-200 text-indigo-900 bg-white hover:bg-indigo-100/50">
+                Deselect All
+              </Button>
+            </div>
+          </div>
+        )}
+
         {filteredStudents.length === 0 ? (
           <div className="p-16 text-center text-slate-400">
             <Users className="w-12 h-12 mx-auto mb-3 text-slate-300" />
@@ -966,96 +994,130 @@ export default function Students() {
               className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300"
             >
               <table ref={tableContentRef} className="w-full text-left border-collapse min-w-[980px] text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-tight">
-                    <th className="px-2.5 py-2 text-left whitespace-nowrap">ADMISSION NO.</th>
-                    <th className="px-2.5 py-2 text-left whitespace-nowrap">ASSESSMENT NO. / BIRTH CERTIFICATE NO.</th>
-                    <th className="px-2.5 py-2 text-left">FULL NAME</th>
-                    <th className="px-2.5 py-2 text-left whitespace-nowrap">GRADE & STREAM</th>
-                    <th className="px-2.5 py-2 text-left whitespace-nowrap">GENDER</th>
-                    <th className="px-2.5 py-2 text-left whitespace-nowrap">DOB</th>
-                    <th className="px-2.5 py-2 text-left">PARENT / GUARDIAN</th>
-                    <th className="px-2.5 py-2 text-left whitespace-nowrap">PHONE NUMBER</th>
-                    <th className="px-2.5 py-2 text-right whitespace-nowrap">ACTIONS</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs">
-                  {filteredStudents.map((student, idx) => {
-                    const sId = student.id || student._id || student.admissionNo || student.admissionNumber || `row-${idx}`;
-                    const sName = student.fullName || student.name || student.learnerName || student.studentName || '';
-                    const sAdm = student.admissionNo || student.admissionNumber || '—';
-                    const sAss = student.assessmentNo || student.assessmentNumber || student.idValue || '—';
-                    const sGender = student.gender || 'Male';
-                    const sDobRaw = student.dob || student.dateOfBirth || '';
-                    let sDob = '—';
-                    if (sDobRaw) {
-                      try {
-                        const cleanDate = sDobRaw.includes('T') ? sDobRaw.split('T')[0] : sDobRaw;
-                        const parts = cleanDate.split('-');
-                        if (parts.length === 3 && parts[0].length === 4) {
-                          const [yyyy, mm, dd] = parts;
-                          const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-                          if (!isNaN(dateObj.getTime())) {
-                            sDob = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                          } else {
-                            sDob = cleanDate;
-                          }
-                        } else {
-                          const d = new Date(sDobRaw);
-                          if (!isNaN(d.getTime())) {
-                            sDob = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                          } else {
-                            sDob = sDobRaw;
-                          }
-                        }
-                      } catch {
-                        sDob = sDobRaw;
-                      }
-                    }
-                    const sParent = student.guardianName || student.parentName || student.guardian || '—';
-                    const sPhone = student.guardianPhone || student.phoneNumber || student.parentPhone || student.phone || '—';
-                    const sGrade = student.grade || student.gradeLevel || student.class || 'Grade 6';
-                    const sStreamRaw = student.stream || 'BLUE';
-                    const sStream = /North|South|East|West/i.test(sStreamRaw) ? 'BLUE' : sStreamRaw;
-
-                    return (
-                      <tr key={sId} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-2.5 py-2 font-mono text-[11px] font-semibold text-indigo-600 whitespace-nowrap">{sAdm}</td>
-                        <td className="px-2.5 py-2 font-mono text-[11px] text-slate-500 whitespace-nowrap">{sAss}</td>
-                        <td className="px-2.5 py-2 font-bold text-slate-900 truncate max-w-[150px]" title={sName}>
-                          <Link to={`/students/${sId}`} className="hover:text-indigo-600 transition-colors">
-                            {sName}
-                          </Link>
-                        </td>
-                        <td className="px-2.5 py-2 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                            {sGrade} ({sStream})
-                          </span>
-                        </td>
-                        <td className="px-2.5 py-2 text-slate-700 whitespace-nowrap">{sGender}</td>
-                        <td className="px-2.5 py-2 font-mono text-slate-600 whitespace-nowrap">{sDob}</td>
-                        <td className="px-2.5 py-2 text-slate-700 truncate max-w-[130px]" title={sParent}>{sParent}</td>
-                        <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap">{sPhone}</td>
-                        <td className="px-3.5 py-2 text-right whitespace-nowrap min-w-[140px]">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => navigate(`/students/${sId}`)}
-                              className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600 transition-colors"
-                              title="View Profile"
-                            >
-                              <Eye size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleEditClick(student)}
-                              className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600 transition-colors"
-                              title="Edit Learner"
-                            >
-                              <Edit size={16} />
-                            </button>
-                            <button
-                              onClick={() => requestDelete(student)}
-                              className="p-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
-                              title="Delete Learner"
+                              <thead>
+                                <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-tight">
+                                  <th className="w-10 px-2.5 py-2 text-center">
+                                    <input
+                                      type="checkbox"
+                                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                      checked={filteredStudents.length > 0 && filteredStudents.every(s => {
+                                        const sId = s.id || s._id || s.admissionNo || s.admissionNumber;
+                                        return selectedIds.includes(sId);
+                                      })}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          const allIds = filteredStudents.map(s => s.id || s._id || s.admissionNo || s.admissionNumber);
+                                          setSelectedIds(allIds);
+                                        } else {
+                                          setSelectedIds([]);
+                                        }
+                                      }}
+                                      aria-label="Select all learners"
+                                    />
+                                  </th>
+                                  <th className="px-2.5 py-2 text-left whitespace-nowrap">ADMISSION NO.</th>
+                                  <th className="px-2.5 py-2 text-left whitespace-nowrap">ASSESSMENT NO. / BIRTH CERTIFICATE NO.</th>
+                                  <th className="px-2.5 py-2 text-left">FULL NAME</th>
+                                  <th className="px-2.5 py-2 text-left whitespace-nowrap">GRADE & STREAM</th>
+                                  <th className="px-2.5 py-2 text-left whitespace-nowrap">GENDER</th>
+                                  <th className="px-2.5 py-2 text-left whitespace-nowrap">DOB</th>
+                                  <th className="px-2.5 py-2 text-left">PARENT / GUARDIAN</th>
+                                  <th className="px-2.5 py-2 text-left whitespace-nowrap">PHONE NUMBER</th>
+                                  <th className="px-2.5 py-2 text-right whitespace-nowrap">ACTIONS</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 text-xs">
+                                {filteredStudents.map((student, idx) => {
+                                  const sId = student.id || student._id || student.admissionNo || student.admissionNumber || `row-${idx}`;
+                                  const sName = student.fullName || student.name || student.learnerName || student.studentName || '';
+                                  const sAdm = student.admissionNo || student.admissionNumber || '—';
+                                  const sAss = student.assessmentNo || student.assessmentNumber || student.idValue || '—';
+                                  const sGender = student.gender || 'Male';
+                                  const sDobRaw = student.dob || student.dateOfBirth || '';
+                                  let sDob = '—';
+                                  if (sDobRaw) {
+                                    try {
+                                      const cleanDate = sDobRaw.includes('T') ? sDobRaw.split('T')[0] : sDobRaw;
+                                      const parts = cleanDate.split('-');
+                                      if (parts.length === 3 && parts[0].length === 4) {
+                                        const [yyyy, mm, dd] = parts;
+                                        const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+                                        if (!isNaN(dateObj.getTime())) {
+                                          sDob = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                        } else {
+                                          sDob = cleanDate;
+                                        }
+                                      } else {
+                                        const d = new Date(sDobRaw);
+                                        if (!isNaN(d.getTime())) {
+                                          sDob = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                        } else {
+                                          sDob = sDobRaw;
+                                        }
+                                      }
+                                    } catch {
+                                      sDob = sDobRaw;
+                                    }
+                                  }
+                                  const sParent = student.guardianName || student.parentName || student.guardian || '—';
+                                  const sPhone = student.guardianPhone || student.phoneNumber || student.parentPhone || student.phone || '—';
+                                  const sGrade = student.grade || student.gradeLevel || student.class || 'Grade 6';
+                                  const sStreamRaw = student.stream || 'BLUE';
+                                  const sStream = /North|South|East|West/i.test(sStreamRaw) ? 'BLUE' : sStreamRaw;
+              
+                                  return (
+                                    <tr key={sId} className={`hover:bg-slate-50/50 transition-colors ${selectedIds.includes(sId) ? 'bg-indigo-50/30' : ''}`}>
+                                      <td className="w-10 px-2.5 py-2 text-center">
+                                        <input
+                                          type="checkbox"
+                                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                                          checked={selectedIds.includes(sId)}
+                                          onChange={(e) => {
+                                            if (e.target.checked) {
+                                              setSelectedIds(prev => [...prev, sId]);
+                                            } else {
+                                              setSelectedIds(prev => prev.filter(id => id !== sId));
+                                            }
+                                          }}
+                                          aria-label={`Select ${sName}`}
+                                        />
+                                      </td>
+                                      <td className="px-2.5 py-2 font-mono text-[11px] font-semibold text-indigo-600 whitespace-nowrap">{sAdm}</td>
+                                      <td className="px-2.5 py-2 font-mono text-[11px] text-slate-500 whitespace-nowrap">{sAss}</td>
+                                      <td className="px-2.5 py-2 font-bold text-slate-900 truncate max-w-[150px]" title={sName}>
+                                        <Link to={`/students/${sId}`} className="hover:text-indigo-600 transition-colors">
+                                          {sName}
+                                        </Link>
+                                      </td>
+                                      <td className="px-2.5 py-2 whitespace-nowrap">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                          {sGrade} ({sStream})
+                                        </span>
+                                      </td>
+                                      <td className="px-2.5 py-2 text-slate-700 whitespace-nowrap">{sGender}</td>
+                                      <td className="px-2.5 py-2 font-mono text-slate-600 whitespace-nowrap">{sDob}</td>
+                                      <td className="px-2.5 py-2 text-slate-700 truncate max-w-[130px]" title={sParent}>{sParent}</td>
+                                      <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap">{sPhone}</td>
+                                      <td className="px-3.5 py-2 text-right whitespace-nowrap min-w-[140px]">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                          <button
+                                            onClick={() => navigate(`/students/${sId}`)}
+                                            className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600 transition-colors"
+                                            title="View Profile"
+                                          >
+                                            <Eye size={16} />
+                                          </button>
+                                          <button
+                                            onClick={() => handleEditClick(student)}
+                                            className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600 transition-colors"
+                                            title="Edit Learner"
+                                          >
+                                            <Edit size={16} />
+                                          </button>
+                                          <button
+                                            onClick={() => requestDelete(student)}
+                                            className="p-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
+                                            title="Delete Learner"
                             >
                               <Trash2 size={16} />
                             </button>
@@ -1423,6 +1485,40 @@ export default function Students() {
           </div>
         </div>
       </Modal>
+
+      {/* Bulk Delete Confirmation Modal */}
+      <Modal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => setIsBulkDeleteModalOpen(false)}
+        title="Confirm Bulk Deletion"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-red-50 border border-red-100 text-red-900">
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="text-xs leading-relaxed">
+              <p className="font-bold text-sm mb-1">Are you sure you want to delete {selectedIds.length} selected learner records?</p>
+              <p className="text-red-700">This action will permanently remove these records from the learners directory. This cannot be undone.</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkDeleteModalOpen(false)}
+              className="rounded-xl h-10 px-4 text-xs font-semibold"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDeleteConfirm}
+              className="rounded-xl h-10 px-4 text-xs font-bold bg-red-600 hover:bg-red-700 text-white"
+            >
+              Yes, Delete {selectedIds.length} Records
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
     </div>
   );
 }
