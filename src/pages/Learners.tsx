@@ -1102,35 +1102,38 @@ export default function Students() {
                                       <td className="px-2.5 py-2 text-slate-700 truncate max-w-[130px]" title={sParent}>{sParent}</td>
                                       <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap">{sPhone}</td>
                                       <td className="px-3.5 py-2 text-right whitespace-nowrap min-w-[140px]">
-                                        <div className="flex items-center justify-end gap-1.5">
+                                        <div className="flex items-center justify-end gap-2">
                                           <button
+                                            type="button"
                                             onClick={() => {
-                                              const learnerId = student.id || student.admissionNo || student.admissionNumber || sId;
-                                              navigate(`/learners/${encodeURIComponent(learnerId)}`, {
+                                              const targetId = student.id || student.admissionNo || student.admissionNumber || sId;
+                                              navigate(`/learners/${encodeURIComponent(targetId)}`, {
                                                 state: { learner: student }
                                               });
                                             }}
-                                            className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600 transition-colors"
+                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                             title="View Profile"
                                           >
-                                            <Eye size={16} />
+                                            <Eye className="w-4 h-4" />
                                           </button>
                                           <button
+                                            type="button"
                                             onClick={() => handleEditClick(student)}
-                                            className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600 transition-colors"
+                                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                             title="Edit Learner"
                                           >
-                                            <Edit size={16} />
+                                            <Edit className="w-4 h-4" />
                                           </button>
                                           <button
+                                            type="button"
                                             onClick={() => requestDelete(student)}
-                                            className="p-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
+                                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                             title="Delete Learner"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </td>
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                      </td>
                       </tr>
                     );
                   })}
