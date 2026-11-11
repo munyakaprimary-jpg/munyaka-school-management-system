@@ -38,14 +38,9 @@ export const getStoredLearners = () => {
 
 export const saveStoredLearners = (learners: any[]) => {
   const serialized = JSON.stringify(learners);
-  localStorage.setItem('munyaka_learners', serialized);
+  // Write only to the single unified storage key
   localStorage.setItem(STORAGE_KEY, serialized);
-  localStorage.setItem('munyaka_learners_v2', serialized);
-  localStorage.setItem('school_learners_data', serialized);
-  localStorage.setItem('munyaka_students', serialized);
-  localStorage.setItem('munyaka_app_learners_v1', serialized);
 };
-
 const deduplicateLearners = (list: any[]) => {
   const seen = new Set<string>();
   const unique: any[] = [];
