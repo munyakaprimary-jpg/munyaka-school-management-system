@@ -53,11 +53,12 @@ export const CorruptedLearnerPurgeGuard: React.FC = () => {
       if (Array.isArray(learners)) {
         const validLearners = learners.filter((l: any) => {
           if (!l) return false;
+          const isCorruptId = l.id === 'MUN-2714-2026' || l.admissionNo === 'MUN-2714-2026';
           const name = String(l.fullName || l.name || l.studentName || '').trim();
-          if (!name || name === 'undefined undefined' || name === 'null null' || name === 'Unnamed Learner' || name === 'Unregistered Learner' || name === 'Unregistered Name') {
-            return false;
-          }
-          const admNo = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
+          const isUnregistered = !name || name === 'undefined undefined' || name === 'null null' || name === 'Unnamed Learner' || name === 'Unregistered Learner' || name === 'Unregistered Name';
+          if (isCorruptId || isUnregistered) return false;
+
+          const admNo = String(l.admissionNo || '').trim();
           if (!admNo || admNo === '—' || admNo === '-' || admNo === 'N/A' || admNo === 'undefined') {
             return false;
           }

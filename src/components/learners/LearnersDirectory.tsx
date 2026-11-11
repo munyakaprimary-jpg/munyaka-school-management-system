@@ -45,25 +45,29 @@ export default function LearnersDirectory() {
   const filteredLearners = useMemo(() => {
     const searchClean = (searchTerm || '').toString().toLowerCase().trim();
     
-    // Deduplicate by admissionNo or id or fullName+grade
+    // Deduplicate & filter out MUN-2714-2026 or unregistered
     const seen = new Set();
     const uniqueLearners = (learners || []).filter(learner => {
       if (!learner) return false;
-      const adm = (learner.admissionNo || learner.admissionNumber || learner.admNo || learner.id || '').toString().trim().toLowerCase();
-      const name = (learner.fullName || learner.name || learner.studentName || '').toString().trim().toLowerCase();
-      const key = adm || `${name}_${learner.gradeLevel || learner.grade || ''}_${learner.stream || ''}`;
+      const isCorruptId = learner.id === 'MUN-2714-2026' || learner.admissionNo === 'MUN-2714-2026';
+      const isUnregistered = !learner.fullName || learner.fullName === 'Unregistered Learner' || learner.fullName.trim() === '';
+      if (isCorruptId || isUnregistered) return false;
+
+      const adm = (learner.admissionNo || learner.id || '').toString().trim().toLowerCase();
+      const name = (learner.fullName || '').toString().trim().toLowerCase();
+      const key = adm || `${name}_${learner.grade || ''}_${learner.stream || ''}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
 
     return uniqueLearners.filter(learner => {
-      const name = (learner.fullName || learner.name || learner.studentName || '').toString().toLowerCase();
-      const adm = (learner.admissionNo || learner.admissionNumber || learner.admNo || learner.id || '').toString().toLowerCase();
-      const identifier = (learner.idValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '').toString().toLowerCase();
-      const grade = (learner.gradeLevel || learner.grade || learner.class || '').toString().toLowerCase();
-      const stream = (learner.stream || learner.stream_name || '').toString().toLowerCase();
-      const gender = (learner.gender || learner.sex || '').toString().toLowerCase();
+      const name = (learner.fullName || '').toString().toLowerCase();
+      const adm = (learner.admissionNo || learner.id || '').toString().toLowerCase();
+      const identifier = (learner.assessmentNo || '').toString().toLowerCase();
+      const grade = (learner.grade || '').toString().toLowerCase();
+      const stream = (learner.stream || '').toString().toLowerCase();
+      const gender = (learner.gender || '').toString().toLowerCase();
 
       const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean) || identifier.includes(searchClean);
       const gradeMatch = gradeFilter === 'all' || grade === (gradeFilter || '').toString().toLowerCase() || grade.includes((gradeFilter || '').toString().toLowerCase());
