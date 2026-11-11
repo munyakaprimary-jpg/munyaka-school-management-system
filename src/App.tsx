@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { STORAGE_KEYS, clearLegacyLearnerStorage } from "@/constants/storageKeys";
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { initialSeedData } from "@/data/initialSeedData";
@@ -155,6 +156,18 @@ import { runBillingAutoLockCheck } from "./utils/billingAutoLock";
 
 // Execute unified central storage initialization on application load
 initializeCentralStorage();
+clearLegacyLearnerStorage();
+clearLegacyLearnerStorage();
+
+// Clear legacy learner storage keys on boot
+if (typeof window !== 'undefined') {
+  clearLegacyLearnerStorage();
+}
+
+// Clear legacy learner storage keys on boot
+if (typeof window !== 'undefined') {
+  clearLegacyLearnerStorage();
+}
 
 // Execute billing auto-lock check on application boot
 if (typeof window !== 'undefined') {
