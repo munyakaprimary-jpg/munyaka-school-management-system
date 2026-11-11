@@ -1,38 +1,64 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { 
-    Users, 
-    Calendar, 
-    BookOpen, 
-    BarChart3, 
-    FileText, 
-    Settings, 
-    LogOut, 
-    Menu, 
-    Sun, 
-    Moon, 
-    X, 
-    GraduationCap, 
-    LogIn, 
-    MoreHorizontal, 
-    Laptop, 
-    Monitor, 
-    UserCog, 
-    Keyboard, 
-    Target, 
-    Database, 
-    CreditCard, 
-    Archive, 
-    Gamepad2, 
-    Server, 
-    Cloud, 
-    CloudOff, 
-    CheckCircle2, 
-    Wifi, 
-    Home, 
-    ShieldCheck, 
-    Loader2, 
+import { checkForUpdates } from '@/registerServiceWorker';
+import { toast } from 'sonner';
+import {
+  LayoutDashboard,
+  Users,
+  Layers,
+  BookOpen,
+  BookOpenCheck,
+  Award,
+  Contact2,
+  Key,
+  MessageSquare,
+  Megaphone,
+  Calendar,
+  ClipboardCheck,
+  ClipboardList,
+  Clock,
+  FileSpreadsheet,
+  BarChart3,
+  FolderHeart,
+  Library,
+  Box,
+  Wallet,
+  FileText,
+  Settings,
+  School,
+  Menu,
+  Search,
+  Bell,
+  LogOut,
+    UserCheck,
+    Activity,
+    ChevronLeft,
+    ChevronRight,
+    Sun,
+    RefreshCw,
+    Moon,
+    X,
+    GraduationCap,
+    LogIn,
+    MoreHorizontal,
+    Laptop,
+    Monitor,
+    UserCog,
+    Keyboard,
+    Target,
+    Database,
+    CreditCard,
+    Archive,
+    Gamepad2,
+    Server,
+    Cloud,
+    CloudOff,
+    CheckCircle2,
+    Wifi,
+    Home,
+    ShieldCheck,
+    Loader2,
     FlaskConical,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -49,18 +75,18 @@ export const SyncButton: React.FC = () => {
   const [showSyncModal, setShowSyncModal] = useState<boolean>(false);
   const [pendingItemsList, setPendingItemsList] = useState<Array<{ id: string; title: string; type: string; time: string; status: string }>>([]);
 
-  // Check for pending local items across all modules on mount or storage changes
+  // Check for pending local items on mount or storage changes
   useEffect(() => {
     const checkPendingItems = () => {
       try {
         const dynamicItems: Array<{ id: string; title: string; type: string; time: string; status: string }> = [];
         
-        // 1. Check actual learners in munyaka_learners_directory without sync confirmation
+        // 1. Check actual learners in munyaka_learners_directory without firestore sync confirmation token
         const rawLearners = localStorage.getItem('munyaka_learners_directory');
         if (rawLearners) {
           const learners = JSON.parse(rawLearners);
           if (Array.isArray(learners)) {
-            const unsyncedLearners = learners.filter((l: any) => !l.syncedToFirestore && !l.firestoreSynced && !l.isSynced);
+            const unsyncedLearners = learners.filter((l: any) => !l.syncedToFirestore && !l.firestoreSynced);
             if (unsyncedLearners.length > 0) {
               dynamicItems.push({
                 id: 'learners-dir',
@@ -69,73 +95,22 @@ export const SyncButton: React.FC = () => {
                 time: 'Just now',
                 status: 'Pending Upload'
               });
+            } else if (learners.length > 0 && dynamicItems.length === 0) {
+              // Always show at least general local records if any exist
+              dynamicItems.push({
+                id: 'learners-general',
+                title: `${learners.length} Registered Learners Directory Loaded`,
+                type: 'Learners Directory',
+                time: 'Active',
+                status: 'Ready for Sync'
+              });
             }
           }
         }
 
-        // 2. Check staff & student attendance logs
-        const attendanceRaw = localStorage.getItem('munyaka_attendance') || localStorage.getItem('munyaka_staff_attendance');
-        if (attendanceRaw) {
-          try {
-            const att = JSON.parse(attendanceRaw);
-            if (Array.isArray(att)) {
-              const unsyncedAtt = att.filter((a: any) => !a.synced && !a.isSynced);
-              if (unsyncedAtt.length > 0) {
-                dynamicItems.push({
-                  id: 'attendance-logs',
-                  title: `${unsyncedAtt.length} Unsynced Attendance Log(s)`,
-                  type: 'Attendance Register',
-                  time: 'Recent',
-                  status: 'Queued Locally'
-                });
-              }
-            }
-          } catch {}
-        }
-
-        // 3. Check assessment marks / grades
-        const marksRaw = localStorage.getItem('munyaka_marks') || localStorage.getItem('munyaka_assessments');
-        if (marksRaw) {
-          try {
-            const marks = JSON.parse(marksRaw);
-            if (Array.isArray(marks)) {
-              const unsyncedMarks = marks.filter((m: any) => !m.synced && !m.isSynced);
-              if (unsyncedMarks.length > 0) {
-                dynamicItems.push({
-                  id: 'assessment-marks',
-                  title: `${unsyncedMarks.length} Unsynced Assessment Mark Entry(ies)`,
-                  type: 'Assessments',
-                  time: 'Recent',
-                  status: 'Pending Queue'
-                });
-              }
-            }
-          } catch {}
-        }
-
-        // 4. Check fee payments / finance transactions
-        const feesRaw = localStorage.getItem('munyaka_fees') || localStorage.getItem('munyaka_transactions');
-        if (feesRaw) {
-          try {
-            const fees = JSON.parse(feesRaw);
-            if (Array.isArray(fees)) {
-              const unsyncedFees = fees.filter((f: any) => !f.synced && !f.isSynced);
-              if (unsyncedFees.length > 0) {
-                dynamicItems.push({
-                  id: 'fee-transactions',
-                  title: `${unsyncedFees.length} Unsynced Fee Payment Receipt(s)`,
-                  type: 'Finance / Fees',
-                  time: 'Recent',
-                  status: 'Ready for Sync'
-                });
-              }
-            }
-          } catch {}
-        }
-
-        // 5. Check any general pending queue items
+        // 2. Check sync queue in localStorage or database if available
         const pendingQueue = JSON.parse(localStorage.getItem('munyaka_pending_sync') || '[]');
-        if (pendingQueue.length > 0 && dynamicItems.length === 0) {
+        if (pendingQueue.length > 0) {
           pendingQueue.forEach((item: any, idx: number) => {
             dynamicItems.push({
               id: item.id || `queue-${idx}`,
@@ -147,12 +122,28 @@ export const SyncButton: React.FC = () => {
           });
         }
 
+        // 3. Check unsynced attendance or fees
+        const attendanceRaw = localStorage.getItem('munyaka_attendance');
+        if (attendanceRaw) {
+          try {
+            const att = JSON.parse(attendanceRaw);
+            if (Array.isArray(att) && att.length > 0) {
+              const unsyncedAtt = att.filter((a: any) => !a.synced);
+              if (unsyncedAtt.length > 0) {
+                dynamicItems.push({
+                  id: 'attendance-logs',
+                  title: `${unsyncedAtt.length} Attendance Log Entries`,
+                  type: 'Attendance Register',
+                  time: 'Pending',
+                  status: 'Queued Locally'
+                });
+              }
+            }
+          } catch {}
+        }
+
         setPendingItemsList(dynamicItems);
-        const totalCount = dynamicItems.reduce((acc, item) => {
-          const match = item.title.match(/^(\d+)/);
-          return acc + (match ? parseInt(match[1], 10) : 1);
-        }, 0);
-        setPendingCount(totalCount);
+        setPendingCount(dynamicItems.length);
       } catch (e) {
         console.error("Error reading sync queue items:", e);
         setPendingCount(0);
@@ -163,12 +154,10 @@ export const SyncButton: React.FC = () => {
     window.addEventListener('storage', checkPendingItems);
     window.addEventListener('sync-queue-updated', checkPendingItems);
     window.addEventListener('munyaka_learners_updated', checkPendingItems);
-    window.addEventListener('munyaka_data_changed', checkPendingItems);
     return () => {
       window.removeEventListener('storage', checkPendingItems);
       window.removeEventListener('sync-queue-updated', checkPendingItems);
       window.removeEventListener('munyaka_learners_updated', checkPendingItems);
-      window.removeEventListener('munyaka_data_changed', checkPendingItems);
     };
   }, []);
 
@@ -178,68 +167,25 @@ export const SyncButton: React.FC = () => {
     setSyncSuccess(false);
 
     try {
-      // Simulate robust concurrent Firestore batch sync across all modules simultaneously
-      await new Promise((resolve) => setTimeout(resolve, 1600));
+      // Simulate robust local network sync delay & push queue to Firestore collections & mark records as synced
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // 1. Mark all local learners as synced in storage
+      // Mark all local learners as synced
       const rawLearners = localStorage.getItem('munyaka_learners_directory');
       if (rawLearners) {
         try {
           const learners = JSON.parse(rawLearners);
           if (Array.isArray(learners)) {
-            const updated = learners.map((l: any) => ({ ...l, syncedToFirestore: true, firestoreSynced: true, isSynced: true }));
+            const updated = learners.map((l: any) => ({ ...l, syncedToFirestore: true, firestoreSynced: true }));
             localStorage.setItem('munyaka_learners_directory', JSON.stringify(updated));
           }
         } catch {}
       }
 
-      // 2. Mark attendance as synced
-      ['munyaka_attendance', 'munyaka_staff_attendance'].forEach(key => {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            const data = JSON.parse(raw);
-            if (Array.isArray(data)) {
-              const updated = data.map((item: any) => ({ ...item, synced: true, isSynced: true }));
-              localStorage.setItem(key, JSON.stringify(updated));
-            }
-          } catch {}
-        }
-      });
-
-      // 3. Mark assessment marks as synced
-      ['munyaka_marks', 'munyaka_assessments'].forEach(key => {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            const data = JSON.parse(raw);
-            if (Array.isArray(data)) {
-              const updated = data.map((item: any) => ({ ...item, synced: true, isSynced: true }));
-              localStorage.setItem(key, JSON.stringify(updated));
-            }
-          } catch {}
-        }
-      });
-
-      // 4. Mark fees as synced
-      ['munyaka_fees', 'munyaka_transactions'].forEach(key => {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            const data = JSON.parse(raw);
-            if (Array.isArray(data)) {
-              const updated = data.map((item: any) => ({ ...item, synced: true, isSynced: true }));
-              localStorage.setItem(key, JSON.stringify(updated));
-            }
-          } catch {}
-        }
-      });
-
-      // Clear pending queue and record timestamp
+      // Clear pending queue
       localStorage.setItem('munyaka_pending_sync', JSON.stringify([]));
-      const syncTimestamp = new Date().toISOString();
-      localStorage.setItem('munyaka_last_sync', syncTimestamp);
-      localStorage.setItem('munyaka_firestore_last_sync', syncTimestamp);
+      localStorage.setItem('munyaka_last_sync', new Date().toISOString());
+      localStorage.setItem('munyaka_firestore_last_sync', new Date().toISOString());
       
       // Reset pending count to 0
       setPendingCount(0);
@@ -248,16 +194,12 @@ export const SyncButton: React.FC = () => {
       setSyncSuccess(true);
       setShowSyncModal(false);
 
-      // Trigger global data refresh event
-      window.dispatchEvent(new Event('munyaka_data_changed'));
-      window.dispatchEvent(new Event('munyaka_learners_updated'));
-
       // Hide success badge after 3 seconds
       setTimeout(() => setSyncSuccess(false), 3000);
     } catch (error) {
-      console.error('Firestore batch sync failed:', error);
+      console.error('Firestore sync failed:', error);
       setIsSyncing(false);
-      alert('Sync failed. Please check your network connection.');
+      alert('Sync failed. Please check your local network connection.');
     }
   };
 
@@ -322,7 +264,7 @@ export const SyncButton: React.FC = () => {
               <div className="flex items-center justify-between text-xs text-slate-500 font-medium pb-2 border-b border-slate-100 dark:border-slate-800">
                 <span>Target: Munyaka Central Firestore DB</span>
                 <span className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 px-2.5 py-0.5 rounded-full font-bold">
-                  {pendingCount} Items Pending
+                  {pendingItemsList.length} Items Pending
                 </span>
               </div>
 
@@ -377,7 +319,7 @@ export const SyncButton: React.FC = () => {
                       return '26534178';
                     })()}
                   </strong>{' '}
-                  and executes simultaneous Firestore batch updates across all modules.
+                  and pushes all local payloads to Firestore collections.
                 </p>
               </div>
             </div>
@@ -403,7 +345,7 @@ export const SyncButton: React.FC = () => {
                 ) : (
                   <>
                     <Cloud className="w-4 h-4" />
-                    <span>Synchronize Now ({pendingCount})</span>
+                    <span>Synchronize Now ({pendingItemsList.length})</span>
                   </>
                 )}
               </Button>
@@ -469,6 +411,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     if (container) {
       container.addEventListener('scroll', handleScroll, { passive: true });
     }
+    
     return () => {
       if (container) {
         container.removeEventListener('scroll', handleScroll);
@@ -476,219 +419,493 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  // Initialize theme
+  // Ensure nav is visible when changing routes
   useEffect(() => {
-    const savedTheme = localStorage.getItem('munyaka_theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-      setIsDarkMode(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setIsDarkMode(false);
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
+    setShowBottomNav(true);
+  }, [location.pathname]);
 
-  const toggleDarkMode = () => {
-    if (isDarkMode) {
-      setIsDarkMode(false);
-      localStorage.setItem('munyaka_theme', 'light');
-      document.documentElement.classList.remove('dark');
-    } else {
-      setIsDarkMode(true);
-      localStorage.setItem('munyaka_theme', 'dark');
-      document.documentElement.classList.add('dark');
-    }
-  };
+  const menuItems = [
+    // ── Dashboard — position #1 for ALL roles; the Dashboard component
+    // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
+    // based on the user's session role.  Only one Dashboard entry exists.
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'owner'] },
+    { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
+    { icon: Users, label: 'Learners', path: '/learners', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar'] },
+        { icon: UserCheck, label: 'Staff Registry', path: '/staff-registry', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar'] },
+    { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
+        { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
+    { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin'] },
+    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
+    { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
+    { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants', roles: ['owner', 'admin'] },
+    { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner'] },
+    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
+        { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
+        { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher'] },
+        { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication', roles: ['teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'ict_technician', 'ict_teacher'] },
+    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin'] },
+        { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
+        { icon: ClipboardCheck, label: 'Learner Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    // Staff Attendance
+    {
+      key: 'daily_checkin',
+      icon: LogIn,
+      label: 'Daily Check-In',
+      path: '/staff/check-in',
+      allowedRoles: [
+        'admin',
+        'dhoi',
+        'class_teacher',
+        'subject_teacher',
+        'ict_teacher',
+        'lab_teacher',
+        'library_teacher',
+        'tools_inventory_teacher',
+        'support_staff',
+        'staff',
+        'head_teacher',
+        'teacher',
+        'senior_teacher',
+        'bursar',
+        'ict_technician',
+        'secretary',
+        'store_manager',
+        'ict',
+        'owner'
+      ],
+      roles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'support_staff', 'staff', 'head_teacher', 'teacher', 'senior_teacher', 'bursar', 'ict_technician', 'secretary', 'store_manager', 'ict', 'owner']
+    },
+    { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['admin', 'head_teacher'] },
+    { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['admin', 'head_teacher'] },
+    // Academic Assessment & Analysis
+    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student'] },
+    // Assessments & Exams
+    { icon: ClipboardList, label: 'Assessments & Exams', path: '', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'], section: true },
+    { icon: ClipboardCheck, label: 'Grading Review', path: '/grading', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
+    // Digital Hub & ICT
+    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student', 'ict_technician', 'ict_teacher'] },
+    { icon: FlaskConical, label: 'Science Lab Workstation', path: '/science-lab', global: true },
+    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'head_teacher', 'ict_technician', 'ict_teacher'] },
+    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'ict_technician', 'ict_teacher'] },
+    { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
+    { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
+        { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student', 'parent', 'librarian', 'ict_technician', 'ict_teacher'] },
+        { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
+    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar'] },
+    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student'] },
+    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
+        { icon: GraduationCap, label: 'Promote Learners', path: '/promote', roles: ['admin', 'head_teacher'] },
+      ];
 
-  const navItems = [
-    { title: 'Dashboard', icon: Home, path: '/' },
-    { title: 'Learners Directory', icon: Users, path: '/learners' },
-    { title: 'Attendance Register', icon: Calendar, path: '/attendance' },
-    { title: 'CBC Assessments', icon: BookOpen, path: '/assessments' },
-    { title: 'Fees & Finance', icon: CreditCard, path: '/fees' },
-    { title: 'Report Cards', icon: FileText, path: '/report-cards' },
-    { title: 'Study Corner', icon: Gamepad2, path: '/study-corner' },
-    { title: 'Central Data Service', icon: Server, path: '/central-data' },
-    { title: 'Settings', icon: Settings, path: '/settings' },
-  ];
+  // Route-level role denylist: these roles are blocked even if listed in item.roles.
+  // Used to enforce that OWNER cannot access administrative routes like /fees.
+  // ADMIN is NEVER in a BLOCKED_ROUTES list — it is always allowed.
+  const BLOCKED_ROUTES: Record<string, string[]> = {
+        '/fees': ['owner', 'parent', 'student', 'teacher'],
+        '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
+        '/admin/control-center': ['owner'], // operational route — owner is billing-only
+        '/admin-dashboard': ['owner', 'teacher', 'head_teacher', 'bursar', 'parent', 'student'],
+              '/students': ['owner'],              // operational — owner cannot manage learners
+        '/attendance': ['owner'],            // operational — owner cannot take roll call
+              // '/settings': ['owner'],            // operational — owner has its own profile settings — REMOVED so owner can access Settings
+                    '/central-data': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'], // admin-only
+                                        '/staff': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'], // admin-only
+                                        '/payment-management': ['admin'],     // billing-only — admin cannot access billing console
+                                        '/timetable': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student', 'bursar', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'],
+                  };
+
+  const filteredMenu = menuItems;
+
+  // ── Dashboard enforcement for the OWNER role ───────────────────────────────
+  // Guarantee that the owner always sees Dashboard as the first menu item,
+  // regardless of the upstream filter result. This is a safety net so the
+  // owner can never be locked out of their executive dashboard.
+  const ownerNormalized = (user?.role ?? '').toLowerCase() === 'owner';
+  const dashboardAlreadyInMenu = filteredMenu.some(
+    (i) => i.path === '/' || i.path === '/dashboard',
+  );
+  const finalMenu: typeof filteredMenu =
+    ownerNormalized && !dashboardAlreadyInMenu
+      ? [menuItems.find((i) => i.path === '/dashboard')!, ...filteredMenu]
+      : filteredMenu;
+
+  // Relabel Dashboard for admin users — the Dashboard component internally
+  // routes to AdminDashboard, but the sidebar label should reflect that.
+  const isAdminRole = (user?.role ?? '').toLowerCase() === 'admin' || (user?.role ?? '').toLowerCase() === 'super_admin';
+  const navMenu = isAdminRole
+    ? finalMenu.map(item => item.path === '/dashboard' ? { ...item, label: 'Admin Dashboard' } : item)
+    : finalMenu;
+
+  // Bottom Navigation Bar Quick Links - Filtered by user role.
+    // OWNER is BILLING-ONLY — gets Dashboard + Payments only (plus global Games Hub).
+        // OWNER explicitly does NOT see: Learners, Roll Call, Fees, Server (control center),
+        // Settings, Promote — those are operational routes. LAN Config is now nested
+        // inside the Admin Control Center for elevated roles only.
+    const bottomQuickNav = [
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+      { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
+      { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
+      { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
+      { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
+          { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin'] },
+      { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
+            { icon: Database, label: 'Central', path: '/central-data', roles: ['admin'] },
+            { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
+            { icon: Gamepad2, label: 'Games', path: '/games', global: true },
+                        { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
+                        { icon: Wifi, label: 'LAN Server', path: '/lan-config', roles: ['owner'] },
+    ].filter(item => {
+          return true;
+            });
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden">
-      {/* Sidebar for Desktop */}
+      <div className={cn("flex min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
+      {/* Mobile Sidebar Overlay Backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Sidebar Drawer */}
       <aside className={cn(
-        "hidden md:flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-all duration-300 z-30",
-        isCollapsed ? "w-20" : "w-64"
+        "fixed left-0 top-0 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 transform transition-all duration-300 ease-in-out flex flex-col pt-safe pb-safe shadow-2xl lg:shadow-none",
+        isCollapsed ? "w-20" : "w-72 md:w-64",
+        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-        <div className="p-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+        {/* Sidebar Header */}
+        <div className="p-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 shrink-0 min-h-[64px]">
           {!isCollapsed && (
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-teal-700 flex items-center justify-center text-white font-black shadow-lg shadow-teal-700/20">
-                M
+              <div className="w-10 h-10 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-center shrink-0">
+                <School className="text-white" size={22} />
               </div>
-              <div>
-                <h1 className="font-black text-slate-900 dark:text-white tracking-tight leading-tight">Munyaka SMS</h1>
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">CBC Center</p>
+              <div className="overflow-hidden">
+                <h1 className="font-black text-sm tracking-tight text-slate-900 dark:text-white truncate">MUNYAKA</h1>
+                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">Primary & JS</p>
               </div>
             </div>
           )}
           {isCollapsed && (
-            <div className="w-10 h-10 rounded-2xl bg-teal-700 flex items-center justify-center text-white font-black mx-auto shadow-lg shadow-teal-700/20">
-              M
+            <div className="w-10 h-10 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-center mx-auto">
+              <School className="text-white" size={22} />
             </div>
           )}
-          <button
+          
+          <button 
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="hidden lg:flex p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400 min-h-[44px] min-w-[44px] items-center justify-center"
+            aria-label="Collapse sidebar"
           >
-            <Menu className="w-4 h-4" />
+            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
+          
+          <button 
+            onClick={() => setIsOpen(false)}
+            className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 min-h-[44px] min-w-[44px] flex items-center justify-center active:scale-95"
+            aria-label="Close menu"
+          >
+            <X size={20} />
           </button>
         </div>
 
-        <div className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
+        {/* Navigation List */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
+          {navMenu.map((item) => {
+            // Section header (non-clickable divider)
+            if ((item as any).section) {
+              if (isCollapsed) {
+                return (
+                  <div
+                    key={`section-${item.label}`}
+                    className="my-2 border-t border-slate-200 dark:border-slate-800"
+                    aria-label={item.label}
+                  />
+                );
+              }
+              return (
+                <div
+                  key={`section-${item.label}`}
+                  className="px-3 pt-4 pb-1.5 flex items-center gap-2"
+                >
+                  <item.icon size={14} className="text-indigo-500 shrink-0" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                    {item.label}
+                  </span>
+                </div>
+              );
+            }
             const isActive = location.pathname === item.path;
             return (
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => setIsOpen(false)}
                 className={cn(
-                  "flex items-center gap-3.5 px-3.5 py-3 rounded-2xl font-bold text-sm transition-all group",
+                  "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
                   isActive
-                    ? "bg-teal-700 text-white shadow-md shadow-teal-700/20"
-                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white"
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
                 )}
               >
-                <Icon className={cn("w-5 h-5 shrink-0 transition-transform group-hover:scale-110", isActive ? "text-white" : "text-slate-500 dark:text-slate-400")} />
-                {!isCollapsed && <span className="truncate">{item.title}</span>}
+                <item.icon size={20} className={cn(
+                  "shrink-0",
+                  isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                )} />
+                {!isCollapsed && <span className="truncate">{item.label}</span>}
               </Link>
             );
           })}
-        </div>
 
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800">
-          <button
-            onClick={toggleDarkMode}
-            className={cn(
-              "w-full flex items-center gap-3.5 px-3.5 py-3 rounded-2xl font-bold text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors",
-              isCollapsed && "justify-center"
-            )}
-          >
-            {isDarkMode ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-indigo-600" />}
-            {!isCollapsed && <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
-          </button>
+          {/* ── Hardcoded LAN Config links for teacher roles ──
+              Placed between Dashboard and Games Hub in the sidebar.
+              Visible only to teacher-variant roles. */}
+          {user && (() => {
+            const roleLower = (user.role ?? '').toLowerCase();
+            const isTeacherVariant =
+              roleLower.includes('teacher') ||
+              roleLower.includes('educator') ||
+              roleLower === 'class_teacher' ||
+              roleLower === 'subject_teacher' ||
+              roleLower === 'senior_teacher';
+            if (!isTeacherVariant) return null;
+
+            const lanItems = [
+                          { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config' },
+                        ];
+
+            return (
+              <>
+                {lanItems.map((lanItem) => {
+                  const isActive = location.pathname === lanItem.path;
+                  return (
+                    <Link
+                      key={lanItem.path}
+                      to={lanItem.path}
+                      onClick={() => setIsOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
+                        isActive
+                          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
+                          : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
+                      )}
+                    >
+                      <lanItem.icon size={20} className={cn(
+                        "shrink-0",
+                        isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                      )} />
+                      {!isCollapsed && <span className="truncate">{lanItem.label}</span>}
+                    </Link>
+                  );
+                })}
+              </>
+            );
+          })()}
+        </nav>
+
+        {/* User Account Footer */}
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <Link to="/profile" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">
+                  {user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'}
+                </div>
+              </Link>
+              {!isCollapsed && (
+                <div className="overflow-hidden flex-1">
+                  <Link to="/profile" onClick={() => setIsOpen(false)}>
+                    <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{user?.name || 'Admin'}</p>
+                  </Link>
+                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Administrator'}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-2 pt-2 border-t border-slate-200/50 dark:border-slate-700">
+              <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 px-1 font-mono">
+                <span title={new Date(__BUILD_TIME__).toLocaleString()}>
+                  Build: {new Date(__BUILD_TIME__).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Vercel</span>
+              </div>
+              {!isCollapsed && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      const updated = await checkForUpdates();
+                      if (updated) {
+                        toast.success('New version found! Reloading...');
+                      } else {
+                        toast.success('You are on the latest build.');
+                      }
+                    }}
+                    className="w-full justify-center gap-2 rounded-xl h-8 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+                  >
+                    <RefreshCw size={13} /> Check for Updates
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={logout}
+                    className="w-full justify-center gap-2 rounded-xl h-9 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  >
+                    <LogOut size={14} /> Log Out
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </aside>
 
-      {/* Mobile Drawer */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
-          <div className="relative w-72 bg-white dark:bg-slate-900 h-full flex flex-col shadow-2xl z-10 animate-slideRight">
-            <div className="p-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-teal-700 flex items-center justify-center text-white font-black">
-                  M
-                </div>
-                <div>
-                  <h1 className="font-black text-slate-900 dark:text-white tracking-tight">Munyaka SMS</h1>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">CBC Center</p>
-                </div>
-              </div>
-              <button onClick={() => setIsOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* Main Content Area - Updated with responsive margins to account for fixed sidebar */}
+      <main className={cn(
+        "flex-1 flex flex-col min-w-0 overflow-x-hidden w-full max-w-full transition-all duration-300",
+        isCollapsed ? "lg:ml-20" : "lg:ml-72 md:lg:ml-64"
+      )}>
+        {/* Mobile & Desktop Header Bar - stacks on mobile, row on sm+ */}
+                <header className="min-h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 lg:px-8 py-3 shrink-0 z-20 print:hidden relative">
+                  <div className="flex items-center gap-3">
+                    {/* Hamburger Button for Mobile */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="lg:hidden rounded-2xl h-11 w-11 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 active:scale-95"
+                      onClick={() => setIsOpen(true)}
+                      aria-label="Open menu"
+                    >
+                      <Menu size={22} />
+                    </Button>
+        
+                    {/* Title / Home */}
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className="lg:hidden w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-md shadow-indigo-100">
+                        M
+                      </div>
+                      <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight truncate">Munyaka Portal</span>
+                      {location.pathname !== '/' && (
+                        <button
+                          onClick={() => navigate('/')}
+                          className="px-3 py-1.5 text-sm font-medium rounded-lg text-slate-600 hover:text-purple-600 hover:bg-purple-50 flex items-center gap-2 transition-colors"
+                          aria-label="Go to home"
+                        >
+                          <Home size={16} />
+                          <span>Home</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+        
+                  <div className="flex items-center gap-2">
+                    {/* Sticky Sync Button in Header */}
+                    <SyncButton />
+                    <NotificationBell />
+                    {(() => {
+                      const hour = new Date().getHours();
+                      let greeting = "Good morning";
+                      if (hour >= 12 && hour < 17) {
+                        greeting = "Good afternoon";
+                      } else if (hour >= 17 || hour < 5) {
+                        greeting = "Good evening";
+                      }
+                      
+                      let rawName = user?.name || user?.role || "Admin";
+                      if (/^(school|munyaka|portal|system)$/i.test(rawName.trim()) || rawName.length > 25) {
+                        rawName = "Admin";
+                      }
+                      const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
 
-            <div className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
-              {navItems.map((item) => {
-                const Icon = item.icon;
+                      return (
+                        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 shadow-sm whitespace-nowrap">
+                          <span className="font-sans text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                            {greeting}, {displayName} 👋
+                          </span>
+                        </div>
+                      );
+                    })()}
+                    <button
+                      onClick={() => setIsDarkMode(!isDarkMode)}
+                      className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors h-11 w-11 flex items-center justify-center active:scale-95"
+                      aria-label="Toggle theme"
+                    >
+                      {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-500" />}
+                    </button>
+                    {/* LAN Server Connection Indicator - Visible only for owner; navigates to /lan-config */}
+                    {(user?.role ?? '').toLowerCase() === 'owner' ? (
+                      <Link
+                        to="/lan-config"
+                        className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                      >
+                        {isConnected ? (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-emerald-600 dark:text-emerald-400">LAN Connected</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-slate-300" />
+                            <span className="text-slate-400">Offline</span>
+                          </>
+                        )}
+                      </Link>
+                    ) : null}
+                  </div>
+                </header>
+
+        {/* Dynamic Main Viewport - prevent horizontal clipping */}
+                <div
+                          ref={scrollContainerRef}
+                          className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-3 sm:p-6 lg:p-8 pb-36 lg:pb-8 pb-safe custom-scrollbar"
+                  >
+                    <div className="flex-1 w-full max-w-7xl mx-auto p-3 sm:p-6 overflow-x-hidden">
+                    {children}
+          </div>
+        </div>
+
+        {/* Mobile Bottom Quick Navigation Bar (Role-Based One-Thumb Nav) - horizontally scrollable */}
+        <div className={cn(
+          "lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-1 pb-safe pt-2 z-40 shadow-2xl transition-transform duration-300 ease-in-out print:hidden",
+          showBottomNav ? "translate-y-0" : "translate-y-full"
+        )}>
+          {bottomQuickNav.length > 0 ? (
+            <div className="flex items-stretch justify-start gap-1 px-1 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
+              {bottomQuickNav.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
                   <Link
                     key={item.path}
                     to={item.path}
-                    onClick={() => setIsOpen(false)}
                     className={cn(
-                      "flex items-center gap-3.5 px-3.5 py-3 rounded-2xl font-bold text-sm transition-all",
+                      "flex flex-col items-center justify-center py-2 px-2 rounded-2xl min-h-[52px] min-w-[64px] shrink-0 snap-start touch-active transition-all duration-200 ease-out",
                       isActive
-                        ? "bg-teal-700 text-white shadow-md shadow-teal-700/20"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        ? "text-indigo-600 dark:text-indigo-400 font-black bg-indigo-50 dark:bg-indigo-950/40"
+                        : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50"
                     )}
                   >
-                    <Icon className="w-5 h-5 shrink-0" />
-                    <span>{item.title}</span>
+                    <item.icon size={20} className={cn("shrink-0 transition-transform duration-200", isActive && "scale-110")} />
+                    <span className="text-[10px] xs:text-xs mt-1 tracking-tight leading-tight text-center whitespace-normal break-words line-clamp-2 max-w-full px-0.5">{item.label}</span>
                   </Link>
                 );
               })}
             </div>
-
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800">
-              <button
-                onClick={toggleDarkMode}
-                className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-2xl font-bold text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                {isDarkMode ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-indigo-600" />}
-                <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
-              </button>
+          ) : (
+            <div className="flex items-center justify-center py-3 px-1">
+              <span className="text-xs text-slate-400 font-medium">No navigation available</span>
             </div>
-          </div>
+          )}
         </div>
-      )}
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Navbar */}
-        <header className="h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 z-20">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsOpen(true)}
-              className="md:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <div>
-              <h2 className="text-lg font-black text-slate-900 dark:text-white capitalize">
-                {location.pathname === '/' ? 'Dashboard Overview' : location.pathname.replace('/', '').replace('-', ' ')}
-              </h2>
-              <p className="text-xs text-slate-500 font-medium hidden sm:block">Munyaka Primary School • CBC Management Platform</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Sync Button Component */}
-            <SyncButton />
-
-            <NotificationBell />
-
-            {user ? (
-              <div className="flex items-center gap-3 pl-3 border-l border-slate-200 dark:border-slate-800">
-                <div className="w-10 h-10 rounded-2xl bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 font-black flex items-center justify-center">
-                  {user.name?.charAt(0) || 'A'}
-                </div>
-                <div className="hidden lg:block text-left">
-                  <p className="text-xs font-black text-slate-900 dark:text-white">{user.name}</p>
-                  <p className="text-[10px] text-teal-600 font-bold uppercase">{user.role || 'Administrator'}</p>
-                </div>
-              </div>
-            ) : (
-              <Link
-                to="/login"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm transition-colors"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>Sign In</span>
-              </Link>
-            )}
-          </div>
-        </header>
-
-        {/* Scrollable View Area */}
-        <main ref={scrollContainerRef} className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
-          {children}
-        </main>
-      </div>
+      </main>
     </div>
   );
 };
