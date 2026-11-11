@@ -104,6 +104,10 @@ export default function AddLearnerModal({
     }
 
     const phoneVal = (formData.phone || '').trim();
+    if (!phoneVal) {
+      showError("Please enter guardian phone number.");
+      return;
+    }
     if (!phoneVal.startsWith('+254')) {
       showError("Phone number must start with +254.");
       return;
@@ -111,36 +115,36 @@ export default function AddLearnerModal({
 
     setIsSaving(true);
     try {
-      const selectedGrade = formData.grade;
-      const selectedStream = formData.stream;
+      const selectedGrade = formData.grade || 'Grade 6';
+      const selectedStream = formData.stream || 'BLUE';
       const admissionNumber = formData.admissionNo || generateCohortAdmissionNumber(selectedGrade, existingLearners);
-      const genderVal = (formData as any).gender || 'Not Specified';
-      const dateOfBirthVal = (formData as any).dateOfBirth || '';
-      const parentNameVal = formData.guardian.trim() || '—';
-      const idVal = formData.identifierValue.trim() || '';
+      const genderVal = (formData as any).gender || 'Male';
+      const dateOfBirthVal = (formData as any).dateOfBirth || '2014-01-01';
+      const parentNameVal = (formData.guardian || '').trim() || 'Parent / Guardian';
+      const idVal = (formData.identifierValue || '').trim() || `ASSESS-${Math.floor(1000 + Math.random() * 9000)}`;
 
       const f = formData as any;
       const newLearner = {
-        id: admissionNumber || `MUN-${Math.floor(1000 + Math.random() * 9000)}-2026`,
-        admissionNo: f.admissionNo || f.adm_no || admissionNumber || `MUN-${Math.floor(1000 + Math.random() * 9000)}-2026`,
+        id: admissionNumber,
+        admissionNo: admissionNumber,
         admissionNumber: admissionNumber,
         admNo: admissionNumber,
-        assessmentNo: f.assessmentNo || f.assessment_no || idVal || '—',
-        assessmentNumber: idVal || '—',
-        birthCertNo: idVal || '—',
-        birthCertificateNo: idVal || '—',
-        fullName: fullNameVal || f.name || f.studentName || '—',
-        name: fullNameVal || f.name || f.studentName || '—',
-        grade: f.grade || f.class || 'Grade 6',
-        gradeLevel: f.grade || f.class || 'Grade 6',
-        stream: f.stream || f.streamName || 'BLUE',
-        gender: genderVal || 'Male',
-        dob: dateOfBirthVal || f.dateOfBirth || '—',
-        dateOfBirth: dateOfBirthVal || f.dateOfBirth || '—',
-        guardianName: parentNameVal || f.guardianName || f.parentName || '—',
-        parentName: parentNameVal || f.guardianName || f.parentName || '—',
-        guardianPhone: phoneVal || f.phone || f.parentPhone || '—',
-        phone: phoneVal || f.phone || f.parentPhone || '—',
+        assessmentNo: idVal,
+        assessmentNumber: idVal,
+        birthCertNo: idVal,
+        birthCertificateNo: idVal,
+        fullName: fullNameVal,
+        name: fullNameVal,
+        grade: selectedGrade,
+        gradeLevel: selectedGrade,
+        stream: selectedStream,
+        gender: genderVal,
+        dob: dateOfBirthVal,
+        dateOfBirth: dateOfBirthVal,
+        guardianName: parentNameVal,
+        parentName: parentNameVal,
+        guardianPhone: phoneVal,
+        phone: phoneVal,
         status: 'Active',
         academicYear: '2026',
         createdAt: new Date().toISOString()
