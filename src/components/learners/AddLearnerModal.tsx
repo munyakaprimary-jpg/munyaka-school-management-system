@@ -55,13 +55,13 @@ export default function AddLearnerModal({
   const [formData, setFormData] = useState({
     fullName: '',
     admissionNo: '',
-    grade: 'Grade 4',
+    grade: 'Grade 6',
     stream: 'Blue',
-    guardian: '',
-    phone: '+254',
-    location: 'Eldoret',
-    identifierType: 'assessment' as 'assessment' | 'birth_cert',
-    identifierValue: '',
+    gender: 'Male',
+    dob: '',
+    guardianName: '',
+    guardianPhone: '+254',
+    assessmentNo: '',
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -103,7 +103,7 @@ export default function AddLearnerModal({
       return;
     }
 
-    const phoneVal = (formData.phone || '').trim();
+    const phoneVal = (formData.guardianPhone || '').trim();
     if (!phoneVal) {
       showError("Please enter guardian phone number.");
       return;
@@ -116,12 +116,12 @@ export default function AddLearnerModal({
     setIsSaving(true);
     try {
       const selectedGrade = formData.grade || 'Grade 6';
-      const selectedStream = formData.stream || 'BLUE';
+      const selectedStream = formData.stream || 'Blue';
       const admissionNumber = formData.admissionNo || generateCohortAdmissionNumber(selectedGrade, existingLearners);
-      const genderVal = (formData as any).gender || 'Male';
-      const dateOfBirthVal = (formData as any).dateOfBirth || '2014-01-01';
-      const parentNameVal = (formData.guardian || '').trim() || 'Parent / Guardian';
-      const idVal = (formData.identifierValue || '').trim() || `ASSESS-${Math.floor(1000 + Math.random() * 9000)}`;
+      const genderVal = formData.gender || 'Male';
+      const dobVal = formData.dob || '';
+      const parentNameVal = (formData.guardianName || '').trim() || 'Parent / Guardian';
+      const idVal = (formData.assessmentNo || '').trim() || '';
 
       const newLearner: Learner = {
         id: admissionNumber,
@@ -131,7 +131,7 @@ export default function AddLearnerModal({
         grade: selectedGrade,
         stream: selectedStream,
         gender: genderVal,
-        dob: dateOfBirthVal,
+        dob: dobVal,
         guardianName: parentNameVal,
         guardianPhone: phoneVal,
         createdAt: new Date().toISOString()
@@ -193,20 +193,34 @@ export default function AddLearnerModal({
           />
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="admissionNo">Admission No. (Auto-generated)</Label>
+          <Input
+            id="admissionNo"
+            name="admissionNo"
+            placeholder="Auto-generated"
+            value={formData.admissionNo}
+            onChange={handleChange}
+            disabled
+            className="bg-slate-50 font-mono text-xs"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="assessmentNo">Assessment No. / Birth Certificate No. *</Label>
+          <Input
+            id="assessmentNo"
+            name="assessmentNo"
+            placeholder="e.g. B001234567"
+            value={formData.assessmentNo}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="admissionNo">Admission No.</Label>
-            <Input
-              id="admissionNo"
-              name="admissionNo"
-              placeholder="Auto-generated"
-              value={formData.admissionNo}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="grade">Grade *</Label>
+            <Label htmlFor="grade">Grade Level *</Label>
             <Select
               value={formData.grade}
               onValueChange={(val) => handleSelectChange('grade', val)}
@@ -221,38 +235,7 @@ export default function AddLearnerModal({
               </SelectContent>
             </Select>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="identifierType">Identifier Type</Label>
-            <Select
-              value={formData.identifierType}
-              onValueChange={(val: any) => handleSelectChange('identifierType', val)}
-            >
-              <SelectTrigger id="identifierType">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="assessment">Assessment Number / UPI</SelectItem>
-                <SelectItem value="birth_cert">Birth Certificate No.</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="identifierValue">Identifier Number</Label>
-            <Input
-              id="identifierValue"
-              name="identifierValue"
-              placeholder={formData.identifierType === 'assessment' ? 'e.g. UPI123456' : 'e.g. BC987654'}
-              value={formData.identifierValue}
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="stream">Stream *</Label>
             <Select
@@ -269,41 +252,58 @@ export default function AddLearnerModal({
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="gender">Gender *</Label>
+            <Select
+              value={formData.gender}
+              onValueChange={(val) => handleSelectChange('gender', val)}
+            >
+              <SelectTrigger id="gender">
+                <SelectValue placeholder="Select Gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="space-y-2">
-            <Label htmlFor="guardian">Guardian Name *</Label>
+            <Label htmlFor="dob">Date of Birth</Label>
             <Input
-              id="guardian"
-              name="guardian"
-              placeholder="e.g. Mary Kiprop"
-              value={formData.guardian}
+              id="dob"
+              name="dob"
+              placeholder="e.g. 12 Dec 2013"
+              value={formData.dob}
               onChange={handleChange}
-              required
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone (+254...) *</Label>
+            <Label htmlFor="guardianName">Parent / Guardian Name *</Label>
             <Input
-              id="phone"
-              name="phone"
-              type="tel"
-              placeholder="+254712345678"
-              value={formData.phone}
+              id="guardianName"
+              name="guardianName"
+              placeholder="e.g. Mary Kamau"
+              value={formData.guardianName}
               onChange={handleChange}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="location">Location *</Label>
+            <Label htmlFor="guardianPhone">Guardian Phone (+254...) *</Label>
             <Input
-              id="location"
-              name="location"
-              placeholder="e.g. Eldoret"
-              value={formData.location}
+              id="guardianPhone"
+              name="guardianPhone"
+              type="tel"
+              placeholder="+254712345678"
+              value={formData.guardianPhone}
               onChange={handleChange}
               required
             />
