@@ -8,65 +8,38 @@ const LearnerProfile = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
 
-  // Robust learner resolution from router state, munyaka_learners_directory, and fallback keys
+  // Robust learner resolution from router state and munyaka_learners_directory storage
   const learner = useMemo(() => {
-    // 1. Check router state first
-    const stateLearner = (location.state as any)?.learner;
-    if (stateLearner) {
-      return stateLearner;
-    }
+    // 1. Get learner passed directly via navigate state
+    const activeLearner = (location.state as any)?.learner || null;
 
-    try {
-      const keys = ['munyaka_learners_directory', 'munyaka_learners_v2', 'munyaka_learners', 'school_learners_data'];
-      let allLearners: any[] = [];
-      for (const k of keys) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              allLearners = parsed;
-              break;
-            }
-          } catch {}
-        }
-      }
+    // 2. Fallback: Search local directory by ID or Admission Number
+    const storedLearners = JSON.parse(localStorage.getItem('munyaka_learners_directory') || localStorage.getItem('munyaka_learners') || '[]');
+    const foundLearner = activeLearner || storedLearners.find((item: any) =>
+      item && (
+        String(item.id) === String(id) ||
+        String(item.admissionNo) === String(id) ||
+        String(item.admissionNumber) === String(id) ||
+        String(item.admNo) === String(id)
+      )
+    );
 
-      // Find by id, admissionNo, admNo, or assessmentNo
-      const found = allLearners.find((l: any) => {
-        if (!l) return false;
-        const lId = String(l.id || '').trim();
-        const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
-        const paramId = String(id || '').trim();
-        return lId === paramId || lAdm === paramId || lId.toLowerCase() === paramId.toLowerCase() || lAdm.toLowerCase() === paramId.toLowerCase();
-      });
+    if (foundLearner) return foundLearner;
 
-      if (found) return found;
-
-      if (allLearners.length > 0 && allLearners[0]) {
-        return allLearners[0];
-      }
-
-      return {
-        id: id || 'unknown',
-        fullName: 'Unknown Learner',
-        admissionNo: id || '—',
-        grade: 'Grade',
-        stream: 'Stream'
-      };
-    } catch {
-      return {
-        id: id || 'unknown',
-        fullName: 'Unknown Learner',
-        admissionNo: id || '—',
-        grade: 'Grade',
-        stream: 'Stream'
-      };
-    }
+    return {
+      id: id || 'unknown',
+      fullName: 'Learner Not Found',
+      admissionNo: id || '—',
+      grade: '—',
+      stream: '—'
+    };
   }, [id, location.state]);
 
-  // Robust property normalizations as requested
-  const learnerName = learner?.fullName || learner?.name || learner?.studentName || `${learner?.firstName || ''} ${learner?.lastName || ''}`.trim() || 'Unknown Learner';
+  // 3. Render exact name or explicit missing state
+  const learnerName = learner
+    ? (learner.fullName || learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`.trim() || 'Learner Not Found')
+    : 'Learner Not Found';
+
   const admissionNo = learner?.admissionNo || learner?.admissionNumber || learner?.admNo || learner?.id || id || '—';
   const gradeStream = `${learner?.grade || learner?.class || 'Grade'} • ${learner?.stream || 'Stream'}`;
 
