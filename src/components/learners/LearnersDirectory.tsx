@@ -50,7 +50,8 @@ export default function LearnersDirectory() {
     const uniqueLearners = (learners || []).filter(learner => {
       if (!learner) return false;
       const isCorruptId = learner.id === 'MUN-2714-2026' || learner.admissionNo === 'MUN-2714-2026';
-      const isUnregistered = !learner.fullName || learner.fullName === 'Unregistered Learner' || learner.fullName.trim() === '';
+      const fullName = String(learner.fullName || '').trim();
+      const isUnregistered = !fullName || fullName === 'Unregistered Learner' || fullName === 'Unnamed Student' || fullName === '' || fullName === 'undefined';
       if (isCorruptId || isUnregistered) return false;
 
       const adm = (learner.admissionNo || learner.id || '').toString().trim().toLowerCase();
