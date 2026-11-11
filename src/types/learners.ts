@@ -1,16 +1,14 @@
 export interface Learner {
   id: string;
   admissionNo: string;
-  admissionNumber?: string;
+  assessmentNo?: string;
   fullName: string;
-  name?: string;
   grade: string;
   stream: string;
-  gender?: string;
-  guardian?: string;
-  phone?: string;
-  location?: string;
-  assessmentNo?: string;
-  assessmentNumber?: string;
+  gender: string;
+  dob?: string;
+  guardianName?: string;
+  guardianPhone?: string;
+  createdAt?: string;
   [key: string]: any;
 }

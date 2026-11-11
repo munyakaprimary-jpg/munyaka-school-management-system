@@ -1,74 +1,35 @@
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import type { Learner } from '@/types/learners';
+import { getLearners as getStorageLearners, saveLearners as saveStorageLearners } from '@/utils/storage';
 
-export interface Learner {
-  id: string;
-  admissionNumber?: string;
-  admissionNo?: string;
-  admNo?: string;
-  identifierValue?: string;
-  identifierType?: string;
-  assessmentNo?: string;
-  assessmentNumber?: string;
-  birthCertNo?: string;
-  birthCertificateNo?: string;
-  fullName?: string;
-  name?: string;
-  studentName?: string;
-  firstName?: string;
-  lastName?: string;
-  gradeLevel?: string;
-  grade?: string;
-  stream?: string;
-  gender?: string;
-  sex?: string;
-  dateOfBirth?: string;
-  dob?: string;
-  parentName?: string;
-  parentGuardian?: string;
-  phoneNumber?: string;
-  phone?: string;
-  [key: string]: any;
-}
-
-import { STORAGE_KEYS as APP_STORAGE_KEYS, getLearners as getStorageLearners, saveLearners as saveStorageLearners } from '@/utils/storage';
-// import type { Learner } from '@/types/learners';
-
-
-
-const STORAGE_KEY = STORAGE_KEYS.LEARNERS;
+export { Learner };
 
 export const normalizeLearner = (item: any): Learner => {
-  if (!item) return {} as Learner;
-  const admissionNo = item.admissionNo || item.adm_no || item.admission_no || item.admissionNumber || item.admNo || item.id || '—';
-  const assessmentNo = item.assessmentNo || item.assessment_no || item.birth_cert_no || item.assessmentNumber || item.birthCertificateNo || item.birthCertNo || item.idValue || '—';
-  const fullName = item.fullName || item.name || item.full_name || item.studentName || item.student_name || `${item.firstName || ''} ${item.lastName || ''}`.trim() || '';
-  const grade = item.grade || item.class || item.grade_level || item.class_name || 'Grade 6';
-  const stream = item.stream || item.stream_name || item.streamName || 'BLUE';
-  const gender = item.gender || item.sex || 'Male';
-  const dob = item.dob || item.date_of_birth || item.birthDate || '—';
-  const guardianName = item.guardianName || item.parent_name || item.guardian_name || item.parentName || item.guardian || '—';
-  const guardianPhone = item.guardianPhone || item.phone || item.parent_phone || item.phone_number || item.phoneNumber || item.parentPhone || '—';
+  if (!item) return { id: '', admissionNo: '', fullName: '', grade: '', stream: '', gender: '' };
+  
+  const admissionNo = String(item.admissionNo || item.admissionNumber || item.admNo || item.id || '').trim();
+  const assessmentNo = item.assessmentNo ? String(item.assessmentNo).trim() : undefined;
+  const fullName = String(item.fullName || item.name || '').trim();
+  const grade = String(item.grade || '').trim();
+  const stream = String(item.stream || '').trim();
+  const gender = String(item.gender || '').trim();
+  const dob = item.dob ? String(item.dob).trim() : undefined;
+  const guardianName = (item.guardianName || item.parentName || item.guardian || '').trim() || undefined;
+  const guardianPhone = (item.guardianPhone || item.phone || item.phoneNumber || '').trim() || undefined;
+  const createdAt = item.createdAt ? String(item.createdAt).trim() : undefined;
 
   return {
-    ...item,
-    id: item.id || item._id || admissionNo,
+    id: String(item.id || admissionNo || `lrn_${Math.random().toString(36).slice(2, 9)}`),
     admissionNo,
-    admissionNumber: admissionNo,
     assessmentNo,
-    assessmentNumber: assessmentNo,
     fullName,
-    name: fullName,
     grade,
-    gradeLevel: grade,
     stream,
     gender,
-    sex: gender,
     dob,
-    dateOfBirth: dob,
     guardianName,
-    parentName: guardianName,
     guardianPhone,
-    phoneNumber: guardianPhone
+    createdAt
   };
 };
 
@@ -80,7 +41,7 @@ export const learnerService = {
   async getLearners(): Promise<Learner[]> {
     try {
       const learners = getStorageLearners();
-      return learners.map(formatLearnerDoc);
+      return (learners || []).map(formatLearnerDoc);
     } catch (e) {
       console.error('Error fetching learners:', e);
       return [];
@@ -90,9 +51,9 @@ export const learnerService = {
   async saveLearner(learner: Partial<Learner>): Promise<Learner> {
     const learners = await this.getLearners();
     const formatted = formatLearnerDoc(learner);
-    const id = formatted.id;
+    const id = formatted.id || formatted.admissionNo;
     
-    const existingIndex = learners.findIndex(l => (l.id && l.id === id) || (l.admissionNumber && l.admissionNumber === formatted.admissionNumber));
+    const existingIndex = learners.findIndex(l => (l.id && l.id === id) || (l.admissionNo && l.admissionNo === formatted.admissionNo));
     if (existingIndex >= 0) {
       learners[existingIndex] = { ...learners[existingIndex], ...formatted };
     } else {
@@ -106,16 +67,13 @@ export const learnerService = {
       try {
         let learners = await this.getLearners();
         const target = learners.find(l =>
-          l.id === id || l.admissionNo === id || l.admissionNumber === id || l.admNo === id ||
-          l.assessmentNo === id || l.assessmentNumber === id || l.birthCertificateNo === id || l.birthCertNo === id
+          l.id === id || l.admissionNo === id || l.assessmentNo === id
         );
         if (target) {
-          // Use purgeLearnerPermanently for true hard deletion across all storage layers
           const { purgeLearnerPermanently } = await import('@/services/purgeLearnerService');
           await purgeLearnerPermanently(target);
         }
-        learners = learners.filter(l => l.id !== id && l.admissionNumber !== id && l.admNo !== id &&
-          l.assessmentNo !== id && l.assessmentNumber !== id && l.birthCertificateNo !== id && l.birthCertNo !== id);
+        learners = learners.filter(l => l.id !== id && l.admissionNo !== id && l.assessmentNo !== id);
         saveStorageLearners(learners);
         return true;
       } catch (e) {
@@ -138,24 +96,20 @@ export const deleteLearner = async (id: string): Promise<boolean> => {
 };
 
 export const generateLearnerId = () => `MUN-${Math.floor(1000 + Math.random() * 9000)}-${new Date().getFullYear()}`;
-export const findExistingLearner = (list: any[], l: any) => list.find(item => item.id === l.id || item.admissionNumber === l.admissionNumber);
+export const findExistingLearner = (list: any[], l: any) => list.find(item => item.id === l.id || item.admissionNo === l.admissionNo);
+
 export const dedupeLearnersById = (list: any[]) => {
   const seen = new Set<string>();
   return (list || []).filter((learner) => {
     if (!learner) return false;
-    const identifier = (
-      learner.birthCertificateNo ||
-      learner.birthCertNo ||
-      learner.assessmentNo ||
-      learner.admissionNumber ||
+    const identifier = String(
       learner.admissionNo ||
-      learner.admNo ||
+      learner.id ||
       learner.fullName ||
-      learner.name ||
       ''
     ).trim().toLowerCase();
 
-    if (!identifier || seen.has(identifier)) {
+    if (!identifier || identifier === 'unregistered learner' || seen.has(identifier)) {
       return false;
     }
     seen.add(identifier);

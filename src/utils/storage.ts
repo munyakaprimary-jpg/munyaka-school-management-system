@@ -326,9 +326,9 @@ export function createStudent(input: Omit<Learner, 'id'> & { id?: string }): Lea
     fullName: input.fullName || 'Unnamed Student',
     grade: input.grade || 'Grade 4',
     stream: input.stream || 'Blue',
-    guardian: input.guardian || '—',
-    phone: input.phone || '+254',
-    location: input.location || 'Eldoret',
+    gender: input.gender || 'Not Specified',
+    guardianName: input.guardianName || input.guardian || '—',
+    guardianPhone: input.guardianPhone || input.phone || '+254',
   };
   const current = getLearners();
   saveLearners([newStudent, ...current]);
