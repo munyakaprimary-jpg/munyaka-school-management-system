@@ -238,13 +238,17 @@ export const SyncButton: React.FC = () => {
                   <strong>
                     {(() => {
                       try {
+                        const directCode = localStorage.getItem('munyaka_school_code');
+                        if (directCode) return directCode;
                         const raw = localStorage.getItem('munyaka_system_settings_v3') || localStorage.getItem('munyaka_system_settings');
                         if (raw) {
                           const parsed = JSON.parse(raw);
-                          return parsed.schoolCode || parsed.school_code || 'MUNYAKA-001';
+                          if (parsed.schoolCode || parsed.school_code) {
+                            return parsed.schoolCode || parsed.school_code;
+                          }
                         }
                       } catch {}
-                      return 'MUNYAKA-001';
+                      return '26534178';
                     })()}
                   </strong>{' '}
                   and pushes all local payloads to Supabase.
