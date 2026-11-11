@@ -1085,8 +1085,8 @@ export default function Students() {
                                       <td className="px-2.5 py-2 font-mono text-[11px] text-slate-500 whitespace-nowrap">{sAss}</td>
                                       <td className="px-2.5 py-2 font-bold text-slate-900 truncate max-w-[150px]" title={sName}>
                                         <Link
-                                          to={`/learners/${encodeURIComponent(student.id || student.admissionNo || sId)}`}
-                                          state={{ learner: student }}
+                                          to={`/learners/${encodeURIComponent(student.id || student.admissionNo || student.studentId || sId)}`}
+                                          state={{ learner: student, student: student }}
                                           className="hover:text-indigo-600 transition-colors"
                                         >
                                           {sName}
@@ -1106,9 +1106,12 @@ export default function Students() {
                                           <button
                                             type="button"
                                             onClick={() => {
-                                              const targetId = student.id || student.admissionNo || student.admissionNumber || sId;
+                                              const targetId = student.id || student.admissionNo || student.admissionNumber || student.studentId || sId;
                                               navigate(`/learners/${encodeURIComponent(targetId)}`, {
-                                                state: { learner: student }
+                                                state: {
+                                                  learner: student,
+                                                  student: student
+                                                }
                                               });
                                             }}
                                             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

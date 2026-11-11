@@ -10,8 +10,9 @@ const LearnerProfile = () => {
 
   // Robust learner resolution from router state and munyaka_learners_directory storage
   const learner = useMemo(() => {
-    // 1. Get learner passed directly via navigate state
-    const activeLearner = (location.state as any)?.learner || null;
+    // 1. Get learner passed directly via navigate state (checking both 'learner' and 'student' keys)
+    const stateData = location.state as any;
+    const activeLearner = stateData?.learner || stateData?.student || null;
 
     // 2. Fallback: Search local directory by ID or Admission Number
     const storedLearners = JSON.parse(localStorage.getItem('munyaka_learners_directory') || localStorage.getItem('munyaka_learners') || '[]');
@@ -20,6 +21,7 @@ const LearnerProfile = () => {
         String(item.id) === String(id) ||
         String(item.admissionNo) === String(id) ||
         String(item.admissionNumber) === String(id) ||
+        String(item.studentId) === String(id) ||
         String(item.admNo) === String(id)
       )
     );
