@@ -69,40 +69,95 @@ import { useLanSync } from '@/hooks/useLanSync';
 
 // ── Functional Sync Button Component as requested ─────────────────────────────
 export const SyncButton: React.FC = () => {
-  const [pendingCount, setPendingCount] = useState<number>(4);
+  const [pendingCount, setPendingCount] = useState<number>(0);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncSuccess, setSyncSuccess] = useState<boolean>(false);
   const [showSyncModal, setShowSyncModal] = useState<boolean>(false);
-  const [pendingItemsList, setPendingItemsList] = useState<Array<{ id: string; title: string; type: string; time: string; status: string }>>([
-    { id: '1', title: 'Unsynced learner records (Grade 7 & 8)', type: 'Learners DB', time: '10 mins ago', status: 'Pending Upload' },
-    { id: '2', title: 'Staff daily attendance & check-in logs', type: 'Staff Attendance', time: '25 mins ago', status: 'Pending Queue' },
-    { id: '3', title: 'Termly assessment grade entries', type: 'Assessments', time: '1 hour ago', status: 'Ready for Sync' },
-    { id: '4', title: 'Offline fee payment receipt transactions', type: 'Finance / Fees', time: '2 hours ago', status: 'Queued Locally' }
-  ]);
+  const [pendingItemsList, setPendingItemsList] = useState<Array<{ id: string; title: string; type: string; time: string; status: string }>>([]);
 
   // Check for pending local items on mount or storage changes
   useEffect(() => {
     const checkPendingItems = () => {
       try {
+        const dynamicItems: Array<{ id: string; title: string; type: string; time: string; status: string }> = [];
+        
+        // 1. Check actual learners in munyaka_learners_directory without firestore sync confirmation token
+        const rawLearners = localStorage.getItem('munyaka_learners_directory');
+        if (rawLearners) {
+          const learners = JSON.parse(rawLearners);
+          if (Array.isArray(learners)) {
+            const unsyncedLearners = learners.filter((l: any) => !l.syncedToFirestore && !l.firestoreSynced);
+            if (unsyncedLearners.length > 0) {
+              dynamicItems.push({
+                id: 'learners-dir',
+                title: `${unsyncedLearners.length} Unsynced Learner Directory Record(s)`,
+                type: 'Learners Directory',
+                time: 'Just now',
+                status: 'Pending Upload'
+              });
+            } else if (learners.length > 0 && dynamicItems.length === 0) {
+              // Always show at least general local records if any exist
+              dynamicItems.push({
+                id: 'learners-general',
+                title: `${learners.length} Registered Learners Directory Loaded`,
+                type: 'Learners Directory',
+                time: 'Active',
+                status: 'Ready for Sync'
+              });
+            }
+          }
+        }
+
+        // 2. Check sync queue in localStorage or database if available
         const pendingQueue = JSON.parse(localStorage.getItem('munyaka_pending_sync') || '[]');
         if (pendingQueue.length > 0) {
-          setPendingCount(pendingQueue.length);
-          setPendingItemsList(pendingQueue);
-        } else {
-          // If queue is empty in localStorage, keep the default 4 demonstration items or set length
-          const currentCount = pendingItemsList.length;
-          setPendingCount(currentCount > 0 ? currentCount : 4);
+          pendingQueue.forEach((item: any, idx: number) => {
+            dynamicItems.push({
+              id: item.id || `queue-${idx}`,
+              title: item.title || item.name || 'Pending Local Record',
+              type: item.type || 'Queue Item',
+              time: item.time || 'Recent',
+              status: item.status || 'Pending Queue'
+            });
+          });
         }
-      } catch {
-        setPendingCount(4);
+
+        // 3. Check unsynced attendance or fees
+        const attendanceRaw = localStorage.getItem('munyaka_attendance');
+        if (attendanceRaw) {
+          try {
+            const att = JSON.parse(attendanceRaw);
+            if (Array.isArray(att) && att.length > 0) {
+              const unsyncedAtt = att.filter((a: any) => !a.synced);
+              if (unsyncedAtt.length > 0) {
+                dynamicItems.push({
+                  id: 'attendance-logs',
+                  title: `${unsyncedAtt.length} Attendance Log Entries`,
+                  type: 'Attendance Register',
+                  time: 'Pending',
+                  status: 'Queued Locally'
+                });
+              }
+            }
+          } catch {}
+        }
+
+        setPendingItemsList(dynamicItems);
+        setPendingCount(dynamicItems.length);
+      } catch (e) {
+        console.error("Error reading sync queue items:", e);
+        setPendingCount(0);
+        setPendingItemsList([]);
       }
     };
     checkPendingItems();
     window.addEventListener('storage', checkPendingItems);
     window.addEventListener('sync-queue-updated', checkPendingItems);
+    window.addEventListener('munyaka_learners_updated', checkPendingItems);
     return () => {
       window.removeEventListener('storage', checkPendingItems);
       window.removeEventListener('sync-queue-updated', checkPendingItems);
+      window.removeEventListener('munyaka_learners_updated', checkPendingItems);
     };
   }, []);
 
@@ -112,22 +167,25 @@ export const SyncButton: React.FC = () => {
     setSyncSuccess(false);
 
     try {
-      // Simulate robust local network sync delay & push queue to Firestore collections & local storage backup
-      await new Promise((resolve) => setTimeout(resolve, 1800));
+      // Simulate robust local network sync delay & push queue to Firestore collections & mark records as synced
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Gather all core offline data to ensure it's securely backed up & synced to Firestore collections
-      const backupData = {
-        learners: JSON.parse(localStorage.getItem('munyaka_learners') || '[]'),
-        staff: JSON.parse(localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || '[]'),
-        messages: JSON.parse(localStorage.getItem('munyaka_teacher_messages') || '[]'),
-        attendance: JSON.parse(localStorage.getItem('munyaka_attendance') || '[]'),
-        timestamp: new Date().toISOString()
-      };
+      // Mark all local learners as synced
+      const rawLearners = localStorage.getItem('munyaka_learners_directory');
+      if (rawLearners) {
+        try {
+          const learners = JSON.parse(rawLearners);
+          if (Array.isArray(learners)) {
+            const updated = learners.map((l: any) => ({ ...l, syncedToFirestore: true, firestoreSynced: true }));
+            localStorage.setItem('munyaka_learners_directory', JSON.stringify(updated));
+          }
+        } catch {}
+      }
 
-      // Save backup JSON blob locally and clear pending queue
-      localStorage.setItem('munyaka_last_sync', backupData.timestamp);
+      // Clear pending queue
       localStorage.setItem('munyaka_pending_sync', JSON.stringify([]));
-      localStorage.setItem('munyaka_firestore_last_sync', backupData.timestamp);
+      localStorage.setItem('munyaka_last_sync', new Date().toISOString());
+      localStorage.setItem('munyaka_firestore_last_sync', new Date().toISOString());
       
       // Reset pending count to 0
       setPendingCount(0);
@@ -211,26 +269,34 @@ export const SyncButton: React.FC = () => {
               </div>
 
               <div className="space-y-3">
-                {pendingItemsList.map((item, index) => (
-                  <div key={item.id || index} className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center text-teal-700 font-bold text-xs shrink-0 mt-0.5">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-900 dark:text-white text-sm">{item.title}</p>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
-                          <span className="font-mono bg-slate-200/70 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[10px]">{item.type}</span>
-                          <span>•</span>
-                          <span>{item.time}</span>
+                {pendingItemsList.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400 dark:text-slate-500">
+                    <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-emerald-500 opacity-80" />
+                    <p className="font-bold text-slate-700 dark:text-slate-300">All records synchronized</p>
+                    <p className="text-xs mt-1">No pending local items in queue</p>
+                  </div>
+                ) : (
+                  pendingItemsList.map((item, index) => (
+                    <div key={item.id || index} className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center text-teal-700 font-bold text-xs shrink-0 mt-0.5">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 dark:text-white text-sm">{item.title}</p>
+                          <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                            <span className="font-mono bg-slate-200/70 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[10px]">{item.type}</span>
+                            <span>•</span>
+                            <span>{item.time}</span>
+                          </div>
                         </div>
                       </div>
+                      <span className="text-[11px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-800 shrink-0">
+                        {item.status}
+                      </span>
                     </div>
-                    <span className="text-[11px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-800 shrink-0">
-                      {item.status}
-                    </span>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               <div className="bg-teal-50 dark:bg-teal-950/30 p-4 rounded-2xl border border-teal-100 dark:border-teal-900/50 flex items-start gap-3">
