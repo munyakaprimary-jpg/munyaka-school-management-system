@@ -1,3 +1,3 @@
 import { initialSeedData } from '@/data/initialSeedData';
-export const mockTransactions = (initialSeedData as any).transactions || [];
+export const mockTransactions = [];
 export default mockTransactions;

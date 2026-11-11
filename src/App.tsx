@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { STORAGE_KEYS, clearLegacyLearnerStorage } from "@/constants/storageKeys";
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-import { initialSeedData } from "@/data/initialSeedData";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -416,8 +415,8 @@ const App = () => {
 
         if (!existingDb) {
                 const initialDb = {
-                  learners: activeLearners.length > 0 ? activeLearners : ((initialSeedData as any).learners || (initialSeedData as any).students || []),
-                  staff: (initialSeedData as any).staff || [],
+                  learners: activeLearners,
+                  staff: [],
                 };
                 const ok = safeWrite('munyaka_central_db', initialDb, { operation: 'seed' });
                 if (!ok) {
@@ -431,7 +430,7 @@ const App = () => {
                   delete parsed.students;
                 }
                 if (!parsed.learners) {
-                  parsed.learners = activeLearners.length > 0 ? activeLearners : ((initialSeedData as any).learners || (initialSeedData as any).students || []);
+                  parsed.learners = activeLearners;
                 } else if (activeLearners.length > 0) {
                   // Merge active learners
                   parsed.learners = activeLearners;

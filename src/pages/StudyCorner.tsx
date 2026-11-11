@@ -1026,7 +1026,7 @@ export default function StudyCorner() {
       difficulty: 'Intermediate',
       readTimeMin: 7
     },
-    ...((initialSeedData as any).cbcStudyContent || []),
+    ...[],
     ...customItems
   ];
 

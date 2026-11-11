@@ -43,7 +43,7 @@ export const HarmonizedLearnerService = {
     }
 
     // Fallback to initial seed if empty
-    const seed = (initialSeedData as any).students || (initialSeedData as any).learners || [];
+    const seed = [];
     if (seed.length > 0) {
       try {
         localStorage.setItem(UNIFIED_LEARNERS_KEY, JSON.stringify(seed));

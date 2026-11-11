@@ -209,7 +209,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const resetToSeedData = useCallback(() => {
     try {
-      const seed = (initialSeedData as any).learners || [];
+      const seed = [];
       const clean = deduplicateLearners(seed);
       setLearnersState(clean);
       saveStoredLearners(clean);
