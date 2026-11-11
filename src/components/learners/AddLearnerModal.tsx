@@ -123,30 +123,17 @@ export default function AddLearnerModal({
       const parentNameVal = (formData.guardian || '').trim() || 'Parent / Guardian';
       const idVal = (formData.identifierValue || '').trim() || `ASSESS-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      const f = formData as any;
-      const newLearner = {
+      const newLearner: Learner = {
         id: admissionNumber,
         admissionNo: admissionNumber,
-        admissionNumber: admissionNumber,
-        admNo: admissionNumber,
         assessmentNo: idVal,
-        assessmentNumber: idVal,
-        birthCertNo: idVal,
-        birthCertificateNo: idVal,
         fullName: fullNameVal,
-        name: fullNameVal,
         grade: selectedGrade,
-        gradeLevel: selectedGrade,
         stream: selectedStream,
         gender: genderVal,
         dob: dateOfBirthVal,
-        dateOfBirth: dateOfBirthVal,
         guardianName: parentNameVal,
-        parentName: parentNameVal,
         guardianPhone: phoneVal,
-        phone: phoneVal,
-        status: 'Active',
-        academicYear: '2026',
         createdAt: new Date().toISOString()
       };
 
