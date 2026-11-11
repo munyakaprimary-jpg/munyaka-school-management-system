@@ -41,7 +41,7 @@ export const normalizeLearner = (item: any): Learner => {
   if (!item) return {} as Learner;
   const admissionNo = item.admissionNo || item.adm_no || item.admission_no || item.admissionNumber || item.admNo || item.id || '—';
   const assessmentNo = item.assessmentNo || item.assessment_no || item.birth_cert_no || item.assessmentNumber || item.birthCertificateNo || item.birthCertNo || item.idValue || '—';
-  const fullName = item.fullName || item.name || item.full_name || item.studentName || item.student_name || `${item.firstName || ''} ${item.lastName || ''}`.trim() || 'Unregistered Learner';
+  const fullName = item.fullName || item.name || item.full_name || item.studentName || item.student_name || `${item.firstName || ''} ${item.lastName || ''}`.trim() || '';
   const grade = item.grade || item.class || item.grade_level || item.class_name || 'Grade 6';
   const stream = item.stream || item.stream_name || item.streamName || 'BLUE';
   const gender = item.gender || item.sex || 'Male';

@@ -173,19 +173,18 @@ export default function Students() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.map(normalizeLearner);
+          const valid = parsed.filter((l: any) =>
+            l &&
+            l.fullName &&
+            l.fullName !== 'Unregistered Learner' &&
+            l.admissionNo &&
+            l.admissionNo !== '—'
+          );
+          return valid.map(normalizeLearner);
         }
       }
     } catch (e) {}
 
-    const loaded = getStoredLearners();
-    if (loaded.length > 0) {
-      return loaded.map(normalizeLearner);
-    }
-    const central = CentralDataService.getLearners() || [];
-    if (central.length > 0) {
-      return central.map(normalizeLearner);
-    }
     return [];
   });
 
