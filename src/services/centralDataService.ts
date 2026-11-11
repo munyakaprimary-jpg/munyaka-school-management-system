@@ -96,9 +96,72 @@ export const CentralDataService = {
   },
 
   deleteStaff: (id: string): void => {
-    const staff = CentralDataService.getStaff();
-    const filtered = staff.filter(s => s.id !== id);
-    CentralDataService.saveStaff(filtered);
+    try {
+      const staff = CentralDataService.getStaff();
+      const target = staff.find((s: any) => s.id === id || s.nationalId === id || s.email === id || s.tscNumber === id || s.staffId === id);
+      
+      // Filter out from main staff list
+      const filtered = staff.filter((s: any) => s.id !== id && s.nationalId !== id && s.email !== id && s.tscNumber !== id && s.staffId !== id);
+      CentralDataService.saveStaff(filtered);
+
+      // Also clean up from all possible localStorage keys related to staff
+      const staffStorageKeys = [
+        'munyaka_staff',
+        'munyaka_staff_members',
+        'munyaka_staff_master',
+        'munyaka_users',
+        'munyaka_system_users',
+        'staff_registry_data'
+      ];
+
+      staffStorageKeys.forEach(key => {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const cleaned = parsed.filter((s: any) =>
+                s.id !== id &&
+                s.nationalId !== id &&
+                s.email !== id &&
+                s.tscNumber !== id &&
+                s.staffId !== id &&
+                (!target || (s.id !== target.id && s.email !== target.email))
+              );
+              localStorage.setItem(key, JSON.stringify(cleaned));
+            }
+          }
+        } catch (e) {
+          console.error(`Error cleaning staff key ${key}:`, e);
+        }
+      });
+
+      // Also check sessionStorage
+      try {
+        const sessKeys = Object.keys(sessionStorage);
+        sessKeys.forEach(key => {
+          if (key.includes('staff') || key.includes('user')) {
+            const raw = sessionStorage.getItem(key);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) {
+                const cleaned = parsed.filter((s: any) =>
+                  s.id !== id && s.nationalId !== id && s.email !== id && s.tscNumber !== id && s.staffId !== id
+                );
+                sessionStorage.setItem(key, JSON.stringify(cleaned));
+              }
+            }
+          }
+        });
+      } catch (e) {
+        console.error('Error cleaning session storage for staff:', e);
+      }
+
+      window.dispatchEvent(new Event('munyaka_staff_updated'));
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+    } catch (err) {
+      console.error('[CentralDataService] deleteStaff error:', err);
+    }
   },
 
   clearStaff: (): void => {

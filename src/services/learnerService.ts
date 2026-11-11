@@ -103,16 +103,26 @@ export const learnerService = {
   },
 
   async deleteLearner(id: string): Promise<boolean> {
-    try {
-      let learners = await this.getLearners();
-      learners = learners.filter(l => l.id !== id && l.admissionNumber !== id && l.admNo !== id);
-      saveStorageLearners(learners);
-      return true;
-    } catch (e) {
-      console.error('Error deleting learner:', e);
-      return false;
+      try {
+        let learners = await this.getLearners();
+        const target = learners.find(l =>
+          l.id === id || l.admissionNo === id || l.admissionNumber === id || l.admNo === id ||
+          l.assessmentNo === id || l.assessmentNumber === id || l.birthCertificateNo === id || l.birthCertNo === id
+        );
+        if (target) {
+          // Use purgeLearnerPermanently for true hard deletion across all storage layers
+          const { purgeLearnerPermanently } = await import('@/services/purgeLearnerService');
+          await purgeLearnerPermanently(target);
+        }
+        learners = learners.filter(l => l.id !== id && l.admissionNumber !== id && l.admNo !== id &&
+          l.assessmentNo !== id && l.assessmentNumber !== id && l.birthCertificateNo !== id && l.birthCertNo !== id);
+        saveStorageLearners(learners);
+        return true;
+      } catch (e) {
+        console.error('Error deleting learner:', e);
+        return false;
+      }
     }
-  }
 };
 
 export const fetchLearners = async (): Promise<Learner[]> => {

@@ -162,20 +162,30 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  const deleteLearner = useCallback((id: string) => {
-    try {
-      const current = getStoredLearners();
-      const filtered = current.filter(l => l.id !== id && l.admissionNo !== id && l.admissionNumber !== id && l.admNo !== id);
-      const clean = deduplicateLearners(filtered);
-      setLearnersState(clean);
-      saveStoredLearners(clean);
-
-      window.dispatchEvent(new Event('munyaka_learners_updated'));
-      window.dispatchEvent(new Event('munyaka:data-changed'));
-    } catch (err) {
-      console.error('[LearnerContext] deleteLearner error:', err);
-    }
-  }, []);
+  const deleteLearner = useCallback(async (id: string) => {
+        try {
+          const current = getStoredLearners();
+          const target = current.find(l =>
+            l.id === id || l.admissionNo === id || l.admissionNumber === id || l.admNo === id ||
+            l.assessmentNo === id || l.assessmentNumber === id || l.birthCertificateNo === id || l.birthCertNo === id
+          );
+          if (target) {
+            // Use purgeLearnerPermanently for true hard deletion across all storage layers
+            const { purgeLearnerPermanently } = await import('@/services/purgeLearnerService');
+            await purgeLearnerPermanently(target);
+          }
+          const filtered = current.filter(l => l.id !== id && l.admissionNo !== id && l.admissionNumber !== id && l.admNo !== id &&
+            l.assessmentNo !== id && l.assessmentNumber !== id && l.birthCertificateNo !== id && l.birthCertNo !== id);
+          const clean = deduplicateLearners(filtered);
+          setLearnersState(clean);
+          saveStoredLearners(clean);
+  
+          window.dispatchEvent(new Event('munyaka_learners_updated'));
+          window.dispatchEvent(new Event('munyaka:data-changed'));
+        } catch (err) {
+          console.error('[LearnerContext] deleteLearner error:', err);
+        }
+      }, []);
 
   const refreshLearners = useCallback(() => {
     try {

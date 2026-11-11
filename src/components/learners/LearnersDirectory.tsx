@@ -91,65 +91,44 @@ export default function LearnersDirectory() {
   };
 
   const handleDeleteLearner = async (learnerToDelete: any) => {
-    if (!learnerToDelete) return;
-    const targetId = learnerToDelete.id || learnerToDelete.admissionNo || learnerToDelete.admissionNumber || learnerToDelete.birthCertificateNo || learnerToDelete.assessmentNo;
-    try {
-      if (deleteLearner) {
-        await deleteLearner(targetId);
+      if (!learnerToDelete) return;
+      try {
+        if (deleteLearner) {
+          await deleteLearner(learnerToDelete.id || learnerToDelete.admissionNo || learnerToDelete.admissionNumber || learnerToDelete.birthCertificateNo || learnerToDelete.assessmentNo);
+        }
+        toast({
+          title: "Learner Removed",
+          description: "Learner record deleted successfully.",
+        });
+      } catch (e) {
+        toast({
+          title: "Error",
+          description: "Failed to delete learner.",
+          variant: "destructive"
+        });
       }
-      // Also try fallback identifiers to ensure complete removal from munyaka_learners
-      const raw = localStorage.getItem('munyaka_learners') || '[]';
-      const list = JSON.parse(raw);
-      const updated = list.filter((l: any) =>
-        l.id !== targetId &&
-        l.admissionNumber !== targetId &&
-        l.admissionNo !== targetId &&
-        l.admNo !== targetId &&
-        l.birthCertificateNo !== targetId &&
-        l.assessmentNo !== targetId
-      );
-      localStorage.setItem('munyaka_learners', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new Event('learners-updated'));
-
-      toast({
-        title: "Learner Removed",
-        description: "Learner record deleted successfully.",
-      });
-    } catch (e) {
-      toast({
-        title: "Error",
-        description: "Failed to delete learner.",
-        variant: "destructive"
-      });
-    }
-  };
+    };
 
   const deleteMultipleLearners = async (ids: string[]) => {
-    try {
-      for (const id of ids) {
-        if (deleteLearner) {
-          await deleteLearner(id);
-        } else {
-          const raw = localStorage.getItem('munyaka_learners') || '[]';
-          const list = JSON.parse(raw);
-          const updated = list.filter((l: any) => (l.id || l.admNo) !== id && l.admissionNumber !== id && l.admissionNo !== id);
-          localStorage.setItem('munyaka_learners', JSON.stringify(updated));
+      try {
+        for (const id of ids) {
+          if (deleteLearner) {
+            await deleteLearner(id);
+          }
         }
+        window.dispatchEvent(new Event('storage'));
+        toast({
+          title: "Learners Removed",
+          description: `${ids.length} learner records deleted successfully.`,
+        });
+      } catch (e) {
+        toast({
+          title: "Error",
+          description: "Failed to delete selected learners.",
+          variant: "destructive"
+        });
       }
-      window.dispatchEvent(new Event('storage'));
-      toast({
-        title: "Learners Removed",
-        description: `${ids.length} learner records deleted successfully.`,
-      });
-    } catch (e) {
-      toast({
-        title: "Error",
-        description: "Failed to delete selected learners.",
-        variant: "destructive"
-      });
-    }
-  };
+    };
 
   const requestDelete = (learner: any) => {
     setPendingDelete(learner);

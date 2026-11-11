@@ -107,9 +107,14 @@ export const HarmonizedLearnerService = {
     }
   },
 
-  deleteLearner: (id: string): void => {
-    const list = HarmonizedLearnerService.getLearners();
-    const filtered = list.filter(l => String(l.id) !== String(id) && String(l.admissionNumber) !== String(id) && String(l.admNo) !== String(id));
-    HarmonizedLearnerService.saveLearners(filtered);
-  }
+  deleteLearner: async (id: string): Promise<void> => {
+      const list = HarmonizedLearnerService.getLearners();
+      const target = list.find(l => String(l.id) === String(id) || String(l.admissionNumber) === String(id) || String(l.admNo) === String(id));
+      if (target) {
+        const { purgeLearnerPermanently } = await import('@/services/purgeLearnerService');
+        await purgeLearnerPermanently(target);
+      }
+      const filtered = list.filter(l => String(l.id) !== String(id) && String(l.admissionNumber) !== String(id) && String(l.admNo) !== String(id));
+      HarmonizedLearnerService.saveLearners(filtered);
+    }
 };
