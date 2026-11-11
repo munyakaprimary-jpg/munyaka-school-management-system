@@ -147,6 +147,22 @@ export default function AddLearnerModal({
       localStorage.setItem('munyaka_learners', JSON.stringify(newStoreList));
       localStorage.setItem('munyaka_learners_directory', JSON.stringify(newStoreList));
       localStorage.setItem('munyaka_students', JSON.stringify(newStoreList));
+
+      if (onLearnerAdded) {
+        onLearnerAdded(newLearner);
+      }
+
+      showSuccess(`Learner ${fullNameVal} registered successfully!`);
+      setIsSaving(false);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      showError("Failed to register learner.");
+      setIsSaving(false);
+    }
+  };
+      localStorage.setItem('munyaka_learners_directory', JSON.stringify(newStoreList));
+      localStorage.setItem('munyaka_students', JSON.stringify(newStoreList));
       localStorage.setItem('school_learners_data', JSON.stringify(newStoreList));
 
       window.dispatchEvent(new CustomEvent('learners-updated', { detail: newStoreList }));

@@ -333,22 +333,22 @@ export default function LearnersDirectory() {
                       {learner.assessmentNo || '—'}
                     </td>
                     <td className="py-4 px-6 font-bold text-slate-900">
-                      {learner.fullName || '—'}
+                      {learner.fullName || learner.name || learner.studentName || '—'}
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-600 font-medium">
-                      {learner.grade || '—'} {learner.stream ? `(${learner.stream})` : ''}
+                      {learner.grade || learner.gradeLevel || '—'} {learner.stream ? `(${learner.stream})` : ''}
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-600">
-                      {learner.gender || '—'}
+                      {learner.gender || learner.sex || '—'}
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-600">
-                      {learner.dob || '—'}
+                      {learner.dob || learner.dateOfBirth || '—'}
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-600">
-                      {learner.guardianName || '—'}
+                      {learner.guardianName || learner.parentName || learner.guardian || '—'}
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-600 font-mono">
-                      {learner.guardianPhone || '—'}
+                      {learner.guardianPhone || learner.phone || learner.phoneNumber || '—'}
                     </td>
                     <td className="py-4 px-6 text-right">
                       <Button
