@@ -234,7 +234,20 @@ export const SyncButton: React.FC = () => {
               <div className="bg-teal-50 dark:bg-teal-950/30 p-4 rounded-2xl border border-teal-100 dark:border-teal-900/50 flex items-start gap-3">
                 <ShieldCheck className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
                 <p className="text-xs text-teal-900 dark:text-teal-200 leading-relaxed">
-                  Clicking <strong>Synchronize Now</strong> securely validates records against centre code <strong>327775</strong> and pushes all local payloads to Supabase.
+                  Clicking <strong>Synchronize Now</strong> securely validates records against official school center code{' '}
+                  <strong>
+                    {(() => {
+                      try {
+                        const raw = localStorage.getItem('munyaka_system_settings_v3') || localStorage.getItem('munyaka_system_settings');
+                        if (raw) {
+                          const parsed = JSON.parse(raw);
+                          return parsed.schoolCode || parsed.school_code || 'MUNYAKA-001';
+                        }
+                      } catch {}
+                      return 'MUNYAKA-001';
+                    })()}
+                  </strong>{' '}
+                  and pushes all local payloads to Supabase.
                 </p>
               </div>
             </div>
