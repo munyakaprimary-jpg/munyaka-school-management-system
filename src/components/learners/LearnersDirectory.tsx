@@ -45,17 +45,21 @@ export default function LearnersDirectory() {
   const filteredLearners = useMemo(() => {
     const searchClean = (searchTerm || '').toString().toLowerCase().trim();
     
-    // Deduplicate & filter out MUN-2714-2026 or unregistered
+    // Deduplicate & filter out MUN-xxxx-2026 patterns or unregistered
     const seen = new Set();
     const uniqueLearners = (learners || []).filter(learner => {
       if (!learner) return false;
-      const isCorruptId = learner.id === 'MUN-2714-2026' || learner.admissionNo === 'MUN-2714-2026';
-      const fullName = String(learner.fullName || '').trim();
-      const isUnregistered = !fullName || fullName === 'Unregistered Learner' || fullName === 'Unnamed Student' || fullName === '' || fullName === 'undefined';
-      if (isCorruptId || isUnregistered) return false;
+      const idStr = String(learner.id || '').trim();
+      const admStr = String(learner.admissionNo || '').trim();
+      const isCorruptPattern = /^MUN-\w{4}-2026$/i.test(idStr) || /^MUN-\w{4}-2026$/i.test(admStr);
+      
+      const fullName = String(learner.fullName || learner.name || '').trim();
+      const isUnregistered = !fullName || fullName === 'Unregistered Learner' || fullName === 'Unnamed Student' || fullName === 'Unnamed Learner' || fullName === '' || fullName === 'undefined';
+      
+      if (isCorruptPattern || isUnregistered) return false;
 
-      const adm = (learner.admissionNo || learner.id || '').toString().trim().toLowerCase();
-      const name = (learner.fullName || '').toString().trim().toLowerCase();
+      const adm = (admStr || idStr || '').toLowerCase();
+      const name = fullName.toLowerCase();
       const key = adm || `${name}_${learner.grade || ''}_${learner.stream || ''}`;
       if (seen.has(key)) return false;
       seen.add(key);
