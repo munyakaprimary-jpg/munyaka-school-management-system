@@ -286,7 +286,7 @@ export default function LearnersDirectory() {
                     checked={filteredLearners.length > 0 && selectedIds.length === filteredLearners.length}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setSelectedIds(filteredLearners.map(l => l.id || l.admNo));
+                        setSelectedIds(filteredLearners.map(l => l.id || l.admissionNo));
                       } else {
                         setSelectedIds([]);
                       }
@@ -298,14 +298,16 @@ export default function LearnersDirectory() {
                 <th className="p-3">FULL NAME</th>
                 <th className="p-3">GRADE & STREAM</th>
                 <th className="py-4 px-6">GENDER</th>
+                <th className="py-4 px-6">DOB</th>
                 <th className="py-4 px-6">PARENT / GUARDIAN</th>
+                <th className="py-4 px-6">PHONE</th>
                 <th className="py-4 px-6 text-right">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-20 text-center text-slate-400 font-medium">
+                  <td colSpan={10} className="py-20 text-center text-slate-400 font-medium">
                     No learner records found. Click <span className="text-indigo-600 font-bold">+ Register New Learner</span> above to register a new student.
                   </td>
                 </tr>
@@ -315,32 +317,38 @@ export default function LearnersDirectory() {
                     <td className="p-3 w-10">
                       <input
                         type="checkbox"
-                        checked={selectedIds.includes(learner.id || learner.admNo)}
+                        checked={selectedIds.includes(learner.id || learner.admissionNo)}
                         onChange={(e) => {
-                          const id = learner.id || learner.admNo;
-                          setSelectedIds(prev => 
+                          const id = learner.id || learner.admissionNo;
+                          setSelectedIds(prev =>
                             e.target.checked ? [...prev, id] : prev.filter(item => item !== id)
                           );
                         }}
                       />
                     </td>
                     <td className="py-4 px-6 font-mono font-bold text-xs text-indigo-600">
-                      {learner.admissionNo || learner.admissionNumber || learner.admNo || '—'}
+                      {learner.admissionNo || '—'}
                     </td>
                     <td className="py-4 px-6 font-mono text-xs text-slate-700 font-semibold">
-                      {learner.idValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertificateNo || learner.birthCertNo || '—'}
+                      {learner.assessmentNo || '—'}
                     </td>
                     <td className="py-4 px-6 font-bold text-slate-900">
-                      {learner.fullName || learner.name || learner.studentName || '—'}
+                      {learner.fullName || '—'}
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-600 font-medium">
-                      {learner.gradeLevel || learner.grade || '—'} {learner.stream ? `(${learner.stream})` : ''}
+                      {learner.grade || '—'} {learner.stream ? `(${learner.stream})` : ''}
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-600">
-                      {learner.gender || learner.sex || '—'}
+                      {learner.gender || '—'}
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-600">
-                      {learner.parentGuardian || learner.parentName || learner.guardian || '—'}
+                      {learner.dob || '—'}
+                    </td>
+                    <td className="py-4 px-6 text-sm text-slate-600">
+                      {learner.guardianName || '—'}
+                    </td>
+                    <td className="py-4 px-6 text-sm text-slate-600 font-mono">
+                      {learner.guardianPhone || '—'}
                     </td>
                     <td className="py-4 px-6 text-right">
                       <Button

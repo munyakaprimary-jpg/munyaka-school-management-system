@@ -8,14 +8,14 @@ export const normalizeLearner = (item: any): Learner => {
   if (!item) return { id: '', admissionNo: '', fullName: '', grade: '', stream: '', gender: '' };
   
   const admissionNo = String(item.admissionNo || item.admissionNumber || item.admNo || item.id || '').trim();
-  const assessmentNo = item.assessmentNo ? String(item.assessmentNo).trim() : undefined;
-  const fullName = String(item.fullName || item.name || '').trim();
-  const grade = String(item.grade || '').trim();
-  const stream = String(item.stream || '').trim();
-  const gender = String(item.gender || '').trim();
-  const dob = item.dob ? String(item.dob).trim() : undefined;
-  const guardianName = (item.guardianName || item.parentName || item.guardian || '').trim() || undefined;
-  const guardianPhone = (item.guardianPhone || item.phone || item.phoneNumber || '').trim() || undefined;
+  const assessmentNo = String(item.assessmentNo || item.assessmentNumber || item.birthCertificateNo || item.birthCertNo || item.idValue || '').trim() || undefined;
+  const fullName = String(item.fullName || item.name || item.studentName || '').trim();
+  const grade = String(item.grade || item.gradeLevel || item.class || '').trim();
+  const stream = String(item.stream || item.streamName || '').trim();
+  const gender = String(item.gender || item.sex || '').trim();
+  const dob = String(item.dob || item.dateOfBirth || '').trim() || undefined;
+  const guardianName = String(item.guardianName || item.parentName || item.guardian || item.parentGuardian || '').trim() || undefined;
+  const guardianPhone = String(item.guardianPhone || item.phone || item.phoneNumber || item.parentPhone || '').trim() || undefined;
   const createdAt = item.createdAt ? String(item.createdAt).trim() : undefined;
 
   return {
