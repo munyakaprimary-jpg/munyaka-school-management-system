@@ -2,13 +2,20 @@ import React, { useMemo } from 'react';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, UserCircle, Hash, Calendar, Shield, BookOpen, Award } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'react-router-dom';
 
 const LearnerProfile = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
 
-  // Robust learner resolution from munyaka_learners_directory and fallback keys
+  // Robust learner resolution from router state, munyaka_learners_directory, and fallback keys
   const learner = useMemo(() => {
+    // 1. Check router state first
+    const stateLearner = (location.state as any)?.learner;
+    if (stateLearner) {
+      return stateLearner;
+    }
+
     try {
       const keys = ['munyaka_learners_directory', 'munyaka_learners_v2', 'munyaka_learners', 'school_learners_data'];
       let allLearners: any[] = [];
@@ -36,7 +43,6 @@ const LearnerProfile = () => {
 
       if (found) return found;
 
-      // If not found by ID, return the first one or a clean object with parameters
       if (allLearners.length > 0 && allLearners[0]) {
         return allLearners[0];
       }
@@ -57,7 +63,7 @@ const LearnerProfile = () => {
         stream: 'Stream'
       };
     }
-  }, [id]);
+  }, [id, location.state]);
 
   // Robust property normalizations as requested
   const learnerName = learner?.fullName || learner?.name || learner?.studentName || `${learner?.firstName || ''} ${learner?.lastName || ''}`.trim() || 'Unknown Learner';

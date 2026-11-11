@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { getLearners, saveLearners, addPendingSyncItem } from '@/utils/storage';
+import { getLearners, addPendingSyncItem } from '@/utils/storage';
 import { generateCohortAdmissionNumber } from '@/utils/admissionUtils';
 import { Learner } from '@/types/learners';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
@@ -68,13 +68,12 @@ export default function AddLearnerModal({
 
   useEffect(() => {
     if (isOpen) {
-      const existingLearners = getLearners();
-      const freshAdmNo = generateCohortAdmissionNumber(formData.grade, existingLearners);
+      const existing = getLearners();
+      const freshAdmNo = generateCohortAdmissionNumber(formData.grade, existing);
       setFormData(prev => ({
         ...prev,
         admissionNo: freshAdmNo,
-        phone: prev.phone && prev.phone !== '' ? prev.phone : '+254',
-        location: prev.location || 'Eldoret'
+        guardianPhone: prev.guardianPhone && prev.guardianPhone !== '' ? prev.guardianPhone : '+254'
       }));
     }
   }, [isOpen, formData.grade]);
@@ -88,8 +87,8 @@ export default function AddLearnerModal({
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
       if (field === 'grade') {
-        const existingLearners = getLearners();
-        updated.admissionNo = generateCohortAdmissionNumber(value, existingLearners);
+        const existing = getLearners();
+        updated.admissionNo = generateCohortAdmissionNumber(value, existing);
       }
       return updated;
     });
@@ -145,22 +144,6 @@ export default function AddLearnerModal({
 
       localStorage.setItem(STORAGE_KEYS.LEARNERS, JSON.stringify(newStoreList));
       localStorage.setItem('munyaka_learners', JSON.stringify(newStoreList));
-      localStorage.setItem('munyaka_learners_directory', JSON.stringify(newStoreList));
-      localStorage.setItem('munyaka_students', JSON.stringify(newStoreList));
-
-      if (onLearnerAdded) {
-        onLearnerAdded(newLearner);
-      }
-
-      showSuccess(`Learner ${fullNameVal} registered successfully!`);
-      setIsSaving(false);
-      onClose();
-    } catch (err) {
-      console.error(err);
-      showError("Failed to register learner.");
-      setIsSaving(false);
-    }
-  };
       localStorage.setItem('munyaka_learners_directory', JSON.stringify(newStoreList));
       localStorage.setItem('munyaka_students', JSON.stringify(newStoreList));
       localStorage.setItem('school_learners_data', JSON.stringify(newStoreList));

@@ -1084,7 +1084,7 @@ export default function Students() {
                                       <td className="px-2.5 py-2 font-mono text-[11px] font-semibold text-indigo-600 whitespace-nowrap">{sAdm}</td>
                                       <td className="px-2.5 py-2 font-mono text-[11px] text-slate-500 whitespace-nowrap">{sAss}</td>
                                       <td className="px-2.5 py-2 font-bold text-slate-900 truncate max-w-[150px]" title={sName}>
-                                        <Link to={`/students/${sId}`} className="hover:text-indigo-600 transition-colors">
+                                        <Link to={`/students/${sId}`} state={{ learner: student }} className="hover:text-indigo-600 transition-colors">
                                           {sName}
                                         </Link>
                                       </td>
@@ -1100,7 +1100,7 @@ export default function Students() {
                                       <td className="px-3.5 py-2 text-right whitespace-nowrap min-w-[140px]">
                                         <div className="flex items-center justify-end gap-1.5">
                                           <button
-                                            onClick={() => navigate(`/students/${sId}`)}
+                                            onClick={() => navigate(`/students/${sId}`, { state: { learner: student } })}
                                             className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600 transition-colors"
                                             title="View Profile"
                                           >
