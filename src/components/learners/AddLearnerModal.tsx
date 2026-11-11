@@ -97,14 +97,14 @@ export default function AddLearnerModal({
 
   const handleSaveLearner = async (e: React.FormEvent) => {
     e.preventDefault();
-    const fullName = (formData.fullName || '').trim();
-    if (!fullName) {
+    const fullNameVal = (formData.fullName || '').trim();
+    if (!fullNameVal) {
       showError("Please enter full name.");
       return;
     }
 
-    const phone = (formData.phone || '').trim();
-    if (!phone.startsWith('+254')) {
+    const phoneVal = (formData.phone || '').trim();
+    if (!phoneVal.startsWith('+254')) {
       showError("Phone number must start with +254.");
       return;
     }
@@ -114,52 +114,47 @@ export default function AddLearnerModal({
       const selectedGrade = formData.grade;
       const selectedStream = formData.stream;
       const admissionNumber = formData.admissionNo || generateCohortAdmissionNumber(selectedGrade, existingLearners);
-      const gender = (formData as any).gender || 'Not Specified';
-      const dateOfBirth = (formData as any).dateOfBirth || '';
-      const parentName = formData.guardian.trim() || '—';
-      const phone = formData.phone.trim() || '+254';
+      const genderVal = (formData as any).gender || 'Not Specified';
+      const dateOfBirthVal = (formData as any).dateOfBirth || '';
+      const parentNameVal = formData.guardian.trim() || '—';
+      const idVal = formData.identifierValue.trim() || '';
 
-      const idType = formData.identifierType || 'assessment';
-      const identifierValue = formData.identifierValue.trim() || '';
-
-      const newLearnerRecord = {
-        id: admissionNumber || `MUN-${Date.now().toString().slice(-4)}`,
-        admissionNo: admissionNumber,
+      const f = formData as any;
+      const newLearner = {
+        id: admissionNumber || `MUN-${Math.floor(1000 + Math.random() * 9000)}-2026`,
+        admissionNo: f.admissionNo || f.adm_no || admissionNumber || `MUN-${Math.floor(1000 + Math.random() * 9000)}-2026`,
         admissionNumber: admissionNumber,
         admNo: admissionNumber,
-        identifierType: idType,
-        identifierValue: identifierValue,
-        idValue: identifierValue,
-        assessmentNo: idType === 'assessment' ? identifierValue : '',
-        assessmentNumber: idType === 'assessment' ? identifierValue : '',
-        birthCertNo: idType === 'birth_cert' ? identifierValue : '',
-        birthCertificateNo: idType === 'birth_cert' ? identifierValue : '',
-        fullName: fullName,
-        name: fullName,
-        gradeLevel: selectedGrade,
-        grade: selectedGrade,
-        stream: selectedStream,
-        gradeAndStream: `${selectedGrade} (${selectedStream})`,
-        gender: gender,
-        dateOfBirth: dateOfBirth || '—',
-        dob: dateOfBirth || '—',
-        parentGuardian: parentName || '—',
-        parentName: parentName || '—',
-        phoneNumber: phone || '—',
-        phone: phone || '—',
+        assessmentNo: f.assessmentNo || f.assessment_no || idVal || '—',
+        assessmentNumber: idVal || '—',
+        birthCertNo: idVal || '—',
+        birthCertificateNo: idVal || '—',
+        fullName: fullNameVal || f.name || f.studentName || '—',
+        name: fullNameVal || f.name || f.studentName || '—',
+        grade: f.grade || f.class || 'Grade 6',
+        gradeLevel: f.grade || f.class || 'Grade 6',
+        stream: f.stream || f.streamName || 'BLUE',
+        gender: genderVal || 'Male',
+        dob: dateOfBirthVal || f.dateOfBirth || '—',
+        dateOfBirth: dateOfBirthVal || f.dateOfBirth || '—',
+        guardianName: parentNameVal || f.guardianName || f.parentName || '—',
+        parentName: parentNameVal || f.guardianName || f.parentName || '—',
+        guardianPhone: phoneVal || f.phone || f.parentPhone || '—',
+        phone: phoneVal || f.phone || f.parentPhone || '—',
         status: 'Active',
         academicYear: '2026',
         createdAt: new Date().toISOString()
       };
 
-      await contextAddLearner(newLearnerRecord);
+      await contextAddLearner(newLearner);
 
-      const existingRaw = localStorage.getItem(STORAGE_KEYS.LEARNERS) || localStorage.getItem('munyaka_learners') || '[]';
+      const existingRaw = localStorage.getItem(STORAGE_KEYS.LEARNERS) || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_directory') || '[]';
       const existingLearnersStore = JSON.parse(existingRaw);
-      const newStoreList = Array.isArray(existingLearnersStore) ? [newLearnerRecord, ...existingLearnersStore] : [newLearnerRecord];
+      const newStoreList = Array.isArray(existingLearnersStore) ? [newLearner, ...existingLearnersStore] : [newLearner];
 
       localStorage.setItem(STORAGE_KEYS.LEARNERS, JSON.stringify(newStoreList));
       localStorage.setItem('munyaka_learners', JSON.stringify(newStoreList));
+      localStorage.setItem('munyaka_learners_directory', JSON.stringify(newStoreList));
       localStorage.setItem('munyaka_students', JSON.stringify(newStoreList));
       localStorage.setItem('school_learners_data', JSON.stringify(newStoreList));
 
@@ -168,15 +163,15 @@ export default function AddLearnerModal({
       window.dispatchEvent(new Event('storage'));
 
       addPendingSyncItem({
-        id: newLearnerRecord.id,
+        id: newLearner.id,
         type: 'learner',
         action: 'create',
-        payload: newLearnerRecord,
+        payload: newLearner,
       });
 
       showSuccess("Learner successfully registered and saved to directory!");
       if (onLearnerAdded) {
-        onLearnerAdded(newLearnerRecord);
+        onLearnerAdded(newLearner);
       }
       onClose();
     } catch (err: any) {
