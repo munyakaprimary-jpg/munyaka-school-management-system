@@ -5,6 +5,7 @@ import { initialSeedData } from "@/data/initialSeedData";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { CorruptedLearnerPurgeGuard } from "@/components/common/CorruptedLearnerPurgeGuard";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -529,6 +530,7 @@ const App = () => {
                     <GlobalExportListener />
                     <SchoolProvider>
                       <LearnerProvider>
+                        <CorruptedLearnerPurgeGuard />
                       <Routes>
                         {/* Public Routes */}
                       <Route path="/login" element={<Login />} />

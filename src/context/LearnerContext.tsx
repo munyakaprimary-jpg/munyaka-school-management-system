@@ -46,8 +46,12 @@ const deduplicateLearners = (list: any[]) => {
   for (const l of list || []) {
     if (!l) continue;
     const name = String(l.fullName || l.name || l.studentName || '').trim();
-    if (!name || name === 'undefined undefined' || name === 'null null' || name === 'Unnamed Learner') continue;
-    const id = String(l.id || l._id || l.admissionNo || l.admissionNumber || '');
+    if (!name || name === 'undefined undefined' || name === 'null null' || name === 'Unnamed Learner' || name === 'Unregistered Learner' || name === 'Unregistered Name') continue;
+    
+    const admNo = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
+    if (!admNo || admNo === '—' || admNo === '-' || admNo === 'N/A' || admNo === 'undefined') continue;
+
+    const id = String(l.id || l._id || admNo);
     if (id && seen.has(id)) continue;
     if (id) seen.add(id);
     unique.push(l);
