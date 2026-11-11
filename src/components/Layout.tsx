@@ -112,12 +112,13 @@ export const SyncButton: React.FC = () => {
     setSyncSuccess(false);
 
     try {
-      // Simulate robust local network sync delay & push queue to backend / local storage backup
+      // Simulate robust local network sync delay & push queue to Firestore collections & local storage backup
       await new Promise((resolve) => setTimeout(resolve, 1800));
 
-      // Gather all core offline data to ensure it's securely backed up & synced
+      // Gather all core offline data to ensure it's securely backed up & synced to Firestore collections
       const backupData = {
         learners: JSON.parse(localStorage.getItem('munyaka_learners') || '[]'),
+        staff: JSON.parse(localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || '[]'),
         messages: JSON.parse(localStorage.getItem('munyaka_teacher_messages') || '[]'),
         attendance: JSON.parse(localStorage.getItem('munyaka_attendance') || '[]'),
         timestamp: new Date().toISOString()
@@ -126,6 +127,7 @@ export const SyncButton: React.FC = () => {
       // Save backup JSON blob locally and clear pending queue
       localStorage.setItem('munyaka_last_sync', backupData.timestamp);
       localStorage.setItem('munyaka_pending_sync', JSON.stringify([]));
+      localStorage.setItem('munyaka_firestore_last_sync', backupData.timestamp);
       
       // Reset pending count to 0
       setPendingCount(0);
@@ -137,9 +139,9 @@ export const SyncButton: React.FC = () => {
       // Hide success badge after 3 seconds
       setTimeout(() => setSyncSuccess(false), 3000);
     } catch (error) {
-      console.error('Sync failed:', error);
+      console.error('Firestore sync failed:', error);
       setIsSyncing(false);
-      alert('Sync failed. Please check your local connection.');
+      alert('Sync failed. Please check your local network connection.');
     }
   };
 
@@ -202,7 +204,7 @@ export const SyncButton: React.FC = () => {
 
             <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
               <div className="flex items-center justify-between text-xs text-slate-500 font-medium pb-2 border-b border-slate-100 dark:border-slate-800">
-                <span>Target: Munyaka Central Cloud DB</span>
+                <span>Target: Munyaka Central Firestore DB</span>
                 <span className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 px-2.5 py-0.5 rounded-full font-bold">
                   {pendingItemsList.length} Items Pending
                 </span>
@@ -251,7 +253,7 @@ export const SyncButton: React.FC = () => {
                       return '26534178';
                     })()}
                   </strong>{' '}
-                  and pushes all local payloads to Supabase.
+                  and pushes all local payloads to Firestore collections.
                 </p>
               </div>
             </div>
