@@ -316,9 +316,10 @@ export default function StaffRegistry() {
 
   useEffect(() => {
     localStorage.setItem('munyaka_staff', JSON.stringify(staffList));
-    // Also sync to staff_master for authentication
     localStorage.setItem('munyaka_staff_db', JSON.stringify(staffList));
     localStorage.setItem('munyaka_staff_directory', JSON.stringify(staffList));
+    localStorage.setItem('munyaka_staff_registry', JSON.stringify(staffList));
+    window.dispatchEvent(new Event('munyaka_staff_updated'));
   }, [staffList]);
 
   const handleOpenAddModal = () => {

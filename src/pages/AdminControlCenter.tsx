@@ -39,20 +39,46 @@ export const AdminControlCenter: React.FC = () => {
 
   useEffect(() => {
     loadStaff();
+
+    // Reactive synchronization via storage event and custom events for instant updates when registry changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (!e.key || e.key.includes('munyaka_staff')) {
+        loadStaff();
+      }
+    };
+
+    const handleCustomStaffSync = () => {
+      loadStaff();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('munyaka_staff_updated', handleCustomStaffSync);
+    window.addEventListener('focus', handleCustomStaffSync);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('munyaka_staff_updated', handleCustomStaffSync);
+      window.removeEventListener('focus', handleCustomStaffSync);
+    };
   }, []);
 
   const loadStaff = () => {
     try {
-      const staffList = getStaffMaster();
-      setStaff(staffList);
       const registryList = localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory');
       if (registryList) {
         try {
           const parsed = JSON.parse(registryList);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             setStaff(parsed);
+            return;
           }
         } catch {}
+      }
+      const masterList = getStaffMaster();
+      if (Array.isArray(masterList) && masterList.length > 0) {
+        setStaff(masterList);
+      } else {
+        setStaff([]);
       }
     } catch {
       setStaff([]);
@@ -65,6 +91,7 @@ export const AdminControlCenter: React.FC = () => {
     localStorage.setItem('munyaka_staff_db', JSON.stringify(updatedList));
     localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
     localStorage.setItem('munyaka_staff_registry', JSON.stringify(updatedList));
+    window.dispatchEvent(new Event('munyaka_staff_updated'));
   };
 
   const handleCopyPassword = (u: any) => {
