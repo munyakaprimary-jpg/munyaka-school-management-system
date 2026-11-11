@@ -17,11 +17,17 @@ const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
 export const getStoredLearners = () => {
   try {
-    const data = localStorage.getItem('munyaka_learners');
-    if (data) {
-      const parsed = JSON.parse(data);
-      if (Array.isArray(parsed)) {
-        return parsed;
+    const keys = ['munyaka_learners_directory', 'munyaka_learners', 'munyaka_learners_v2', 'school_learners_data', 'munyaka_students', 'munyaka_app_learners_v1'];
+    for (const key of keys) {
+      const data = localStorage.getItem(key);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter((l: any) => {
+            const name = String(l?.fullName || l?.name || '').trim().toLowerCase();
+            return name && name !== 'unregistered learner' && name !== 'unregistered name' && name !== 'unnamed learner';
+          });
+        }
       }
     }
   } catch (e) {

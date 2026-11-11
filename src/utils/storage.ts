@@ -218,7 +218,7 @@ export function normalizeStaffAccessCode(code: string | undefined | null, index:
  */
 export function getLearners(): Learner[] {
   try {
-    const keys = ['munyaka_app_learners_v1', 'school_learners_data', 'munyaka_learners', 'munyaka_students'];
+    const keys = ['munyaka_learners_directory', 'munyaka_app_learners_v1', 'school_learners_data', 'munyaka_learners', 'munyaka_students'];
     let allRaw: any[] = [];
     const seenIds = new Set<string>();
     const seenAdmins = new Set<string>();
@@ -233,6 +233,7 @@ export function getLearners(): Learner[] {
             if (!l) continue;
             const name = String(l.fullName || l.name || l.studentName || '').trim();
             if (!name) continue;
+            if (name.toLowerCase() === 'unregistered learner' || name.toLowerCase() === 'unregistered name' || name.toLowerCase() === 'unnamed learner') continue;
             const id = String(l.id || l._id || '');
             const adm = String(l.admissionNo || l.admNo || l.admissionNumber || '');
             
@@ -251,15 +252,7 @@ export function getLearners(): Learner[] {
       }
     }
 
-    // Backup original state before normalizing
-    try {
-      localStorage.setItem('munyaka_learners_backup_' + Date.now(), JSON.stringify(allRaw));
-      if (allRaw.length > 0) {
-        localStorage.setItem('munyaka_app_learners_v1', JSON.stringify(allRaw));
-      }
-    } catch (e) {}
-
-    return allRaw.map((l: any) => ({
+    const cleaned = allRaw.map((l: any) => ({
       ...l,
       id: l.id || l._id || l.admissionNo || l.admissionNumber || `learner_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       admissionNo: l.admissionNo || l.admNo || l.admissionNumber || '',
@@ -274,7 +267,12 @@ export function getLearners(): Learner[] {
       phone: l.phone || l.phoneNumber || '+254',
       phoneNumber: l.phoneNumber || l.phone || '+254',
       location: l.location || 'Eldoret',
-    }));
+    })).filter((l: any) => {
+      const fn = String(l.fullName || l.name || '').trim().toLowerCase();
+      return fn && fn !== 'unregistered learner' && fn !== 'unregistered name' && fn !== 'unnamed learner';
+    });
+
+    return cleaned;
   } catch (e) {
     console.error('[storage.ts] getLearners error:', e);
     return [];
