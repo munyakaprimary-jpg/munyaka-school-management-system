@@ -337,7 +337,7 @@ export default function LearnersDirectory() {
                       {learner.assessmentNo || '—'}
                     </td>
                     <td className="py-4 px-6 font-bold text-slate-900">
-                      {learner.fullName || learner.name || learner.studentName || '—'}
+                      {learner.fullName || learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`.trim() || '—'}
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-600 font-medium">
                       {learner.grade || learner.gradeLevel || '—'} {learner.stream ? `(${learner.stream})` : ''}

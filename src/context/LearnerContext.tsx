@@ -17,22 +17,14 @@ const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
 export const getStoredLearners = () => {
   try {
-    const data = localStorage.getItem('munyaka_learners_directory');
-    if (data) {
-      const parsed = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.filter((l: any) => {
-          const name = String(l?.fullName || l?.name || '').trim().toLowerCase();
-          const id = String(l?.id || l?.admissionNo || '').trim();
-          const isCorruptPattern = /^MUN-\w{4}-2026$/i.test(id);
-          return name && name !== 'unregistered learner' && name !== 'unregistered name' && name !== 'unnamed learner' && !isCorruptPattern;
-        });
-      }
-    }
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
     console.error("Failed to parse learners storage", e);
+    return [];
   }
-  return [];
 };
 
 export const saveStoredLearners = (learners: any[]) => {
@@ -62,15 +54,12 @@ const deduplicateLearners = (list: any[]) => {
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [learners, setLearnersState] = useState<any[]>(() => {
     try {
-      const saved = localStorage.getItem('munyaka_learners');
+      const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('munyaka_learners');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return deduplicateLearners(parsed);
       }
-      const parsed = getStoredLearners();
-      const clean = deduplicateLearners(parsed);
-      saveStoredLearners(clean);
-      return clean;
+      return [];
     } catch (e) {
       console.error("Failed to parse learners storage", e);
       return [];
