@@ -461,9 +461,25 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
   ]);
   const [gradeStreamsMap, setGradeStreamsMap] = useState<Record<string, string[]>>({});
 
-  // Helper to compute next continuous admission number
+  // Helper to compute cohort joining year and next continuous admission number
   const computeNextAdmissionNo = (targetGrade: string) => {
     const currentYear = new Date().getFullYear();
+    
+    // Determine cohort joining year based on grade
+    // Grade 1 = currentYear (2026), Grade 2 = currentYear - 1 (2025), etc.
+    let joiningYear = currentYear;
+    const lowerGrade = targetGrade.toLowerCase();
+    if (lowerGrade.includes('grade 1')) joiningYear = currentYear;
+    else if (lowerGrade.includes('grade 2')) joiningYear = currentYear - 1;
+    else if (lowerGrade.includes('grade 3')) joiningYear = currentYear - 2;
+    else if (lowerGrade.includes('grade 4')) joiningYear = currentYear - 3;
+    else if (lowerGrade.includes('grade 5')) joiningYear = currentYear - 4;
+    else if (lowerGrade.includes('grade 6')) joiningYear = currentYear - 5;
+    else if (lowerGrade.includes('grade 7')) joiningYear = currentYear - 6;
+    else if (lowerGrade.includes('grade 8')) joiningYear = currentYear - 7;
+    else if (lowerGrade.includes('grade 9')) joiningYear = currentYear - 8;
+    else if (lowerGrade.includes('pp1') || lowerGrade.includes('pp2')) joiningYear = currentYear + 1; // Kindergarten entry
+
     try {
       const stored = localStorage.getItem('munyaka_learners');
       const allLearners: Learner[] = stored ? JSON.parse(stored) : [];
@@ -471,7 +487,6 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
       const gradeOrder = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
       const targetIdx = gradeOrder.indexOf(targetGrade);
       
-      // Collect all numeric sequences from existing learners in target grade or lower grades
       let maxSeq = 0;
       let totalCount = 0;
 
@@ -480,10 +495,8 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
         const g = l.grade || l.gradeLevel || '';
         const gIdx = gradeOrder.indexOf(g);
         
-        // If learner is in target grade or a lower grade (or unrecognised but part of store)
         if (targetIdx === -1 || gIdx === -1 || gIdx <= targetIdx) {
           const adm = String(l.admissionNumber || l.admissionNo || l.admNo || '');
-          // Parse format like MUN-045/2026 or MUN-G4-045/2026 or MUN-45
           const match = adm.match(/MUN-(?:G\d+\-)?(\d+)(?:\/\d{4})?/i);
           if (match && match[1]) {
             const seq = parseInt(match[1], 10);
@@ -496,9 +509,9 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
 
       const nextSeq = Math.max(maxSeq + 1, totalCount + 1);
       const padded = String(nextSeq).padStart(3, '0');
-      return `MUN-${padded}/${currentYear}`;
+      return `MUN-${padded}/${joiningYear}`;
     } catch (e) {
-      return `MUN-001/${currentYear}`;
+      return `MUN-001/${joiningYear}`;
     }
   };
 
