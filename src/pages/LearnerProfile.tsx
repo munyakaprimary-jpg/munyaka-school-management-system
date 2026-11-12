@@ -106,8 +106,6 @@ const StudentProfile = () => {
           String(s.assessmentNo ?? '') === String(decodedId) ||
           String(s.assessment ?? '') === String(id ?? '') ||
           String(s.assessment ?? '') === String(decodedId) ||
-          String(s.birthCertificateNo ?? '') === String(id ?? '') ||
-          String(s.birthCertificateNo ?? '') === String(decodedId) ||
           String(s.name ?? '').toLowerCase() === String(decodedId).toLowerCase()
         );
       });
