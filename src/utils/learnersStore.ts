@@ -1,45 +1,33 @@
-/**
- * Unified Learners Persistence Store (`munyaka_learners`)
- */
+import { getStoredLearners, saveStoredLearners } from '@/utils/learnersStore';
 
-export interface PersistentLearner {
-  id: string;
-  admissionNumber?: string;
-  name: string;
-  grade: string;
-  stream: string;
-  gender: string;
-  parentPhone?: string;
-  balance?: number;
-  status?: string;
-  [key: string]: any;
-}
+export function removeStoredLearner(id: string) {
+  const learners = getStoredLearners();
+  const filtered = learners.filter((l: any) => 
+    l.id !== id && 
+    l.admissionNumber !== id && 
+    l.admissionNo !== id && 
+    l.admNo !== id
+  );
+  saveStoredLearners(filtered);
 
-export const LEARNERS_DB_KEY = 'munyaka_learners';
-
-export function getStoredLearners(): PersistentLearner[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const data = localStorage.getItem(LEARNERS_DB_KEY);
-    if (!data) return [];
-    const parsed = JSON.parse(data);
-    if (Array.isArray(parsed)) {
-      return parsed;
+  // Also clean munyaka_learners / munyaka_learners_v2 if present
+  for (const key of ['munyaka_learners_v2', 'munyaka_learners']) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((l: any) => 
+            l.id !== id && 
+            l.admissionNumber !== id && 
+            l.admissionNo !== id && 
+            l.admNo !== id
+          );
+          localStorage.setItem(key, JSON.stringify(cleaned));
+        }
+      }
+    } catch {
+      // ignore
     }
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveStoredLearners(learners: PersistentLearner[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    const json = JSON.stringify(learners);
-    localStorage.setItem(LEARNERS_DB_KEY, json);
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new CustomEvent('munyaka_learners_updated', { detail: { count: learners.length } }));
-  } catch (e) {
-    console.error('[munyaka_learners] saveStoredLearners error:', e);
   }
 }

@@ -1,405 +1,255 @@
-import React, { useState, useEffect, useMemo } from 'react';
+"use client";
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { 
   Search, 
   UserPlus, 
   Trash2, 
   GraduationCap, 
   Users,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye,
+  AlertCircle
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
-import AddLearnerModal from '@/components/learners/AddLearnerModal';
-import AdminPinModal from '@/components/learners/AdminPinModal';
-import { useLearners } from '@/context/LearnerContext';
-import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
+import { getStoredLearners, removeStoredLearner } from '@/utils/learnersStore';
+import { showSuccess, showError } from '@/utils/toast';
 
-const AVAILABLE_GRADES = [
-  'Playgroup', 'PP1', 'PP2', 
-  'Grade 1', 'Grade 2', 'Grade 3', 
-  'Grade 4', 'Grade 5', 'Grade 6', 
-  'Grade 7', 'Grade 8', 'Grade 9', 'Junior Secondary'
-];
+interface LearnersDirectoryProps {
+  onRegisterClick: () => void;
+  onTransferInClick: () => void;
+}
 
-const AVAILABLE_STREAMS = ['East', 'West', 'North', 'South', 'Red', 'Blue', 'Green', 'Gold'];
-
-export default function LearnersDirectory() {
+export default function LearnersDirectory({
+  onRegisterClick,
+  onTransferInClick,
+}: LearnersDirectoryProps) {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { learners, addLearner, deleteLearner } = useLearners();
+  const [learners, setLearners] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [gradeFilter, setGradeFilter] = useState('ALL');
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [gradeFilter, setGradeFilter] = useState('all');
-  const [streamFilter, setStreamFilter] = useState('all');
-  const [genderFilter, setGenderFilter] = useState('all');
-
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<any>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  // Filtered & Searched Learners & Deduplication
-  const filteredLearners = useMemo(() => {
-    const searchClean = (searchTerm || '').toString().toLowerCase().trim();
-    
-    // Deduplicate & filter out MUN-xxxx-2026 patterns or unregistered
-    const seen = new Set();
-    const uniqueLearners = (learners || []).filter(learner => {
-      if (!learner) return false;
-      const idStr = String(learner.id || '').trim();
-      const admStr = String(learner.admissionNo || '').trim();
-      const isCorruptPattern = /^MUN-\w{4}-2026$/i.test(idStr) || /^MUN-\w{4}-2026$/i.test(admStr);
-      
-      const fullName = String(learner.fullName || learner.name || '').trim();
-      const isUnregistered = !fullName || fullName === 'Unregistered Learner' || fullName === 'Unnamed Student' || fullName === 'Unnamed Learner' || fullName === '' || fullName === 'undefined';
-      
-      if (isCorruptPattern || isUnregistered) return false;
-
-      const adm = (admStr || idStr || '').toLowerCase();
-      const name = fullName.toLowerCase();
-      const key = adm || `${name}_${learner.grade || ''}_${learner.stream || ''}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
-    return uniqueLearners.filter(learner => {
-      const name = (learner.fullName || '').toString().toLowerCase();
-      const adm = (learner.admissionNo || learner.id || '').toString().toLowerCase();
-      const identifier = (learner.assessmentNo || '').toString().toLowerCase();
-      const grade = (learner.grade || '').toString().toLowerCase();
-      const stream = (learner.stream || '').toString().toLowerCase();
-      const gender = (learner.gender || '').toString().toLowerCase();
-
-      const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean) || identifier.includes(searchClean);
-      const gradeMatch = gradeFilter === 'all' || grade === (gradeFilter || '').toString().toLowerCase() || grade.includes((gradeFilter || '').toString().toLowerCase());
-      const streamMatch = streamFilter === 'all' || stream === (streamFilter || '').toString().toLowerCase() || stream.includes((streamFilter || '').toString().toLowerCase());
-      const genderMatch = genderFilter === 'all' || gender === (genderFilter || '').toString().toLowerCase() || gender.includes((genderFilter || '').toString().toLowerCase());
-
-      return nameMatch && gradeMatch && streamMatch && genderMatch;
-    });
-  }, [learners, searchTerm, gradeFilter, streamFilter, genderFilter]);
-
-  const handleLearnerAdded = async (newLearner: any) => {
+  const loadLearners = () => {
     try {
-      await addLearner(newLearner);
-      toast({
-        title: "Learner Added",
-        description: `${newLearner.fullName || newLearner.name || 'Learner'} was successfully registered and saved to the directory.`,
-      });
+      const stored = getStoredLearners() || [];
+      const rawDb = localStorage.getItem('munyaka_central_db');
+      const db = rawDb ? JSON.parse(rawDb) : {};
+      const centralStudents = Array.isArray(db?.students) ? db.students : [];
+      const munyakaStudents = JSON.parse(localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_learners') || '[]');
+
+      const combined = [...stored, ...centralStudents, ...munyakaStudents];
+      
+      // Deduplicate and filter out corrupt/test stubs like MUN-9455-2026 if present
+      const uniqueMap = new Map();
+      for (const l of combined) {
+        if (!l) continue;
+        const idStr = String(l.id || l.admNo || l.admissionNumber || '');
+        const admStr = String(l.admissionNumber || l.admissionNo || l.admNo || '');
+        
+        if (/^MUN-9455-2026$/i.test(idStr) || /^MUN-9455-2026$/i.test(admStr)) {
+          continue;
+        }
+
+        const key = l.id || admStr || l.name;
+        if (key && !uniqueMap.has(key)) {
+          uniqueMap.set(key, l);
+        }
+      }
+
+      setLearners(Array.from(uniqueMap.values()));
     } catch (e) {
-      toast({
-        title: "Error",
-        description: "Failed to save learner to directory.",
-        variant: "destructive"
-      });
+      console.error('[LearnersDirectory] Failed to load learners:', e);
+      setLearners([]);
     }
   };
 
-  const handleDeleteLearner = async (learnerToDelete: any) => {
-      if (!learnerToDelete) return;
-      try {
-        if (deleteLearner) {
-          await deleteLearner(learnerToDelete.id || learnerToDelete.admissionNo || learnerToDelete.admissionNumber || learnerToDelete.birthCertificateNo || learnerToDelete.assessmentNo);
-        }
-        toast({
-          title: "Learner Removed",
-          description: "Learner record deleted successfully.",
-        });
-      } catch (e) {
-        toast({
-          title: "Error",
-          description: "Failed to delete learner.",
-          variant: "destructive"
-        });
-      }
+  useEffect(() => {
+    loadLearners();
+    const handleUpdate = () => loadLearners();
+    window.addEventListener('learners_data_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('learners_data_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
     };
+  }, []);
 
-  const deleteMultipleLearners = async (ids: string[]) => {
-      try {
-        for (const id of ids) {
-          if (deleteLearner) {
-            await deleteLearner(id);
-          }
-        }
-        window.dispatchEvent(new Event('storage'));
-        toast({
-          title: "Learners Removed",
-          description: `${ids.length} learner records deleted successfully.`,
-        });
-      } catch (e) {
-        toast({
-          title: "Error",
-          description: "Failed to delete selected learners.",
-          variant: "destructive"
-        });
-      }
-    };
+  const filteredLearners = useMemo(() => {
+    return learners.filter((l) => {
+      if (!l) return false;
+      const name = String(l.name || l.fullName || (l.firstName && l.lastName ? `${l.firstName} ${l.lastName}` : l.firstName) || '').toLowerCase();
+      const adm = String(l.admissionNumber || l.admissionNo || l.admNo || l.id || '').toLowerCase();
+      const assessment = String(l.assessmentNumber || l.assessmentNo || l.assessment || l.birthCertificateNo || '').toLowerCase();
+      
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = !q || name.includes(q) || adm.includes(q) || assessment.includes(q);
+
+      const gradeStr = String(l.grade || '').toLowerCase();
+      const matchesGrade = gradeFilter === 'ALL' || gradeStr.includes(gradeFilter.toLowerCase());
+
+      const status = String(l.status || 'Active').toLowerCase();
+      const isActive = status !== 'transferred' && status !== 'graduated' && status !== 'suspended';
+
+      return matchesSearch && matchesGrade && isActive;
+    });
+  }, [learners, searchQuery, gradeFilter]);
 
   const requestDelete = (learner: any) => {
-    setPendingDelete(learner);
-    setIsAuthOpen(true);
-  };
-
-  const handleVerifyAuth = () => {
-    if (pendingDelete) {
-      handleDeleteLearner(pendingDelete);
-    }
-    setIsAuthOpen(false);
-    setPendingDelete(null);
-  };
-
-  const handleExportCSV = () => {
-    try {
-      const headers = ["Admission No", "Assessment No / Birth Cert No", "Full Name", "Grade & Stream", "Gender", "Date of Birth", "Parent / Guardian", "Phone Number"];
-      const rows = filteredLearners.map(s => [
-        s.admissionNo || s.admissionNumber || '',
-        s.idValue || s.assessmentNo || s.assessmentNumber || s.birthCertNo || s.birthCertificateNo || '',
-        s.fullName || s.name || '',
-        s.gradeAndStream || `${s.gradeLevel || s.grade || ''} (${s.stream || ''})`,
-        s.gender || s.sex || '',
-        s.dateOfBirth || s.dob || '',
-        s.parentName || s.parentGuardian || '',
-        s.phoneNumber || s.phone || ''
-      ]);
-      const csvContent = [generateCSVHeader("LEARNERS DIRECTORY EXPORT").join(","), headers.join(","), ...rows.map(e => e.map(val => `"${String(val || '').replace(/"/g, '""')}"`).join(","))].join("\n");
-      downloadCSV(csvContent, `Learners_Directory_${Date.now()}.csv`);
-      toast({ title: "Export Successful", description: "Learners list downloaded as CSV." });
-    } catch (e) {
-      toast({ title: "Export Failed", description: "Could not download CSV export.", variant: "destructive" });
+    const id = learner.id || learner.admissionNumber || learner.admissionNo;
+    if (!id) return;
+    if (window.confirm(`Are you sure you want to remove ${learner.name || 'this learner'} from the directory?`)) {
+      removeStoredLearner(id);
+      loadLearners();
+      showSuccess(`Removed ${learner.name || 'learner'} from directory.`);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/70 p-4 sm:p-8 space-y-6">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-100">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-indigo-600 font-bold text-xs uppercase tracking-wider">
-            <GraduationCap className="w-4 h-4" /> Student Management System
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Learners Directory</h1>
-          <p className="text-sm text-slate-500 font-medium">Manage student profiles, assessment/birth certificate identifiers, and grade allocations.</p>
+    <div className="w-full space-y-6">
+      {/* Top Action Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Learners Directory</h2>
+          <p className="text-sm font-medium text-slate-500">Manage enrolled students, profiles, and records.</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
           <Button
-            onClick={handleExportCSV}
+            onClick={onRegisterClick}
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-sm"
+          >
+            <UserPlus size={16} /> Register Learner
+          </Button>
+          <Button
+            onClick={onTransferInClick}
             variant="outline"
-            className="rounded-2xl border-slate-200 text-slate-700 font-bold hover:bg-slate-50 px-4 py-6"
+            className="rounded-xl border-slate-200 font-bold gap-2 text-slate-700 hover:bg-slate-50"
           >
-            <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" /> Export CSV
-          </Button>
-          <Button
-            onClick={() => setIsAddModalOpen(true)}
-            className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200 px-5 py-6"
-          >
-            <UserPlus className="w-5 h-5 mr-2" /> Register New Learner
+            <GraduationCap size={16} /> Transfer In
           </Button>
         </div>
       </div>
 
-      {/* Filters & Search Toolbar */}
-      <div className="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col lg:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full lg:w-96">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Search by name, adm no, or ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-11 rounded-2xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-500 font-medium h-12"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          <Select value={gradeFilter} onValueChange={setGradeFilter}>
-            <SelectTrigger className="w-full sm:w-[170px] rounded-2xl border-slate-200 h-12 font-medium">
-              <SelectValue placeholder="Filter Grade" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              <SelectItem value="all">All Grades</SelectItem>
-              {AVAILABLE_GRADES.map(grade => (
-                <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={streamFilter} onValueChange={setStreamFilter}>
-            <SelectTrigger className="w-full sm:w-[150px] rounded-2xl border-slate-200 h-12 font-medium">
-              <SelectValue placeholder="Filter Stream" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              <SelectItem value="all">All Streams</SelectItem>
-              {AVAILABLE_STREAMS.map(stream => (
-                <SelectItem key={stream} value={stream}>{stream}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={genderFilter} onValueChange={setGenderFilter}>
-            <SelectTrigger className="w-full sm:w-[150px] rounded-2xl border-slate-200 h-12 font-medium">
-              <SelectValue placeholder="Filter Gender" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              <SelectItem value="all">All Genders</SelectItem>
-              <SelectItem value="Male">Male</SelectItem>
-              <SelectItem value="Female">Female</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Directory Table */}
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-lg font-bold text-slate-900">Enrolled Students</h2>
-            <span className="ml-2 px-3 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700">
-              {filteredLearners.length} active
-            </span>
+      {/* Search & Filter Bar */}
+      <Card className="border-none shadow-sm rounded-3xl bg-white p-4">
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <Input
+              placeholder="Search by name, admission no, or assessment/NEMIS..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 rounded-2xl border-slate-200 bg-slate-50/50 focus:bg-white text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+            {['ALL', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'].map((g) => (
+              <button
+                key={g}
+                onClick={() => setGradeFilter(g)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  gradeFilter === g
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {g}
+              </button>
+            ))}
           </div>
         </div>
+      </Card>
 
-        {selectedIds.length > 0 && (
-          <div className="flex items-center justify-between bg-red-50 border border-red-200 p-3 rounded-lg mx-6 mt-4">
-            <span className="text-red-700 font-medium">{selectedIds.length} learner(s) selected</span>
-            <button
-              onClick={() => {
-                if (confirm(`Delete ${selectedIds.length} selected learners?`)) {
-                  deleteMultipleLearners(selectedIds);
-                  setSelectedIds([]);
-                }
-              }}
-              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 font-medium text-sm"
-            >
-              Delete Selected ({selectedIds.length})
-            </button>
-          </div>
-        )}
-
-        <div className="overflow-x-auto mt-4">
-          <table className="w-full text-left border-collapse">
+      {/* Clean Learners Table */}
+      <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-sm text-left border-collapse min-w-[700px]">
             <thead>
-              <tr className="bg-slate-50 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
-                <th className="p-3 w-10">
-                  <input
-                    type="checkbox"
-                    checked={filteredLearners.length > 0 && selectedIds.length === filteredLearners.length}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedIds(filteredLearners.map(l => l.id || l.admissionNo));
-                      } else {
-                        setSelectedIds([]);
-                      }
-                    }}
-                  />
-                </th>
-                <th className="p-3">ADMISSION NO.</th>
-                <th className="p-3">ASSESSMENT NO. / BIRTH CERTIFICATE NO.</th>
-                <th className="p-3">FULL NAME</th>
-                <th className="p-3">GRADE & STREAM</th>
-                <th className="py-4 px-6">GENDER</th>
-                <th className="py-4 px-6">DOB</th>
-                <th className="py-4 px-6">PARENT / GUARDIAN</th>
-                <th className="py-4 px-6">PHONE</th>
+              <tr className="bg-slate-50/80 text-slate-400 uppercase tracking-wider text-[11px] font-black border-b border-slate-100">
+                <th className="py-4 px-6">ADMISSION NO.</th>
+                <th className="py-4 px-6">ASSESSMENT NO.</th>
+                <th className="py-4 px-6">FULL NAME</th>
+                <th className="py-4 px-6">GRADE & STREAM</th>
                 <th className="py-4 px-6 text-right">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-20 text-center text-slate-400 font-medium">
-                    No learner records found. Click <span className="text-indigo-600 font-bold">+ Register New Learner</span> above to register a new student.
+                  <td colSpan={5} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-3 max-w-sm mx-auto">
+                      <div className="p-4 bg-slate-50 rounded-full text-slate-400">
+                        <Users size={32} />
+                      </div>
+                      <h3 className="text-base font-bold text-slate-800">No learners found</h3>
+                      <p className="text-xs text-slate-500">
+                        {searchQuery || gradeFilter !== 'ALL'
+                          ? 'No learners match your search criteria.'
+                          : 'Get started by registering a new learner or transferring one in.'}
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filteredLearners.map((learner, idx) => (
-                  <tr key={learner.id || learner.admissionNo || idx} className="hover:bg-slate-50/85 transition-colors">
-                    <td className="p-3 w-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(learner.id || learner.admissionNo)}
-                        onChange={(e) => {
-                          const id = learner.id || learner.admissionNo;
-                          setSelectedIds(prev =>
-                            e.target.checked ? [...prev, id] : prev.filter(item => item !== id)
-                          );
-                        }}
-                      />
-                    </td>
-                    <td className="py-4 px-6 font-mono font-bold text-xs text-indigo-600">
-                      {learner.admissionNo || '—'}
-                    </td>
-                    <td className="py-4 px-6 font-mono text-xs text-slate-700 font-semibold">
-                      {learner.assessmentNo || '—'}
-                    </td>
-                    <td className="py-4 px-6 font-bold text-slate-900">
-                      {learner.fullName || learner.name || learner.studentName || '—'}
-                    </td>
-                    <td className="py-4 px-6 text-sm text-slate-600 font-medium">
-                      {learner.grade || learner.gradeLevel || '—'} {learner.stream ? `(${learner.stream})` : ''}
-                    </td>
-                    <td className="py-4 px-6 text-sm text-slate-600">
-                      {learner.gender || learner.sex || '—'}
-                    </td>
-                    <td className="py-4 px-6 text-sm text-slate-600">
-                      {learner.dob || learner.dateOfBirth || '—'}
-                    </td>
-                    <td className="py-4 px-6 text-sm text-slate-600">
-                      {learner.guardianName || learner.parentName || learner.guardian || '—'}
-                    </td>
-                    <td className="py-4 px-6 text-sm text-slate-600 font-mono">
-                      {learner.guardianPhone || learner.phone || learner.phoneNumber || '—'}
-                    </td>
-                    <td className="py-4 px-6 text-right flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const lookupKey = learner.id || learner.admissionNumber || learner.admissionNo || learner.assessmentNo || learner.birthCertificateNo;
-                          navigate(`/students/${encodeURIComponent(lookupKey)}`);
-                        }}
-                        className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-xl"
-                        title="View Profile"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => requestDelete(learner)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl"
-                        title="Delete Learner"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                filteredLearners.map((learner, idx) => {
+                  const fullName = learner.name || learner.fullName || (learner.firstName && learner.lastName ? `${learner.firstName} ${learner.lastName}` : (learner.firstName || 'Unnamed Learner'));
+                  const admNo = learner.admissionNumber || learner.admissionNo || learner.admNo || '—';
+                  const assessmentNo = learner.assessmentNumber || learner.assessmentNo || learner.assessment || learner.birthCertificateNo || '—';
+                  const rawGrade = String(learner.grade || '').trim();
+                  const gradeStream = rawGrade
+                    ? (rawGrade.toLowerCase().startsWith('grade') ? `${rawGrade} • ${learner.stream || 'North'}` : `Grade ${rawGrade} • ${learner.stream || 'North'}`)
+                    : (learner.stream || '—');
+                  const lookupKey = learner.id || admNo || assessmentNo;
+
+                  return (
+                    <tr key={learner.id || admNo || idx} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-4 px-6 font-mono font-bold text-slate-900 text-xs">
+                        {admNo}
+                      </td>
+                      <td className="py-4 px-6 font-mono font-medium text-slate-600 text-xs">
+                        {assessmentNo}
+                      </td>
+                      <td className="py-4 px-6 font-bold text-slate-900">
+                        {fullName}
+                      </td>
+                      <td className="py-4 px-6">
+                        <Badge variant="outline" className="font-bold text-[11px] bg-slate-50 border-slate-200 text-slate-700 rounded-lg px-2.5 py-0.5">
+                          {gradeStream}
+                        </Badge>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/students/${encodeURIComponent(lookupKey)}`)}
+                            className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-xl"
+                            title="View Profile"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => requestDelete(learner)}
+                            className="h-8 w-8 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl"
+                            title="Remove Learner"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Add Learner Modal */}
-      <AddLearnerModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onLearnerAdded={handleLearnerAdded}
-      />
-
-      {/* Admin PIN Verification Modal for Deletion */}
-      <AdminPinModal
-        open={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onSuccess={handleVerifyAuth}
-        title="Admin Authorization Required"
-        description="Enter admin PIN to confirm deletion of this learner record."
-      />
+      </Card>
     </div>
   );
 }
