@@ -471,29 +471,25 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     async function getAssessmentNumber() {
       if (!student) return;
 
-      const adm = String((student as any)?.admission_no || (student as any)?.admissionNumber || '').trim();
-
-      // If admission number is MUN-002-2020, use B003427929 or B003204655
-      if (adm === 'MUN-002-2020') {
-        setAssessmentNo('B003427929');
-        return;
-      }
+      const adm = String((student as any)?.admission_no || (student as any)?.admissionNumber || (student as any)?.admNo || '').trim();
 
       try {
-        const val = (student as any)?.assessment_no || (student as any)?.assessmentNo;
+        const val = (student as any)?.assessment_no || (student as any)?.assessmentNo || (student as any)?.assessment || (student as any)?.birthCertificateNo;
         if (val && !String(val).startsWith('MUN')) {
           setAssessmentNo(val);
+        } else if (adm && !adm.startsWith('MUN')) {
+          setAssessmentNo(adm);
         } else {
-          setAssessmentNo('B' + Math.floor(10000000 + Math.random() * 90000000));
+          setAssessmentNo(adm || 'B' + Math.floor(10000000 + Math.random() * 90000000));
         }
       } catch (err) {
-        if (isMounted) setAssessmentNo('B003427929');
+        if (isMounted) setAssessmentNo('N/A');
       }
     }
 
     getAssessmentNumber();
     return () => { isMounted = false; };
-  }, [student?.id, (student as any)?.admission_no, (student as any)?.admissionNumber]);
+  }, [student?.id, (student as any)?.admission_no, (student as any)?.admissionNumber, (student as any)?.assessmentNo, (student as any)?.birthCertificateNo]);
 
   const handleExecuteTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -508,7 +504,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     setCertificateNumber(certNum);
     const learnerName = student?.name || '';
     const admissionNo = (student as any)?.admission_no || (student as any)?.admissionNo || (student as any)?.admNo || 'N/A';
-    const assessmentNoValue = assessmentNo && !assessmentNo.startsWith('MUN') ? assessmentNo : 'B003427929';
+    const assessmentNoValue = assessmentNo && assessmentNo !== 'Loading...' ? assessmentNo : ((student as any)?.birthCertificateNo || (student as any)?.assessment || admissionNo);
     const grade = student?.grade || 'N/A';
     const stream = student?.stream || 'N/A';
     const exitDate = transferData.dateOfExit ? new Date(transferData.dateOfExit).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
