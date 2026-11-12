@@ -64,30 +64,6 @@ export default function LearnersDirectory() {
   const [isTransferInModalOpen, setIsTransferInModalOpen] = useState(false);
   const [editingLearner, setEditingLearner] = useState<Learner | null>(null);
 
-  // Delete state & Admin Password modal state
-  const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([]);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [adminPasswordInput, setAdminPasswordInput] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-
-  const getActiveAdminPassword = () => {
-    try {
-      const p1 = localStorage.getItem('munyaka_admin_password');
-      if (p1) return p1;
-      const p2 = localStorage.getItem('adminPassword');
-      if (p2) return p2;
-      const settingsRaw = localStorage.getItem('munyaka_security_settings') || localStorage.getItem('security_auth_settings');
-      if (settingsRaw) {
-        const settings = JSON.parse(settingsRaw);
-        if (settings.deleteAdminPassword) return settings.deleteAdminPassword;
-        if (settings.adminPassword) return settings.adminPassword;
-      }
-    } catch (e) {
-      // ignore
-    }
-    return 'admin123';
-  };
-
   // Sync with storage events & fallback keys
   useEffect(() => {
     const loadLearners = () => {
@@ -174,36 +150,21 @@ export default function LearnersDirectory() {
 
   // Delete learner
   const handleDelete = (id: string) => {
-    setDeleteTargetIds([id]);
-    setAdminPasswordInput('');
-    setPasswordError('');
-    setShowPasswordModal(true);
+    if (window.confirm("Are you sure you want to delete this learner record?")) {
+      const updated = learners.filter(l => l.id !== id);
+      persistLearners(updated);
+      setSelectedIds(prev => prev.filter(i => i !== id));
+    }
   };
 
   // Bulk delete
   const handleBulkDelete = () => {
     if (selectedIds.length === 0) return;
-    setDeleteTargetIds(selectedIds);
-    setAdminPasswordInput('');
-    setPasswordError('');
-    setShowPasswordModal(true);
-  };
-
-  const handleConfirmDelete = () => {
-    const adminPassword = getActiveAdminPassword();
-    if (adminPasswordInput !== adminPassword) {
-      setPasswordError("Incorrect admin password");
-      return;
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} selected learner(s)?`)) {
+      const updated = learners.filter(l => !selectedIds.includes(l.id));
+      persistLearners(updated);
+      setSelectedIds([]);
     }
-
-    const updated = learners.filter(l => !deleteTargetIds.includes(l.id));
-    persistLearners(updated);
-    setSelectedIds(prev => prev.filter(id => !deleteTargetIds.includes(id)));
-    setShowPasswordModal(false);
-    setDeleteTargetIds([]);
-    setAdminPasswordInput('');
-    setPasswordError('');
-    showSuccess(`Successfully deleted ${deleteTargetIds.length} learner record(s).`);
   };
 
   // Navigate to Profile View
