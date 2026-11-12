@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles, Hash } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { getLearners, addPendingSyncItem } from '@/utils/storage';
-import { generateCohortAdmissionNumber } from '@/utils/admissionUtils';
+import { generateUniqueCohortAdmissionNumber, generateCohortAdmissionNumber } from '@/utils/admissionUtils';
 import { Learner } from '@/types/learners';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { useLearners } from '@/context/LearnerContext';
@@ -44,11 +44,15 @@ export default function AddLearnerModal({
 }: AddLearnerModalProps) {
   const { addLearner: contextAddLearner } = useLearners();
   const [existingLearners, setExistingLearners] = useState<any[]>([]);
+  const [randomCode, setRandomCode] = useState<string>('');
 
   useEffect(() => {
     if (isOpen) {
       const data = getLearners();
-      setExistingLearners(Array.isArray(data) ? data : []);
+      const learnersArr = Array.isArray(data) ? data : [];
+      setExistingLearners(learnersArr);
+      const res = generateUniqueCohortAdmissionNumber('Grade 6', learnersArr);
+      setRandomCode(res.randomCode);
     }
   }, [isOpen]);
 
@@ -67,16 +71,16 @@ export default function AddLearnerModal({
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && randomCode) {
       const existing = getLearners();
-      const freshAdmNo = generateCohortAdmissionNumber(formData.grade, existing);
+      const res = generateUniqueCohortAdmissionNumber(formData.grade, existing, randomCode);
       setFormData(prev => ({
         ...prev,
-        admissionNo: freshAdmNo,
+        admissionNo: res.admissionNumber,
         guardianPhone: prev.guardianPhone && prev.guardianPhone !== '' ? prev.guardianPhone : '+254'
       }));
     }
-  }, [isOpen, formData.grade]);
+  }, [isOpen, formData.grade, randomCode]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -88,10 +92,18 @@ export default function AddLearnerModal({
       const updated = { ...prev, [field]: value };
       if (field === 'grade') {
         const existing = getLearners();
-        updated.admissionNo = generateCohortAdmissionNumber(value, existing);
+        const res = generateUniqueCohortAdmissionNumber(value, existing, randomCode);
+        updated.admissionNo = res.admissionNumber;
       }
       return updated;
     });
+  };
+
+  const handleRegenerateCode = () => {
+    const existing = getLearners();
+    const res = generateUniqueCohortAdmissionNumber(formData.grade, existing);
+    setRandomCode(res.randomCode);
+    setFormData(prev => ({ ...prev, admissionNumber: res.admissionNumber }));
   };
 
   const handleSaveLearner = async (e: React.FormEvent) => {
@@ -194,15 +206,30 @@ export default function AddLearnerModal({
 
         <div className="space-y-2">
           <Label htmlFor="admissionNo">Admission No. (Auto-generated)</Label>
-          <Input
-            id="admissionNo"
-            name="admissionNo"
-            placeholder="Auto-generated"
-            value={formData.admissionNo}
-            onChange={handleChange}
-            disabled
-            className="bg-slate-50 font-mono text-xs"
-          />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input
+                id="admissionNo"
+                name="admissionNo"
+                placeholder="Auto-generated"
+                value={formData.admissionNo}
+                onChange={handleChange}
+                className="pl-9 bg-slate-50 font-mono text-xs uppercase font-bold text-indigo-700"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleRegenerateCode}
+              className="h-10 px-3 font-bold text-xs gap-1.5"
+              title="Regenerate 4-character code"
+            >
+              <Sparkles size={14} />
+              Regenerate
+            </Button>
+          </div>
+          <p className="text-[10px] text-slate-400 font-medium">Format: MUN-[4-Char]-[CohortYear]. Updates automatically when Grade changes.</p>
         </div>
 
         <div className="space-y-2">
@@ -258,7 +285,7 @@ export default function AddLearnerModal({
             <Label htmlFor="gender">Gender *</Label>
             <Select
               value={formData.gender}
-              onValueChange={(val) => handleSelectChange('gender', val)}
+              onValueChange={(val) => setFormData(prev => ({ ...prev, gender: val }))}
             >
               <SelectTrigger id="gender">
                 <SelectValue placeholder="Select Gender" />
@@ -271,13 +298,14 @@ export default function AddLearnerModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dob">Date of Birth</Label>
+            <Label htmlFor="dob">Date of Birth *</Label>
             <Input
               id="dob"
               name="dob"
-              placeholder="e.g. 12 Dec 2013"
+              type="date"
               value={formData.dob}
               onChange={handleChange}
+              required
             />
           </div>
         </div>
@@ -288,7 +316,7 @@ export default function AddLearnerModal({
             <Input
               id="guardianName"
               name="guardianName"
-              placeholder="e.g. Mary Kamau"
+              placeholder="e.g. Mary Kiprop"
               value={formData.guardianName}
               onChange={handleChange}
               required
@@ -296,11 +324,10 @@ export default function AddLearnerModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="guardianPhone">Guardian Phone (+254...) *</Label>
+            <Label htmlFor="guardianPhone">Parent Phone (+254...) *</Label>
             <Input
               id="guardianPhone"
               name="guardianPhone"
-              type="tel"
               placeholder="+254712345678"
               value={formData.guardianPhone}
               onChange={handleChange}
@@ -309,7 +336,7 @@ export default function AddLearnerModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
           <Button
             type="button"
             variant="outline"
@@ -320,11 +347,11 @@ export default function AddLearnerModal({
           </Button>
           <Button
             type="submit"
-            className="bg-gray-900 text-white hover:bg-gray-800"
             disabled={isSaving}
+            className="bg-teal-600 hover:bg-teal-700 text-white font-bold gap-2"
           >
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Register Student
+            {isSaving && <Loader2 className="animate-spin" size={16} />}
+            {isSaving ? 'Registering...' : 'Register Learner'}
           </Button>
         </div>
       </form>

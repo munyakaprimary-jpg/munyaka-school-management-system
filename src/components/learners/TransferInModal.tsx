@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { notifyDataChanged } from '@/hooks/useDashboardData';
-import { generateCohortAdmissionNumber } from '../../utils/admissionUtils';
+import { generateUniqueCohortAdmissionNumber } from '../../utils/admissionUtils';
 import {
   Select,
   SelectContent,
@@ -69,13 +69,6 @@ const REASON_PRESETS = [
   'Other',
 ];
 
-const generateUniqueAdmissionNo = (
-  grade: string,
-  existingLearners: Learner[],
-  enrollmentYear: number
-): string => {
-  return generateCohortAdmissionNumber(grade, existingLearners);
-};
 
 const todayIso = (): string => new Date().toISOString().split('T')[0];
 
@@ -131,15 +124,19 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
 
   const currentYear = new Date().getFullYear();
   
+  const [stableCode, setStableCode] = useState<string>('');
+
   const buildInitialState = (): FormState => {
     const existingLearners = getExistingLearners();
     const defaultGrade = gradesConfig.grades[0] ?? 'Grade 1';
+    const res = generateUniqueCohortAdmissionNumber(defaultGrade, existingLearners);
+    setStableCode(res.randomCode);
     return {
       fullName: '',
       gender: 'Male',
       dob: '',
       birthCertificateNo: '',
-      admissionNumber: generateUniqueAdmissionNo(defaultGrade, existingLearners, currentYear),
+      admissionNumber: res.admissionNumber,
       assessmentNo: '',
       nemisUpi: '',
       previousSchool: '',
@@ -181,12 +178,12 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
   useEffect(() => {
     const grade = form.grade || gradesConfig.grades[0] || 'Grade 1';
     const existingLearners = getExistingLearners() || [];
-    const selectedYear = form.dateAdmitted
-      ? new Date(form.dateAdmitted).getFullYear()
-      : new Date().getFullYear();
-    const newAdmNo = generateUniqueAdmissionNo(grade, existingLearners, selectedYear);
-    setForm((prev) => ({ ...prev, admissionNumber: newAdmNo }));
-  }, [form.grade]);
+    const res = generateUniqueCohortAdmissionNumber(grade, existingLearners, stableCode);
+    if (!stableCode && res.randomCode) {
+      setStableCode(res.randomCode);
+    }
+    setForm((prev) => ({ ...prev, admissionNumber: res.admissionNumber }));
+  }, [form.grade, stableCode]);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -194,17 +191,12 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
 
   const handleRegenerateAdmNo = () => {
     const existingLearners = getExistingLearners() || [];
-    const selectedYear = form.dateAdmitted
-      ? new Date(form.dateAdmitted).getFullYear()
-      : new Date().getFullYear();
-    
-    const newAdmNo = generateUniqueAdmissionNo(
+    const res = generateUniqueCohortAdmissionNumber(
       form.grade || 'Grade 1',
-      existingLearners,
-      selectedYear
+      existingLearners
     );
-
-    setForm((prev) => ({ ...prev, admissionNumber: newAdmNo }));
+    setStableCode(res.randomCode);
+    setForm((prev) => ({ ...prev, admissionNumber: res.admissionNumber }));
   };
 
   const handleClose = () => {
