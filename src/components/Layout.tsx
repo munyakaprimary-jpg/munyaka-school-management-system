@@ -69,82 +69,55 @@ import { useLanSync } from '@/hooks/useLanSync';
 
 // ── Functional Sync Button Component as requested ─────────────────────────────
 export const SyncButton: React.FC = () => {
-const [pendingCount, setPendingCount] = useState<number>(() => {
-  try {
-    const data = localStorage.getItem('munyaka_learners');
-    if (data) {
-      const parsed = JSON.parse(data);
-      if (Array.isArray(parsed)) {
-        return parsed.filter((l: any) => l.synced === false).length;
-      }
-    }
-  } catch (e) {}
-  return 0;
-});
-const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [pendingCount, setPendingCount] = useState<number>(0);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncSuccess, setSyncSuccess] = useState<boolean>(false);
+  const [showSyncModal, setShowSyncModal] = useState<boolean>(false);
+  const [pendingItemsList, setPendingItemsList] = useState<Array<{ id: string; title: string; type: string; time: string; status: string }>>([]);
 
-useEffect(() => {
-  const updatePending = () => {
-    try {
-      const data = localStorage.getItem('munyaka_learners');
-      if (data) {
-        const parsed = JSON.parse(data);
-        if (Array.isArray(parsed)) {
-          const count = parsed.filter((l: any) => l.synced === false).length;
-          setPendingCount(count);
-          return;
+  // Check for pending local items on mount or storage changes
+  useEffect(() => {
+    const checkPendingItems = () => {
+      try {
+        const dynamicItems: Array<{ id: string; title: string; type: string; time: string; status: string }> = [];
+        
+        // 1. Check actual learners in munyaka_learners_directory without firestore sync confirmation token
+        const rawLearners = localStorage.getItem('munyaka_learners_directory');
+        if (rawLearners) {
+          const learners = JSON.parse(rawLearners);
+          if (Array.isArray(learners)) {
+            const unsyncedLearners = learners.filter((l: any) => !l.syncedToFirestore && !l.firestoreSynced);
+            if (unsyncedLearners.length > 0) {
+              dynamicItems.push({
+                id: 'learners-dir',
+                title: `${unsyncedLearners.length} Unsynced Learner Directory Record(s)`,
+                type: 'Learners Directory',
+                time: 'Just now',
+                status: 'Pending Upload'
+              });
+            } else if (learners.length > 0 && dynamicItems.length === 0) {
+              // Always show at least general local records if any exist
+              dynamicItems.push({
+                id: 'learners-general',
+                title: `${learners.length} Registered Learners Directory Loaded`,
+                type: 'Learners Directory',
+                time: 'Active',
+                status: 'Ready for Sync'
+              });
+            }
+          }
         }
-      }
-    } catch (e) {}
-    setPendingCount(0);
-  };
 
-  updatePending();
-  window.addEventListener('storage', updatePending);
-  window.addEventListener('munyaka_learners_updated', updatePending);
-  window.addEventListener('munyaka-data-updated', updatePending);
-
-  return () => {
-    window.removeEventListener('storage', updatePending);
-    window.removeEventListener('munyaka_learners_updated', updatePending);
-    window.removeEventListener('munyaka-data-updated', updatePending);
-  };
-}, []);
-
-const handleSync = async () => {
-  setIsSyncing(true);
-  try {
-    const data = localStorage.getItem('munyaka_learners');
-    if (data) {
-      const parsed = JSON.parse(data);
-      if (Array.isArray(parsed)) {
-        const syncedList = parsed.map((l: any) => ({ ...l, synced: true }));
-        localStorage.setItem('munyaka_learners', JSON.stringify(syncedList));
-        localStorage.setItem('munyaka_learners_directory', JSON.stringify(syncedList));
-      }
-    }
-    await new Promise(r => setTimeout(r, 600));
-    setPendingCount(0);
-    window.dispatchEvent(new Event('munyaka_learners_updated'));
-    window.dispatchEvent(new Event('munyaka-data-updated'));
-  } catch (e) {
-    console.error("Sync failed", e);
-  } finally {
-    setIsSyncing(false);
-  }
-};
-
-return (
-  <button
-    onClick={handleSync}
-    disabled={isSyncing}
-    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 rounded-xl text-xs font-semibold transition-all shadow-sm"
-  >
-    <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-    <span>Sync ({pendingCount})</span>
-  </button>
-);
-};
+        // 2. Check sync queue in localStorage or database if available
+        const pendingQueue = JSON.parse(localStorage.getItem('munyaka_pending_sync') || '[]');
+        if (pendingQueue.length > 0) {
+          pendingQueue.forEach((item: any, idx: number) => {
+            dynamicItems.push({
+              id: item.id || `queue-${idx}`,
+              title: item.title || item.name || 'Pending Local Record',
+              type: item.type || 'Queue Item',
+              time: item.time || 'Recent',
+              status: item.status || 'Pending Queue'
             });
           });
         }
