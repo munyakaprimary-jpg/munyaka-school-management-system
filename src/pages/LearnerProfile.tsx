@@ -110,8 +110,14 @@ const StudentProfile = () => {
         );
       });
 
-      if (found) return found;
-      if (combined.length > 0) return combined[0];
+      const normalizeName = (learner: any) => ({
+        ...learner,
+        name: learner.name ?? learner.fullName ?? learner.studentName ?? '',
+        fullName: learner.fullName ?? learner.name ?? learner.studentName ?? '',
+      });
+
+      if (found) return normalizeName(found);
+      if (combined.length > 0) return normalizeName(combined[0]);
 
       // Default sample learner fallback if storage is completely empty
       return {
