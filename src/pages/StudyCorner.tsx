@@ -980,8 +980,8 @@ export default function StudyCorner() {
         { question: 'What is the LCM of 12, 18, and 24?', options: ['36', '48', '72', '96'], answer: '72' }
       ],
       category: 'Mathematics',
-      difficulty: 'Intermediate',
-      readTimeMin: 10
+            difficulty: 'Medium',
+            readTimeMin: 10
     },
     {
       id: 'cbc-gen-cre-1',
@@ -1002,8 +1002,8 @@ export default function StudyCorner() {
         { question: 'Give one way students can practice environmental stewardship in school.', options: ['Planting trees', 'Littering', 'Wasting water', 'Burning plastics'], answer: 'Planting trees' }
       ],
       category: 'Christian Religious Education',
-      difficulty: 'Beginner',
-      readTimeMin: 8
+            difficulty: 'Easy',
+            readTimeMin: 8
     },
     {
       id: 'cbc-gen-eng-1',
@@ -1023,8 +1023,8 @@ export default function StudyCorner() {
         { question: 'Identify the verb in: "The clever learners answered all questions correctly."', options: ['clever', 'answered', 'questions', 'correctly'], answer: 'answered' }
       ],
       category: 'English',
-      difficulty: 'Intermediate',
-      readTimeMin: 7
+            difficulty: 'Medium',
+            readTimeMin: 7
     },
     ...[],
     ...customItems

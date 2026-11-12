@@ -16,7 +16,7 @@ export interface Att {
 export interface CI {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   strand?: string;
   subStrand?: string;
   topic?: string;
@@ -33,6 +33,11 @@ export interface CI {
   revisionQuestions?: RevisionQuestion[];
   tags?: string[];
   category?: string;
+  subject?: string;
+  fullNotes?: string[];
+  keyTerms?: string[];
+  practiceQuestions?: { question: string; options: string[]; answer: string }[];
+  readTimeMin?: number;
 }
 
 export type ContentItem = CI;

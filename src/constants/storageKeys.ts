@@ -1,6 +1,7 @@
 export const STORAGE_KEYS = {
   LEARNERS: 'munyaka_learners_directory',
-  STAFF: 'munyaka_staff_registry'
+  STAFF: 'munyaka_staff_registry',
+  MARKS: 'munyaka_marks'
 };
 
 export const clearLegacyLearnerStorage = () => {
