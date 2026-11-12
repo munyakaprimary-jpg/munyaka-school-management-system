@@ -470,6 +470,52 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
     location: learner?.location || 'Eldoret'
   });
 
+  const [availableGrades, setAvailableGrades] = useState<string[]>([
+    'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'
+  ]);
+  const [gradeStreamsMap, setGradeStreamsMap] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('munyaka_grades_streams') || localStorage.getItem('munyaka_grades');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const gradesSet: string[] = [];
+          const map: Record<string, string[]> = {};
+          parsed.forEach((item: any) => {
+            const gName = item.name || item.grade || item.title;
+            if (gName) {
+              gradesSet.push(gName);
+              const streamsArr = item.streams || item.streamList || item.streamNames || ['East', 'West', 'North', 'South'];
+              map[gName] = Array.isArray(streamsArr) ? streamsArr.map((s: any) => typeof s === 'string' ? s : (s.name || s.stream)) : ['East', 'West'];
+            }
+          });
+          if (gradesSet.length > 0) {
+            setAvailableGrades(gradesSet);
+            setGradeStreamsMap(map);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load grades & streams", e);
+    }
+  }, []);
+
+  const currentStreams = useMemo(() => {
+    const gradeKey = formData.grade || '';
+    if (gradeStreamsMap[gradeKey] && gradeStreamsMap[gradeKey].length > 0) {
+      return gradeStreamsMap[gradeKey];
+    }
+    return ['East', 'West', 'North', 'South', 'Green', 'Blue', 'Red'];
+  }, [formData.grade, gradeStreamsMap]);
+
+  useEffect(() => {
+    if (currentStreams.length > 0 && !currentStreams.includes(formData.stream || '')) {
+      setFormData(prev => ({ ...prev, stream: currentStreams[0] }));
+    }
+  }, [formData.grade, currentStreams]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.fullName?.trim()) {
@@ -478,6 +524,7 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
     }
     onSave({
       ...formData,
+      name: formData.fullName,
       admissionNo: formData.admissionNumber,
       assessmentNo: formData.assessmentNumber
     });
@@ -490,7 +537,7 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">
             {learner ? "Edit Learner Record" : "Register New Learner"}
           </h2>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl"
           >
@@ -540,26 +587,22 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
                 onChange={e => setFormData({ ...formData, grade: e.target.value })}
                 className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
               >
-                <option value="Grade 1">Grade 1</option>
-                <option value="Grade 2">Grade 2</option>
-                <option value="Grade 3">Grade 3</option>
-                <option value="Grade 4">Grade 4</option>
-                <option value="Grade 5">Grade 5</option>
-                <option value="Grade 6">Grade 6</option>
-                <option value="Grade 7">Grade 7</option>
-                <option value="Grade 8">Grade 8</option>
-                <option value="Grade 9">Grade 9</option>
+                {availableGrades.map(g => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
               </select>
             </div>
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Stream</label>
-              <input
-                type="text"
-                placeholder="e.g. East"
+              <select
                 value={formData.stream}
                 onChange={e => setFormData({ ...formData, stream: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
-              />
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
+              >
+                {currentStreams.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Gender</label>
