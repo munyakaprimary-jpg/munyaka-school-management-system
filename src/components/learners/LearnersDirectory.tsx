@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import TransferInModal from './TransferInModal';
 import { showSuccess, showError } from '@/utils/toast';
+import { generateUniqueCohortAdmissionNumber } from '@/utils/admissionUtils';
 
 interface Learner {
   id: string;
