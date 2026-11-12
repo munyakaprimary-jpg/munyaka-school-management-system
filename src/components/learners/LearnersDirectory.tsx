@@ -391,8 +391,7 @@ export default function LearnersDirectory() {
             </span>
             <button
               onClick={handleBulkDelete}
-              type="button"
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-xs rounded-xl shadow-sm transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-medium shadow-sm transition-all"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Delete Selected
