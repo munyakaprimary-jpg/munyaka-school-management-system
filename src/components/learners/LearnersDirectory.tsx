@@ -602,9 +602,9 @@ function LearnerProfileModal({ learner, onClose, onEdit }: { learner: Learner; o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-xl overflow-hidden animate-scaleUp">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-xl flex flex-col max-h-[85vh] overflow-hidden animate-scaleUp">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 p-6 text-white relative">
+        <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 p-6 text-white relative shrink-0">
           <button
             onClick={onClose}
             className="absolute top-5 right-5 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all text-white"
@@ -628,7 +628,7 @@ function LearnerProfileModal({ learner, onClose, onEdit }: { learner: Learner; o
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Admission Number</span>
@@ -693,7 +693,7 @@ function LearnerProfileModal({ learner, onClose, onEdit }: { learner: Learner; o
         </div>
 
         {/* Modal Footer */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 p-4 px-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div className="bg-slate-50 dark:bg-slate-800/60 p-4 px-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
           <span className="text-xs text-slate-400 font-medium">Admission Date: {admissionDate}</span>
           <div className="flex items-center gap-2">
             <button
