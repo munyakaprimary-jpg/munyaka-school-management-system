@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Search, Plus, Eye, Edit, Trash2, Filter, X, Users,
-  Download, Upload, CheckSquare, Square, MoreHorizontal, AlertCircle, ArrowRightLeft
+import { 
+  Search, Plus, Eye, Edit, Trash2, Filter, X, Users, 
+  Download, Upload, CheckSquare, Square, MoreHorizontal, AlertCircle 
 } from 'lucide-react';
-import TransferInModal from './TransferInModal';
 
 interface Learner {
   id: string;
@@ -58,50 +57,7 @@ export default function LearnersDirectory() {
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isTransferInOpen, setIsTransferInOpen] = useState(false);
   const [editingLearner, setEditingLearner] = useState<Learner | null>(null);
-
-  // Handle Export / Download List as CSV
-  const handleDownloadList = () => {
-    try {
-      const recordsToExport = filteredLearners.length > 0 ? filteredLearners : learners;
-      if (recordsToExport.length === 0) {
-        alert("No learner records available to export.");
-        return;
-      }
-
-      const headers = ['Admission Number', 'Assessment Number', 'Full Name', 'Grade', 'Stream', 'Gender', 'Date of Birth', 'Parent/Guardian Name', 'Phone Number'];
-      const csvRows = [headers.join(',')];
-
-      recordsToExport.forEach(l => {
-        const adm = `"${(l.admissionNumber || l.admissionNo || l.admNo || '').replace(/"/g, '""')}"`;
-        const assess = `"${(l.assessmentNumber || l.assessmentNo || l.birthCertNo || '').replace(/"/g, '""')}"`;
-        const name = `"${(l.fullName || l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim().replace(/"/g, '""')}"`;
-        const grade = `"${(l.grade || l.gradeLevel || '').replace(/"/g, '""')}"`;
-        const stream = `"${(l.stream || '').replace(/"/g, '""')}"`;
-        const gender = `"${(l.gender || '').replace(/"/g, '""')}"`;
-        const dob = `"${(l.dob || l.yearOfBirth || '').replace(/"/g, '""')}"`;
-        const parent = `"${(l.parentName || l.guardianName || '').replace(/"/g, '""')}"`;
-        const phone = `"${(l.phoneNumber || l.parentPhone || '').replace(/"/g, '""')}"`;
-
-        csvRows.push([adm, assess, name, grade, stream, gender, dob, parent, phone].join(','));
-      });
-
-      const csvString = csvRows.join('\n');
-      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `munyaka_learners_directory_${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error("Failed to export CSV list", e);
-      alert("Failed to export CSV list. Please try again.");
-    }
-  };
 
   // Sync with storage events & fallback keys
   useEffect(() => {
@@ -236,22 +192,6 @@ export default function LearnersDirectory() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleDownloadList}
-            title="Download List as CSV"
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-xl shadow-sm transition-all text-sm"
-          >
-            <Download className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            Download List
-          </button>
-          <button
-            onClick={() => setIsTransferInOpen(true)}
-            title="Transfer In Learner"
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-xl shadow-sm transition-all text-sm"
-          >
-            <ArrowRightLeft className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            Transfer In Learner
-          </button>
           <button
             onClick={() => {
               setEditingLearner(null);
@@ -538,18 +478,6 @@ export default function LearnersDirectory() {
               persistLearners(updated);
             }
             setIsAddModalOpen(false);
-          }}
-        />
-      )}
-
-      {/* Transfer In Learner Modal */}
-      {isTransferInOpen && (
-        <TransferInModal
-          isOpen={isTransferInOpen}
-          onClose={() => setIsTransferInOpen(false)}
-          onTransferInComplete={(newLearner) => {
-            const fresh = getStoredLearnersList();
-            setLearners(fresh);
           }}
         />
       )}
