@@ -354,12 +354,25 @@ export default function LearnersDirectory() {
                     <td className="py-4 px-6 text-sm text-slate-600 font-mono">
                       {learner.guardianPhone || learner.phone || learner.phoneNumber || '—'}
                     </td>
-                    <td className="py-4 px-6 text-right">
+                    <td className="py-4 px-6 text-right flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const lookupKey = learner.id || learner.admissionNumber || learner.admissionNo || learner.assessmentNo || learner.birthCertificateNo;
+                          navigate(`/students/${encodeURIComponent(lookupKey)}`);
+                        }}
+                        className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-xl"
+                        title="View Profile"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => requestDelete(learner)}
                         className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl"
+                        title="Delete Learner"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
