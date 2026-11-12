@@ -456,24 +456,76 @@ export default function LearnersDirectory() {
 
 // Inline Form Modal for Adding / Editing Learner
 function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | null; onClose: () => void; onSave: (l: Learner) => void }) {
-  const [formData, setFormData] = useState<Learner>({
-    id: learner?.id || `MUN-${Math.floor(1000 + Math.random() * 9000)}-${new Date().getFullYear()}`,
-    admissionNumber: learner?.admissionNumber || learner?.admissionNo || `MUN-G4-${Math.floor(10 + Math.random() * 90)}/${new Date().getFullYear()}`,
-    assessmentNumber: learner?.assessmentNumber || learner?.assessmentNo || `ASSESS-${Math.floor(1000 + Math.random() * 9000)}`,
-    fullName: learner?.fullName || learner?.name || '',
-    grade: learner?.grade || learner?.gradeLevel || 'Grade 4',
-    stream: learner?.stream || 'East',
-    gender: learner?.gender || 'Female',
-    parentName: learner?.parentName || '',
-    phoneNumber: learner?.phoneNumber || '',
-    dob: learner?.dob || '2016-01-01',
-    location: learner?.location || 'Eldoret'
-  });
-
   const [availableGrades, setAvailableGrades] = useState<string[]>([
     'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'
   ]);
   const [gradeStreamsMap, setGradeStreamsMap] = useState<Record<string, string[]>>({});
+
+  // Helper to compute next continuous admission number
+  const computeNextAdmissionNo = (targetGrade: string) => {
+    const currentYear = new Date().getFullYear();
+    try {
+      const stored = localStorage.getItem('munyaka_learners');
+      const allLearners: Learner[] = stored ? JSON.parse(stored) : [];
+      
+      const gradeOrder = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+      const targetIdx = gradeOrder.indexOf(targetGrade);
+      
+      // Collect all numeric sequences from existing learners in target grade or lower grades
+      let maxSeq = 0;
+      let totalCount = 0;
+
+      allLearners.forEach(l => {
+        totalCount++;
+        const g = l.grade || l.gradeLevel || '';
+        const gIdx = gradeOrder.indexOf(g);
+        
+        // If learner is in target grade or a lower grade (or unrecognised but part of store)
+        if (targetIdx === -1 || gIdx === -1 || gIdx <= targetIdx) {
+          const adm = String(l.admissionNumber || l.admissionNo || l.admNo || '');
+          // Parse format like MUN-045/2026 or MUN-G4-045/2026 or MUN-45
+          const match = adm.match(/MUN-(?:G\d+\-)?(\d+)(?:\/\d{4})?/i);
+          if (match && match[1]) {
+            const seq = parseInt(match[1], 10);
+            if (!isNaN(seq) && seq > maxSeq) {
+              maxSeq = seq;
+            }
+          }
+        }
+      });
+
+      const nextSeq = Math.max(maxSeq + 1, totalCount + 1);
+      const padded = String(nextSeq).padStart(3, '0');
+      return `MUN-${padded}/${currentYear}`;
+    } catch (e) {
+      return `MUN-001/${currentYear}`;
+    }
+  };
+
+  const [formData, setFormData] = useState<Learner>(() => {
+    const initialGrade = learner?.grade || learner?.gradeLevel || 'Grade 4';
+    return {
+      id: learner?.id || `MUN-${Math.floor(1000 + Math.random() * 9000)}-${new Date().getFullYear()}`,
+      admissionNumber: learner?.admissionNumber || learner?.admissionNo || (learner ? '' : computeNextAdmissionNo(initialGrade)),
+      assessmentNumber: learner?.assessmentNumber || learner?.assessmentNo || `ASSESS-${Math.floor(1000 + Math.random() * 9000)}`,
+      fullName: learner?.fullName || learner?.name || '',
+      grade: initialGrade,
+      stream: learner?.stream || 'East',
+      gender: learner?.gender || 'Female',
+      parentName: learner?.parentName || '',
+      phoneNumber: learner?.phoneNumber || '',
+      dob: learner?.dob || '2016-01-01',
+      location: learner?.location || 'Eldoret'
+    };
+  });
+
+  // When grade changes for a new learner, auto-update admission number if not edited
+  useEffect(() => {
+    if (!learner) {
+      const newAdm = computeNextAdmissionNo(formData.grade || 'Grade 4');
+      setFormData(prev => ({ ...prev, admissionNumber: newAdm }));
+    }
+  }, [formData.grade, learner]);
 
   useEffect(() => {
     try {
