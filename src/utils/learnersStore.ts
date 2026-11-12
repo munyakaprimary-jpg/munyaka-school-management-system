@@ -1,4 +1,4 @@
-export const LEARNERS_DB_KEY = 'munyaka_learners_v2';
+const LEARNERS_DB_KEY = 'munyaka_learners_v2';
 
 export function getStoredLearners(): any[] {
   if (typeof window === 'undefined') return [];
