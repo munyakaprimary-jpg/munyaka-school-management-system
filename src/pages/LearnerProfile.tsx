@@ -111,46 +111,30 @@ const StudentProfile = () => {
       });
 
       const normalizeName = (learner: any) => ({
-        ...learner,
-        name: learner.name ?? learner.fullName ?? learner.studentName ?? '',
-        fullName: learner.fullName ?? learner.name ?? learner.studentName ?? '',
-      });
-
-      if (found) return normalizeName(found);
-      if (combined.length > 0) return normalizeName(combined[0]);
-
-      // Default sample learner fallback if storage is completely empty
-      return {
-        id: id || 'sample-learner-1',
-        admNo: 'MUN/2026/001',
-        name: 'Eunice Wanjiku',
-        grade: 'Grade 4',
-        stream: 'North',
-        gender: 'Female',
-        guardian: 'Mary Wanjiku',
-        phone: '+254 712 345 678',
-        status: 'Active'
-      };
-    } catch (e) {
-      console.error('[StudentProfile] Error loading learner data:', e);
-      return {
-        id: id || 'sample-learner-1',
-        admNo: 'MUN/2026/001',
-        name: 'Eunice Wanjiku',
-        grade: 'Grade 4',
-        stream: 'North',
-        gender: 'Female',
-        guardian: 'Mary Wanjiku',
-        phone: '+254 712 345 678',
-        status: 'Active'
-      };
-    }
+              ...learner,
+              name: learner.name ?? learner.fullName ?? learner.studentName ?? '',
+              fullName: learner.fullName ?? learner.name ?? learner.studentName ?? '',
+            });
+      
+            if (found) return normalizeName(found);
+            if (combined.length > 0) return normalizeName(combined[0]);
+      
+            // No learner found — return null so the "Learner Not Found" UI renders.
+            return null;
+          } catch (e) {
+            console.error('[StudentProfile] Error loading learner data:', e);
+            return null;
+          }
   }, [id]);
 
   const [showNotFound, setShowNotFound] = useState(false);
-  useEffect(() => {
-    setShowNotFound(false);
-  }, [id, activeLearner]);
+    useEffect(() => {
+      if (!id) {
+        setShowNotFound(false);
+        return;
+      }
+      setShowNotFound(activeLearner === null);
+    }, [id, activeLearner]);
 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
