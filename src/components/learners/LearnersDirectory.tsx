@@ -509,9 +509,9 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
 
       const nextSeq = Math.max(maxSeq + 1, totalCount + 1);
       const padded = String(nextSeq).padStart(3, '0');
-      return `MUN-${padded}/${joiningYear}`;
+      return `MUN-${padded}-${joiningYear}`;
     } catch (e) {
-      return `MUN-001/${joiningYear}`;
+      return `MUN-001-${joiningYear}`;
     }
   };
 
