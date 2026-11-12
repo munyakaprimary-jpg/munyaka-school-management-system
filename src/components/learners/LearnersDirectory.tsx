@@ -332,9 +332,9 @@ export default function LearnersDirectory() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-800/50 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  <th className="py-3.5 px-4 w-12 text-center">
-                    <button 
+                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-800/50 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 px-3 w-10 text-center">
+                    <button
                       onClick={toggleSelectAll}
                       className="text-slate-400 hover:text-indigo-600 transition-colors"
                       aria-label="Select all learners"
@@ -346,17 +346,17 @@ export default function LearnersDirectory() {
                       )}
                     </button>
                   </th>
-                  <th className="py-3.5 px-4 font-semibold">Admission No.</th>
-                  <th className="py-3.5 px-4 font-semibold">Assessment / Birth Cert No.</th>
-                  <th className="py-3.5 px-4 font-semibold">Full Name</th>
-                  <th className="py-3.5 px-4 font-semibold">Grade & Stream</th>
-                  <th className="py-3.5 px-4 font-semibold">Gender</th>
-                  <th className="py-3.5 px-4 font-semibold">DOB / Age</th>
-                  <th className="py-3.5 px-4 font-semibold">Parent / Guardian & Phone</th>
-                  <th className="py-3.5 px-4 font-semibold text-right">Actions</th>
+                  <th className="py-3 px-3 font-semibold">Admission No.</th>
+                  <th className="py-3 px-3 font-semibold">Assessment / Birth Cert No.</th>
+                  <th className="py-3 px-3 font-semibold">Full Name</th>
+                  <th className="py-3 px-3 font-semibold">Grade & Stream</th>
+                  <th className="py-3 px-3 font-semibold">Gender</th>
+                  <th className="py-3 px-3 font-semibold">DOB / Age</th>
+                  <th className="py-3 px-3 font-semibold">Parent / Guardian & Phone</th>
+                  <th className="py-3 px-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                 {filteredLearners.map((learner) => {
                   const isSelected = selectedIds.includes(learner.id);
                   const fullName = learner.fullName || learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`.trim() || 'Unnamed Learner';
@@ -375,7 +375,7 @@ export default function LearnersDirectory() {
                       const curY = new Date().getFullYear();
                       const calcAge = curY - birthYear;
                       if (calcAge >= 0 && calcAge < 30) {
-                        ageDisplay = ` (${calcAge} yrs)`;
+                        ageDisplay = ` (${calcAge}y)`;
                       }
                     }
                   }
@@ -384,12 +384,12 @@ export default function LearnersDirectory() {
                   const phone = learner.phoneNumber || learner.parentPhone || '';
 
                   return (
-                    <tr 
+                    <tr
                       key={learner.id}
                       className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${isSelected ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : ''}`}
                     >
-                      <td className="py-4 px-4 text-center">
-                        <button 
+                      <td className="py-3 px-3 text-center">
+                        <button
                           onClick={() => toggleSelectOne(learner.id)}
                           className="text-slate-400 hover:text-indigo-600 transition-colors"
                           aria-label={`Select ${fullName}`}
@@ -401,30 +401,30 @@ export default function LearnersDirectory() {
                           )}
                         </button>
                       </td>
-                      <td className="py-4 px-4 font-mono font-bold text-slate-700 dark:text-slate-300">
+                      <td className="py-3 px-3 font-mono font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap text-xs">
                         {admissionNo}
                       </td>
-                      <td className="py-4 px-4 font-mono text-xs text-slate-500 dark:text-slate-400">
+                      <td className="py-3 px-3 font-mono text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         {assessmentNo}
                       </td>
-                      <td className="py-4 px-4 font-bold text-slate-900 dark:text-white">
+                      <td className="py-3 px-3 font-bold text-slate-900 dark:text-white whitespace-nowrap text-xs">
                         {fullName}
                       </td>
-                      <td className="py-4 px-4 text-slate-600 dark:text-slate-300 font-medium">
+                      <td className="py-3 px-3 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap text-xs">
                         {grade} {stream}
                       </td>
-                      <td className="py-4 px-4 text-slate-600 dark:text-slate-300 capitalize">
+                      <td className="py-3 px-3 text-slate-600 dark:text-slate-300 capitalize whitespace-nowrap text-xs">
                         {gender}
                       </td>
-                      <td className="py-4 px-4 text-slate-600 dark:text-slate-300 font-mono text-xs">
+                      <td className="py-3 px-3 text-slate-600 dark:text-slate-300 font-mono text-xs whitespace-nowrap">
                         {dobVal ? `${dobVal}${ageDisplay}` : '—'}
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="text-slate-800 dark:text-slate-200 font-medium">{parentName}</div>
-                        {phone && <div className="text-xs text-slate-400 font-mono mt-0.5">{phone}</div>}
+                      <td className="py-3 px-3 whitespace-nowrap text-xs">
+                        <span className="text-slate-800 dark:text-slate-200 font-medium">{parentName}</span>
+                        {phone && <span className="text-slate-400 font-mono ml-1.5">({phone})</span>}
                       </td>
-                      <td className="py-4 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="py-3 px-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => handleViewProfile(learner)}
                             title="View Profile"
