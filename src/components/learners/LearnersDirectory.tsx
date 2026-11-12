@@ -238,7 +238,7 @@ export default function LearnersDirectory() {
             className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-semibold rounded-xl transition-all text-sm shadow-sm"
             title="Download/Export Filtered Learner List as CSV"
           >
-            <Download className="w-4 h-4 text-slate-500" />
+            <FileDown className="w-4 h-4 text-slate-500" />
             Download List
           </button>
           <button
