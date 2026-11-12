@@ -1,25 +1,4 @@
-const LEARNERS_DB_KEY = 'munyaka_learners_v2';
-
-export function getStoredLearners(): any[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(LEARNERS_DB_KEY) || localStorage.getItem('munyaka_learners') || localStorage.getItem('school_learners_data');
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveStoredLearners(learners: any[]) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(LEARNERS_DB_KEY, JSON.stringify(learners));
-  } catch {
-    // ignore
-  }
-}
+import { getStoredLearners, saveStoredLearners } from '@/utils/learnersStore';
 
 export function removeStoredLearner(id: string) {
   const learners = getStoredLearners();
@@ -31,7 +10,8 @@ export function removeStoredLearner(id: string) {
   );
   saveStoredLearners(filtered);
 
-  for (const key of ['munyaka_learners_v2', 'munyaka_learners', 'school_learners_data']) {
+  // Also clean munyaka_learners / munyaka_learners_v2 if present
+  for (const key of ['munyaka_learners_v2', 'munyaka_learners']) {
     try {
       const raw = localStorage.getItem(key);
       if (raw) {
