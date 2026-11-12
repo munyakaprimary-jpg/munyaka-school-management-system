@@ -169,11 +169,8 @@ export default function LearnersDirectory() {
       localStorage.setItem('munyaka_active_learner', JSON.stringify(learner));
     } catch (e) {}
 
-    // Dispatch custom navigation event or change hash/state if router is used
-    window.dispatchEvent(new CustomEvent('navigate_to_profile', { detail: { learnerId: learner.id, learner } }));
-    
-    // Also try setting URL hash if router listens
-    window.location.hash = `#profile-${learner.id}`;
+    // Navigate directly to dedicated Learner Profile page
+    window.location.hash = `/learners/${learner.id}`;
   };
 
   return (

@@ -82,16 +82,34 @@ const StudentProfile = () => {
 
   const activeLearner = useMemo(() => {
     try {
-      const stored = getStoredLearners() || [];
-      const rawDb = localStorage.getItem('munyaka_central_db');
-      const db = rawDb ? JSON.parse(rawDb) : {};
-      const centralStudents = Array.isArray(db?.students) ? db.students : [];
-      const munyakaStudents = safeRead<any[]>('munyaka_learners_v2', []) || safeRead<any[]>('munyaka_learners', []);
-
-      const combined = [...stored, ...centralStudents, ...munyakaStudents];
       const decodedId = id ? decodeURIComponent(id) : '';
+      
+      // Read directly from munyaka_learners and munyaka_learners_directory in localStorage
+      const keys = ['munyaka_learners', 'munyaka_learners_directory', 'learners', 'munyaka_students', 'munyaka_master_learner_list'];
+      let allLearners: any[] = [];
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              allLearners = [...allLearners, ...parsed];
+            }
+          } catch {}
+        }
+      }
 
-      const found = combined.find((s: any) => {
+      // Also check munyaka_central_db students/learners
+      try {
+        const rawDb = localStorage.getItem('munyaka_central_db');
+        if (rawDb) {
+          const db = JSON.parse(rawDb);
+          if (Array.isArray(db?.learners)) allLearners = [...allLearners, ...db.learners];
+          if (Array.isArray(db?.students)) allLearners = [...allLearners, ...db.students];
+        }
+      } catch {}
+
+      const found = allLearners.find((s: any) => {
         if (!s) return false;
         return (
           String(s.id ?? '') === String(id ?? '') ||
@@ -106,25 +124,43 @@ const StudentProfile = () => {
           String(s.assessmentNo ?? '') === String(decodedId) ||
           String(s.assessment ?? '') === String(id ?? '') ||
           String(s.assessment ?? '') === String(decodedId) ||
-          String(s.name ?? '').toLowerCase() === String(decodedId).toLowerCase()
+          String(s.name ?? '').toLowerCase() === String(decodedId).toLowerCase() ||
+          String(s.fullName ?? '').toLowerCase() === String(decodedId).toLowerCase()
         );
       });
 
       const normalizeName = (learner: any) => ({
-              ...learner,
-              name: learner.name ?? learner.fullName ?? learner.studentName ?? '',
-              fullName: learner.fullName ?? learner.name ?? learner.studentName ?? '',
-            });
-      
-            if (found) return normalizeName(found);
-            if (combined.length > 0) return normalizeName(combined[0]);
-      
-            // No learner found — return null so the "Learner Not Found" UI renders.
-            return null;
-          } catch (e) {
-            console.error('[StudentProfile] Error loading learner data:', e);
-            return null;
+        ...learner,
+        id: learner.id || learner.admissionNumber || learner.admissionNo || learner.admNo || decodedId,
+        name: learner.name ?? learner.fullName ?? learner.studentName ?? 'Unnamed Learner',
+        fullName: learner.fullName ?? learner.name ?? learner.studentName ?? 'Unnamed Learner',
+        admNo: learner.admNo ?? learner.admissionNo ?? learner.admissionNumber ?? '—',
+        grade: learner.grade ?? learner.gradeLevel ?? '—',
+        stream: learner.stream ?? '',
+        gender: learner.gender ?? 'Female',
+        guardian: learner.parentName ?? learner.guardianName ?? learner.guardian ?? '—',
+        phone: learner.phoneNumber ?? learner.parentPhone ?? learner.phone ?? '—',
+        dob: learner.dob ?? learner.yearOfBirth ?? '',
+      });
+
+      if (found) return normalizeName(found);
+
+      // If not found in array search, check if munyaka_active_learner matches ID
+      try {
+        const activeRaw = localStorage.getItem('munyaka_active_learner');
+        if (activeRaw) {
+          const activeParsed = JSON.parse(activeRaw);
+          if (activeParsed && (String(activeParsed.id) === String(id) || String(activeParsed.admissionNumber) === String(id) || String(activeParsed.admissionNo) === String(id))) {
+            return normalizeName(activeParsed);
           }
+        }
+      } catch {}
+
+      return null;
+    } catch (e) {
+      console.error('[StudentProfile] Error loading learner data:', e);
+      return null;
+    }
   }, [id]);
 
   const [showNotFound, setShowNotFound] = useState(false);
@@ -496,7 +532,7 @@ const StudentProfile = () => {
       {/* Header - stacks on mobile */}
       <div className="flex flex-col sm:flex-row w-full items-start sm:items-center justify-between gap-4">
         <div className="flex flex-col md:flex-row items-center gap-3 w-full min-w-0">
-          <BackButton to="/students" />
+          <BackButton to="/learners" />
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold text-slate-900 truncate break-words whitespace-nowrap">{student?.name ?? 'Learner'}</h1>
             <p className="text-sm font-medium text-slate-600 truncate break-words whitespace-nowrap">
