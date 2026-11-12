@@ -343,6 +343,7 @@ export default function LearnersDirectory() {
                   <th className="py-3.5 px-4 font-semibold">Full Name</th>
                   <th className="py-3.5 px-4 font-semibold">Grade & Stream</th>
                   <th className="py-3.5 px-4 font-semibold">Gender</th>
+                  <th className="py-3.5 px-4 font-semibold">DOB / Age</th>
                   <th className="py-3.5 px-4 font-semibold">Parent / Guardian & Phone</th>
                   <th className="py-3.5 px-4 font-semibold text-right sticky right-0 bg-slate-50 dark:bg-slate-800/95 shadow-l">Actions</th>
                 </tr>
@@ -356,6 +357,21 @@ export default function LearnersDirectory() {
                   const grade = learner.grade || learner.gradeLevel || '—';
                   const stream = learner.stream ? `(${learner.stream})` : '';
                   const gender = learner.gender || '—';
+                  const dobVal = learner.dob || learner.yearOfBirth || '';
+                  
+                  // Calculate age if dobVal is present
+                  let ageDisplay = '';
+                  if (dobVal) {
+                    const birthYear = parseInt(dobVal.substring(0, 4), 10);
+                    if (!isNaN(birthYear)) {
+                      const curY = new Date().getFullYear();
+                      const calcAge = curY - birthYear;
+                      if (calcAge >= 0 && calcAge < 30) {
+                        ageDisplay = ` (${calcAge} yrs)`;
+                      }
+                    }
+                  }
+
                   const parentName = learner.parentName || learner.guardianName || '—';
                   const phone = learner.phoneNumber || learner.parentPhone || '';
 
@@ -391,6 +407,9 @@ export default function LearnersDirectory() {
                       </td>
                       <td className="py-4 px-4 text-slate-600 dark:text-slate-300 capitalize">
                         {gender}
+                      </td>
+                      <td className="py-4 px-4 text-slate-600 dark:text-slate-300 font-mono text-xs">
+                        {dobVal ? `${dobVal}${ageDisplay}` : '—'}
                       </td>
                       <td className="py-4 px-4">
                         <div className="text-slate-800 dark:text-slate-200 font-medium">{parentName}</div>
@@ -680,6 +699,17 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
                 <option value="Male">Male</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Date of Birth / Year of Birth *</label>
+            <input
+              type="date"
+              required
+              value={formData.dob}
+              onChange={e => setFormData({ ...formData, dob: e.target.value, yearOfBirth: e.target.value.substring(0, 4) })}
+              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white"
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
