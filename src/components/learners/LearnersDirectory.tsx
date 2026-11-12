@@ -27,7 +27,19 @@ interface Learner {
 }
 
 export default function LearnersDirectory() {
-  const [learners, setLearners] = useState<Learner[]>([]);
+  const [learners, setLearners] = useState<Learner[]>(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_learners');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return [];
+    } catch (e) {
+      console.error("Failed to load learners from localStorage", e);
+      return [];
+    }
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('all');
   const [selectedStream, setSelectedStream] = useState('all');
@@ -38,7 +50,7 @@ export default function LearnersDirectory() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingLearner, setEditingLearner] = useState<Learner | null>(null);
 
-  // Load from localStorage on mount & subscribe to storage events
+  // Sync with storage events
   useEffect(() => {
     const loadLearners = () => {
       try {
@@ -47,17 +59,13 @@ export default function LearnersDirectory() {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) {
             setLearners(parsed);
-            return;
           }
         }
-        setLearners([]);
       } catch (e) {
         console.error("Failed to load learners from localStorage", e);
-        setLearners([]);
       }
     };
 
-    loadLearners();
     window.addEventListener('storage', loadLearners);
     window.addEventListener('munyaka_learners_updated', loadLearners);
 
