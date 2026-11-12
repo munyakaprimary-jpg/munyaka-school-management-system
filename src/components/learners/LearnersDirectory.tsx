@@ -64,6 +64,64 @@ export default function LearnersDirectory() {
   const [isTransferInModalOpen, setIsTransferInModalOpen] = useState(false);
   const [editingLearner, setEditingLearner] = useState<Learner | null>(null);
 
+  // Delete state & Admin Password modal state
+  const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([]);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  const getActiveAdminPassword = () => {
+    try {
+      const p1 = localStorage.getItem('munyaka_admin_password');
+      if (p1) return p1;
+      const p2 = localStorage.getItem('adminPassword');
+      if (p2) return p2;
+      const settingsRaw = localStorage.getItem('munyaka_security_settings') || localStorage.getItem('security_auth_settings');
+      if (settingsRaw) {
+        const settings = JSON.parse(settingsRaw);
+        if (settings.deleteAdminPassword) return settings.deleteAdminPassword;
+        if (settings.adminPassword) return settings.adminPassword;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return 'admin123';
+  };
+
+  // Delete learner
+  const handleDelete = (id: string) => {
+    setDeleteTargetIds([id]);
+    setAdminPasswordInput('');
+    setPasswordError('');
+    setShowPasswordModal(true);
+  };
+
+  // Bulk delete
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) return;
+    setDeleteTargetIds(selectedIds);
+    setAdminPasswordInput('');
+    setPasswordError('');
+    setShowPasswordModal(true);
+  };
+
+  const handleConfirmDelete = () => {
+    const adminPassword = getActiveAdminPassword();
+    if (adminPasswordInput !== adminPassword) {
+      setPasswordError("Incorrect admin password");
+      return;
+    }
+
+    const updated = learners.filter(l => !deleteTargetIds.includes(l.id));
+    persistLearners(updated);
+    setSelectedIds(prev => prev.filter(id => !deleteTargetIds.includes(id)));
+    setShowPasswordModal(false);
+    setDeleteTargetIds([]);
+    setAdminPasswordInput('');
+    setPasswordError('');
+    showSuccess(`Successfully deleted ${deleteTargetIds.length} learner record(s).`);
+  };
+
   // Sync with storage events & fallback keys
   useEffect(() => {
     const loadLearners = () => {
@@ -149,23 +207,7 @@ export default function LearnersDirectory() {
   };
 
   // Delete learner
-  const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this learner record?")) {
-      const updated = learners.filter(l => l.id !== id);
-      persistLearners(updated);
-      setSelectedIds(prev => prev.filter(i => i !== id));
-    }
-  };
-
-  // Bulk delete
-  const handleBulkDelete = () => {
-    if (selectedIds.length === 0) return;
-    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} selected learner(s)?`)) {
-      const updated = learners.filter(l => !selectedIds.includes(l.id));
-      persistLearners(updated);
-      setSelectedIds([]);
-    }
-  };
+  // (Replaced window.confirm with Admin Password modal flow below)
 
   // Navigate to Profile View
   const handleViewProfile = (learner: Learner) => {
@@ -550,6 +592,82 @@ export default function LearnersDirectory() {
             persistLearners(updated);
           }}
         />
+      )}
+
+      {/* Admin Password Modal for Deleting Learners */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 flex items-center justify-center">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setDeleteTargetIds([]);
+                  setAdminPasswordInput('');
+                  setPasswordError('');
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">Admin Authentication Required</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Enter Admin Password to permanently delete {deleteTargetIds.length} learner(s).
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Admin Password
+              </label>
+              <input
+                type="password"
+                placeholder="Enter password (default: admin123)"
+                value={adminPasswordInput}
+                onChange={(e) => {
+                  setAdminPasswordInput(e.target.value);
+                  if (passwordError) setPasswordError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmDelete();
+                }}
+                autoFocus
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500 placeholder-slate-400"
+              />
+              {passwordError && (
+                <p className="text-xs font-semibold text-rose-600 flex items-center gap-1 mt-1">
+                  {passwordError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setDeleteTargetIds([]);
+                  setAdminPasswordInput('');
+                  setPasswordError('');
+                }}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200 dark:shadow-none transition-all"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
