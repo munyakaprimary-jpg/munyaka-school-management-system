@@ -58,6 +58,10 @@ export default function LearnersDirectory() {
   const [selectedStream, setSelectedStream] = useState('all');
   const [selectedGender, setSelectedGender] = useState('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([]);
+  const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState<string>('');
+  const [passwordError, setPasswordError] = useState<string>('');
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
