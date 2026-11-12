@@ -103,7 +103,7 @@ export default function AddLearnerModal({
     const existing = getLearners();
     const res = generateUniqueCohortAdmissionNumber(formData.grade, existing);
     setRandomCode(res.randomCode);
-    setFormData(prev => ({ ...prev, admissionNumber: res.admissionNumber }));
+    setFormData(prev => ({ ...prev, admissionNo: res.admissionNumber }));
   };
 
   const handleSaveLearner = async (e: React.FormEvent) => {
@@ -288,7 +288,7 @@ export default function AddLearnerModal({
               onValueChange={(val) => setFormData(prev => ({ ...prev, gender: val }))}
             >
               <SelectTrigger id="gender">
-                <SelectValue placeholder="Select Gender" />
+                <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Male">Male</SelectItem>

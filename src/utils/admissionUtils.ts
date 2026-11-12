@@ -18,15 +18,24 @@ export const getCohortYear = (studentGrade: string): number => {
   return gradeJoinYearMap[gradeNum] || (currentCalendarYear - (gradeNum - 1));
 };
 
-const ALPHANUM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // excluding O, 0, I, 1
+const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const NUMBERS = '23456789';
+const ALL_CHARS = LETTERS + NUMBERS;
 
 export const generateRandom4Char = (): string => {
-  let result = '';
-  for (let i = 0; i < 4; i++) {
-    const randomIndex = Math.floor(Math.random() * ALPHANUM_CHARS.length);
-    result += ALPHANUM_CHARS[randomIndex];
+  // Ensure at least one letter and one number for a healthy alphanumeric mix (e.g., K7M4)
+  const l1 = LETTERS[Math.floor(Math.random() * LETTERS.length)];
+  const n1 = NUMBERS[Math.floor(Math.random() * NUMBERS.length)];
+  const c3 = ALL_CHARS[Math.floor(Math.random() * ALL_CHARS.length)];
+  const c4 = ALL_CHARS[Math.floor(Math.random() * ALL_CHARS.length)];
+  
+  const chars = [l1, n1, c3, c4];
+  // Shuffle array
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chars[i], chars[j]] = [chars[j], chars[i]];
   }
-  return result;
+  return chars.join('');
 };
 
 export const getAllExistingAdmissionNumbers = (existingLearners: any[] = []): Set<string> => {
@@ -74,7 +83,7 @@ export const generateUniqueCohortAdmissionNumber = (
   return { admissionNumber, randomCode };
 };
 
-// Legacy alias for backward compatibility
+// Main generator export expected by AddLearnerModal and TransferInModal
 export const generateCohortAdmissionNumber = (studentGrade: string, existingLearners: any[] = []): string => {
   return generateUniqueCohortAdmissionNumber(studentGrade, existingLearners).admissionNumber;
 };
