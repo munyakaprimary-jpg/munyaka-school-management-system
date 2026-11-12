@@ -83,15 +83,19 @@ const StudentProfile = () => {
   const activeLearner = useMemo(() => {
     try {
       const stored = getStoredLearners() || [];
+      const munyakaLearners = safeRead<any[]>('munyaka_learners', []);
+      const munyakaStudents = safeRead<any[]>('munyaka_students', []);
+      const munyakaLearnersV2 = safeRead<any[]>('munyaka_learners_v2', []);
       const rawDb = localStorage.getItem('munyaka_central_db');
       const db = rawDb ? JSON.parse(rawDb) : {};
       const centralStudents = Array.isArray(db?.students) ? db.students : [];
-      const munyakaStudents = safeRead<any[]>('munyaka_learners_v2', []) || safeRead<any[]>('munyaka_learners', []);
 
-      const combined = [...stored, ...centralStudents, ...munyakaStudents];
+      const combined = [...munyakaLearners, ...munyakaStudents, ...munyakaLearnersV2, ...stored, ...centralStudents];
+      // Deduplicate by id or admNo
+      const uniqueCombined = Array.from(new Map(combined.filter(Boolean).map(s => [s.id || s.admNo || s.admissionNo, s])).values());
       const decodedId = id ? decodeURIComponent(id) : '';
 
-      const found = combined.find((s: any) => {
+      const found = uniqueCombined.find((s: any) => {
         if (!s) return false;
         return (
           String(s.id ?? '') === String(id ?? '') ||
@@ -111,20 +115,19 @@ const StudentProfile = () => {
       });
 
       const normalizeName = (learner: any) => ({
-              ...learner,
-              name: learner.name ?? learner.fullName ?? learner.studentName ?? '',
-              fullName: learner.fullName ?? learner.name ?? learner.studentName ?? '',
-            });
-      
-            if (found) return normalizeName(found);
-            if (combined.length > 0) return normalizeName(combined[0]);
-      
-            // No learner found — return null so the "Learner Not Found" UI renders.
-            return null;
-          } catch (e) {
-            console.error('[StudentProfile] Error loading learner data:', e);
-            return null;
-          }
+        ...learner,
+        name: learner.name ?? learner.fullName ?? learner.studentName ?? '',
+        fullName: learner.fullName ?? learner.name ?? learner.studentName ?? '',
+      });
+
+      if (found) return normalizeName(found);
+      if (uniqueCombined.length > 0 && !id) return normalizeName(uniqueCombined[0]);
+
+      return null;
+    } catch (e) {
+      console.error('[StudentProfile] Error loading learner data:', e);
+      return null;
+    }
   }, [id]);
 
   const [showNotFound, setShowNotFound] = useState(false);
