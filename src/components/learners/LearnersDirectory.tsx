@@ -26,19 +26,28 @@ interface Learner {
   [key: string]: any;
 }
 
-export default function LearnersDirectory() {
-  const [learners, setLearners] = useState<Learner[]>(() => {
-    try {
-      const saved = localStorage.getItem('munyaka_learners');
+// Helper to safely load learners from all possible storage keys without data loss
+const getStoredLearnersList = (): Learner[] => {
+  try {
+    const keys = ['munyaka_learners', 'learners', 'school_students', 'munyaka_learners_directory'];
+    for (const key of keys) {
+      const saved = localStorage.getItem(key);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
-      return [];
-    } catch (e) {
-      console.error("Failed to load learners from localStorage", e);
-      return [];
     }
+  } catch (e) {
+    console.error("Error reading stored learners", e);
+  }
+  return [];
+};
+
+export default function LearnersDirectory() {
+  const [learners, setLearners] = useState<Learner[]>(() => {
+    return getStoredLearnersList();
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('all');
@@ -50,19 +59,12 @@ export default function LearnersDirectory() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingLearner, setEditingLearner] = useState<Learner | null>(null);
 
-  // Sync with storage events
+  // Sync with storage events & fallback keys
   useEffect(() => {
     const loadLearners = () => {
-      try {
-        const stored = localStorage.getItem('munyaka_learners');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            setLearners(parsed);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to load learners from localStorage", e);
+      const fresh = getStoredLearnersList();
+      if (fresh.length > 0) {
+        setLearners(fresh);
       }
     };
 
@@ -75,14 +77,16 @@ export default function LearnersDirectory() {
     };
   }, []);
 
-  // Save learners to localStorage helper
+  // Save learners to localStorage helper with backup keys
   const persistLearners = (updated: Learner[]) => {
     setLearners(updated);
     try {
-      localStorage.setItem('munyaka_learners', JSON.stringify(updated));
+      const dataStr = JSON.stringify(updated);
+      localStorage.setItem('munyaka_learners', dataStr);
+      localStorage.setItem('munyaka_learners_directory', dataStr);
       window.dispatchEvent(new Event('munyaka_learners_updated'));
     } catch (e) {
-      console.error("Failed to save learners", e);
+      console.error("Failed to save learners to storage", e);
     }
   };
 
