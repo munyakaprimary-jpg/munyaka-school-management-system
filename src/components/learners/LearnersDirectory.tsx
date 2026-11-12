@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Search, Plus, Eye, Edit, Trash2, Filter, X, Users, 
-  Download, Upload, CheckSquare, Square, MoreHorizontal, AlertCircle 
+import {
+  Search, Plus, Eye, Edit, Trash2, Filter, X, Users,
+  Download, Upload, CheckSquare, Square, MoreHorizontal, AlertCircle
 } from 'lucide-react';
+import { generateUniqueCohortAdmissionNumber } from '@/utils/admissionUtils';
 
 interface Learner {
   id: string;
@@ -489,57 +490,16 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
   ]);
   const [gradeStreamsMap, setGradeStreamsMap] = useState<Record<string, string[]>>({});
 
-  // Helper to compute cohort joining year and next continuous admission number
+  // Helper to compute cohort joining year and random 4-char alphanumeric admission number
   const computeNextAdmissionNo = (targetGrade: string) => {
-    const currentYear = new Date().getFullYear();
-    
-    // Determine cohort joining year based on grade
-    // Grade 1 = currentYear (2026), Grade 2 = currentYear - 1 (2025), etc.
-    let joiningYear = currentYear;
-    const lowerGrade = targetGrade.toLowerCase();
-    if (lowerGrade.includes('grade 1')) joiningYear = currentYear;
-    else if (lowerGrade.includes('grade 2')) joiningYear = currentYear - 1;
-    else if (lowerGrade.includes('grade 3')) joiningYear = currentYear - 2;
-    else if (lowerGrade.includes('grade 4')) joiningYear = currentYear - 3;
-    else if (lowerGrade.includes('grade 5')) joiningYear = currentYear - 4;
-    else if (lowerGrade.includes('grade 6')) joiningYear = currentYear - 5;
-    else if (lowerGrade.includes('grade 7')) joiningYear = currentYear - 6;
-    else if (lowerGrade.includes('grade 8')) joiningYear = currentYear - 7;
-    else if (lowerGrade.includes('grade 9')) joiningYear = currentYear - 8;
-    else if (lowerGrade.includes('pp1') || lowerGrade.includes('pp2')) joiningYear = currentYear + 1; // Kindergarten entry
-
     try {
-      const stored = localStorage.getItem('munyaka_learners');
+      const stored = localStorage.getItem('munyaka_learners') || localStorage.getItem('school_learners_data');
       const allLearners: Learner[] = stored ? JSON.parse(stored) : [];
-      
-      const gradeOrder = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
-      const targetIdx = gradeOrder.indexOf(targetGrade);
-      
-      let maxSeq = 0;
-      let totalCount = 0;
-
-      allLearners.forEach(l => {
-        totalCount++;
-        const g = l.grade || l.gradeLevel || '';
-        const gIdx = gradeOrder.indexOf(g);
-        
-        if (targetIdx === -1 || gIdx === -1 || gIdx <= targetIdx) {
-          const adm = String(l.admissionNumber || l.admissionNo || l.admNo || '');
-          const match = adm.match(/MUN-(?:G\d+\-)?(\d+)(?:\/\d{4})?/i);
-          if (match && match[1]) {
-            const seq = parseInt(match[1], 10);
-            if (!isNaN(seq) && seq > maxSeq) {
-              maxSeq = seq;
-            }
-          }
-        }
-      });
-
-      const nextSeq = Math.max(maxSeq + 1, totalCount + 1);
-      const padded = String(nextSeq).padStart(3, '0');
-      return `MUN-${padded}-${joiningYear}`;
+      const res = generateUniqueCohortAdmissionNumber(targetGrade, allLearners);
+      return res.admissionNumber;
     } catch (e) {
-      return `MUN-001-${joiningYear}`;
+      const res = generateUniqueCohortAdmissionNumber(targetGrade, []);
+      return res.admissionNumber;
     }
   };
 
