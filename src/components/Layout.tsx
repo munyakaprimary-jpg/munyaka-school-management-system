@@ -145,9 +145,6 @@ return (
   </button>
 );
 };
-            });
-          });
-        }
 
         // 3. Check unsynced attendance or fees
         const attendanceRaw = localStorage.getItem('munyaka_attendance');
