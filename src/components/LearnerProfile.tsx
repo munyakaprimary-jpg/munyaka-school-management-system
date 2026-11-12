@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, UserCircle, Hash, Calendar, Shield, BookOpen, Award } from 'lucide-react';
@@ -8,14 +8,18 @@ const LearnerProfile = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
 
-  // Robust learner resolution from router state and munyaka_learners_directory storage
+  // ── 1. Robust learner resolution from router state and storage ──
   const learner = useMemo(() => {
-    // 1. Get learner passed directly via navigate state (checking both 'learner' and 'student' keys)
+    // Check router state first (passed from Learners table actions)
     const stateData = location.state as any;
     const activeLearner = stateData?.learner || stateData?.student || null;
 
-    // 2. Fallback: Search local directory by ID or Admission Number
-    const storedLearners = JSON.parse(localStorage.getItem('munyaka_learners_directory') || localStorage.getItem('munyaka_learners') || '[]');
+    // Fallback: Search local directory by ID or Admission Number
+    const storedLearners = JSON.parse(
+      localStorage.getItem('munyaka_learners_directory') ||
+      localStorage.getItem('munyaka_learners') ||
+      '[]'
+    );
     const foundLearner = activeLearner || storedLearners.find((item: any) =>
       item && (
         String(item.id) === String(id) ||
@@ -37,13 +41,102 @@ const LearnerProfile = () => {
     };
   }, [id, location.state]);
 
-  // 3. Render exact name or explicit missing state
+  // ── 2. Derived name / ID rendering ──
   const learnerName = learner
     ? (learner.fullName || learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`.trim() || 'Learner Not Found')
     : 'Learner Not Found';
 
   const admissionNo = learner?.admissionNo || learner?.admissionNumber || learner?.admNo || learner?.id || id || '—';
   const gradeStream = `${learner?.grade || learner?.class || 'Grade'} • ${learner?.stream || 'Stream'}`;
+
+  // ── 3. Fetch associated records from local storage ──
+  useEffect(() => {
+    // Marks: try munyaka_marks_records first, then munyaka_marks
+    const marksRaw = localStorage.getItem('munyaka_marks_records') || localStorage.getItem('munyaka_marks');
+    if (marksRaw) {
+      try {
+        const allMarks = JSON.parse(marksRaw);
+        if (Array.isArray(allMarks)) {
+          const learnerMarks = allMarks.filter((m: any) =>
+            String(m.studentId || m.learnerId || m.id) === String(learner?.id || learner?.admissionNo || '')
+          );
+          // Store for potential later use (could be passed to state/context)
+          // For now we just ensure data is available
+          console.log(`Loaded ${learnerMarks.length} mark record(s) for learner ${learner?.id}`);
+        }
+      } catch {}
+    }
+  }, [learner?.id]);
+
+  useEffect(() => {
+    // Attendance: try munyaka_attendance_records
+    const attRaw = localStorage.getItem('munyaka_attendance_records');
+    if (attRaw) {
+      try {
+        const allAttendance = JSON.parse(attRaw);
+        if (Array.isArray(allAttendance)) {
+          const learnerAttendance = allAttendance.filter((a: any) =>
+            String(a.studentId || a.learnerId || a.id) === String(learner?.id || learner?.admissionNo || '')
+          );
+          console.log(`Loaded ${learnerAttendance.length} attendance record(s) for learner ${learner?.id}`);
+        }
+      } catch {}
+    }
+  }, [learner?.id]);
+
+  useEffect(() => {
+    // Fee/Ledger records: try munyaka_fees_records
+    const feesRaw = localStorage.getItem('munyaka_fees_records');
+    if (feesRaw) {
+      try {
+        const allFees = JSON.parse(feesRaw);
+        if (Array.isArray(allFees)) {
+          const learnerFees = allFees.filter((f: any) =>
+            String(f.studentId || f.learnerId || f.id) === String(learner?.id || learner?.admissionNo || '')
+          );
+          console.log(`Loaded ${learnerFees.length} fee record(s) for learner ${learner?.id}`);
+        }
+      } catch {}
+    }
+  }, [learner?.id]);
+
+  // ── 4. Compute attendance percentage & fee balance from stored data ──
+  const attendanceRate = useMemo(() => {
+    // If we have attendance data, compute rate; otherwise show default
+    const attRaw = localStorage.getItem('munyaka_attendance_records');
+    if (!attRaw) return '98.5%'; // default fallback
+    try {
+      const allAtt = JSON.parse(attRaw);
+      const learnerAtt = allAtt.filter((a: any) =>
+        String(a.studentId || a.learnerId || a.id) === String(learner?.id || learner?.admissionNo || '')
+      );
+      if (learnerAtt.length === 0) return 'N/A';
+      const present = learnerAtt.filter((a: any) => a.status === 'Present' || a.status === 'present').length;
+      const total = learnerAtt.length;
+      const rate = Math.round((present / total) * 100);
+      return `${rate}%`;
+    } catch {
+      return 'N/A';
+    }
+  }, [learner?.id]);
+
+  const feeBalance = useMemo(() => {
+    const feesRaw = localStorage.getItem('munyaka_fees_records');
+    if (!feesRaw) return 'Ksh 0';
+    try {
+      const allFees = JSON.parse(feesRaw);
+      const learnerFees = allFees.filter((f: any) =>
+        String(f.studentId || f.learnerId || f.id) === String(learner?.id || learner?.admissionNo || '')
+      );
+      if (learnerFees.length === 0) return 'Ksh 0';
+      const total = learnerFees.reduce((sum: number, f: any) => sum + (f.amount || f.value || 0), 0);
+      const paid = learnerFees.reduce((sum: number, f: any) => sum + (f.paid || f.amountPaid || 0), 0);
+      const balance = total - paid;
+      return balance <= 0 ? 'Ksh 0' : `Ksh ${balance}`;
+    } catch {
+      return 'Ksh 0';
+    }
+  }, [learner?.id]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
@@ -118,7 +211,7 @@ const LearnerProfile = () => {
           </Card>
         </div>
 
-        {/* Right Card: Academic Performance & Assessments */}
+        {/* Middle Card: Academic Performance & Assessments */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="border-none shadow-md rounded-[2rem] bg-white dark:bg-slate-900 p-8 border border-slate-200/80 dark:border-slate-800">
             <div className="flex items-center justify-between pb-6 mb-6 border-b border-slate-100 dark:border-slate-800">
@@ -175,11 +268,11 @@ const LearnerProfile = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
               <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
                 <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Attendance Rate</p>
-                <p className="text-2xl font-black text-slate-900 dark:text-white">98.5%</p>
+                <p className="text-2xl font-black text-slate-900 dark:text-white">{attendanceRate}</p>
               </div>
               <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
                 <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Fee Balance</p>
-                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">Ksh 0</p>
+                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{feeBalance}</p>
               </div>
               <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
                 <p className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">Clubs / House</p>
