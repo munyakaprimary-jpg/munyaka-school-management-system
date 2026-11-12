@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search, Plus, Eye, Edit, Trash2, Filter, X, Users,
-  Download, Upload, CheckSquare, Square, MoreHorizontal, AlertCircle
+  Upload, CheckSquare, Square, MoreHorizontal, AlertCircle, FileDown, ArrowRightLeft
 } from 'lucide-react';
 import TransferInModal from './TransferInModal';
 import { showSuccess, showError } from '@/utils/toast';
-import { Download, ArrowRightLeft } from 'lucide-react';
 
 interface Learner {
   id: string;
