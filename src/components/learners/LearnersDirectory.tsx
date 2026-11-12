@@ -345,7 +345,7 @@ export default function LearnersDirectory() {
                   <th className="py-3.5 px-4 font-semibold">Gender</th>
                   <th className="py-3.5 px-4 font-semibold">DOB / Age</th>
                   <th className="py-3.5 px-4 font-semibold">Parent / Guardian & Phone</th>
-                  <th className="py-3.5 px-4 font-semibold text-right sticky right-0 bg-slate-50 dark:bg-slate-800/95 shadow-l">Actions</th>
+                  <th className="py-3.5 px-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
@@ -415,7 +415,7 @@ export default function LearnersDirectory() {
                         <div className="text-slate-800 dark:text-slate-200 font-medium">{parentName}</div>
                         {phone && <div className="text-xs text-slate-400 font-mono mt-0.5">{phone}</div>}
                       </td>
-                      <td className="py-4 px-4 text-right sticky right-0 bg-white dark:bg-slate-900 shadow-l">
+                      <td className="py-4 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleViewProfile(learner)}
