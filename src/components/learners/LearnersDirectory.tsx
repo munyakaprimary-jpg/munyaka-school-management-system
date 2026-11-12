@@ -628,7 +628,7 @@ export default function LearnersDirectory() {
               </label>
               <input
                 type="password"
-                placeholder="Enter password (default: admin123)"
+                placeholder="Enter administrator password..."
                 value={adminPasswordInput}
                 onChange={(e) => {
                   setAdminPasswordInput(e.target.value);
