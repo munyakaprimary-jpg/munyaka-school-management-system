@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search, Plus, Eye, Edit, Trash2, Filter, X, Users,
-  Upload, CheckSquare, Square, MoreHorizontal, AlertCircle, FileDown, ArrowRightLeft
+  Upload, CheckSquare, Square, MoreHorizontal, AlertCircle, FileDown, ArrowRightLeft, Lock
 } from 'lucide-react';
 import TransferInModal from './TransferInModal';
 import { showSuccess, showError } from '@/utils/toast';
 import { generateUniqueCohortAdmissionNumber } from '@/utils/admissionUtils';
+import { getActiveAdminPassword } from '@/services/adminCredentials';
 
 interface Learner {
   id: string;
