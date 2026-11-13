@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Download, CheckCircle2, QrCode } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 interface TeacherExportModalProps {
   isOpen: boolean;
@@ -18,19 +18,6 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
 }) => {
   const { user } = useAuth();
   const [isExporting, setIsExporting] = useState(false);
-  const [successShareData, setSuccessShareData] = useState<{
-    isOpen: boolean;
-    filename: string;
-    data: string;
-    mimeType: string;
-    title: string;
-  }>({
-    isOpen: false,
-    filename: '',
-    data: '',
-    mimeType: 'application/json',
-    title: ''
-  });
 
   if (!isOpen) return null;
 
@@ -111,15 +98,6 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
           </Button>
         </div>
       </div>
-
-      <SuccessShareModal
-        isOpen={successShareData.isOpen}
-        onClose={() => setSuccessShareData(prev => ({ ...prev, isOpen: false }))}
-        filename={successShareData.filename}
-        data={successShareData.data}
-        mimeType={successShareData.mimeType}
-        title={successShareData.title}
-      />
     </div>
   );
 };
