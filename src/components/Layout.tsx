@@ -732,8 +732,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             
             <div className="space-y-2 pt-2 border-t border-slate-200/50 dark:border-slate-700">
               <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 px-1 font-mono">
-                <span title={new Date(__BUILD_TIME__).toLocaleString()}>
-                  Build: {new Date(__BUILD_TIME__).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                <span title={new Date().toLocaleString()}>
+                  Build: {new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold">Vercel</span>
               </div>
