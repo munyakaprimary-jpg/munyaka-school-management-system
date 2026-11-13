@@ -30,9 +30,26 @@ interface Learner {
   [key: string]: any;
 }
 
-// Helper to safely load learners from all possible storage keys without data loss
+// Helper to safely load learners from all possible storage keys including munyaka_central_db and munyaka_master_state without data loss
 const getStoredLearnersList = (): Learner[] => {
   try {
+    // 1. Check munyaka_central_db (e.g. .learners or direct array)
+    const centralDbRaw = localStorage.getItem('munyaka_central_db');
+    if (centralDbRaw) {
+      const parsedDb = JSON.parse(centralDbRaw);
+      if (Array.isArray(parsedDb) && parsedDb.length > 0) return parsedDb;
+      if (parsedDb && Array.isArray(parsedDb.learners) && parsedDb.learners.length > 0) return parsedDb.learners;
+      if (parsedDb && parsedDb.data && Array.isArray(parsedDb.data.learners) && parsedDb.data.learners.length > 0) return parsedDb.data.learners;
+    }
+
+    // 2. Check munyaka_master_state
+    const masterStateRaw = localStorage.getItem('munyaka_master_state');
+    if (masterStateRaw) {
+      const parsedMaster = JSON.parse(masterStateRaw);
+      if (Array.isArray(parsedMaster.learners) && parsedMaster.learners.length > 0) return parsedMaster.learners;
+      if (Array.isArray(parsedMaster.students) && parsedMaster.students.length > 0) return parsedMaster.students;
+    }
+
     const keys = ['munyaka_learners', 'learners', 'school_students', 'munyaka_learners_directory'];
     for (const key of keys) {
       const saved = localStorage.getItem(key);
@@ -140,13 +157,34 @@ export default function LearnersDirectory() {
     };
   }, []);
 
-  // Save learners to localStorage helper with backup keys
+  // Save learners to localStorage helper with backup keys, munyaka_central_db, and munyaka_master_state
   const persistLearners = (updated: Learner[]) => {
     setLearners(updated);
     try {
       const dataStr = JSON.stringify(updated);
       localStorage.setItem('munyaka_learners', dataStr);
       localStorage.setItem('munyaka_learners_directory', dataStr);
+
+      // Also sync to munyaka_central_db (.learners)
+      try {
+        const centralDbRaw = localStorage.getItem('munyaka_central_db');
+        const centralDb = centralDbRaw ? JSON.parse(centralDbRaw) : {};
+        centralDb.learners = updated;
+        localStorage.setItem('munyaka_central_db', JSON.stringify(centralDb));
+      } catch (err) {
+        console.error("Failed to update munyaka_central_db learners", err);
+      }
+
+      // Also sync to munyaka_master_state
+      try {
+        const masterStateRaw = localStorage.getItem('munyaka_master_state');
+        const masterState = masterStateRaw ? JSON.parse(masterStateRaw) : {};
+        masterState.learners = updated;
+        localStorage.setItem('munyaka_master_state', JSON.stringify(masterState));
+      } catch (err) {
+        console.error("Failed to update munyaka_master_state learners", err);
+      }
+
       window.dispatchEvent(new Event('munyaka_learners_updated'));
     } catch (e) {
       console.error("Failed to save learners to storage", e);
