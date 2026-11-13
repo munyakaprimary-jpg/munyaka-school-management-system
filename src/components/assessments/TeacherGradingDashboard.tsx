@@ -408,59 +408,82 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
     });
 
     const grades: StudentGrade[] = [];
-    allSubmissions.forEach((sub) => {
-      // When a single exam is active, only show its submissions.
-      if (activeExam && sub.assessmentId !== activeExam.id) return;
-
-      const assessment = assessments.find((a) => a.id === sub.assessmentId) || null;
-      if (!assessment) return;
-
-      const respMap: Record<string, StudentResponse> = {};
-      sub.responses.forEach((r) => { respMap[r.questionId] = r; });
-
-      const structuredMarks =
-        structuredMarksCache[`${sub.assessmentId}_${sub.studentId}`] || {};
-      const { score: mcqScore, max: mcqMax } = gradeMCQs(assessment.questions, respMap);
-      const structuredQuestions = assessment.questions.filter((q) => q.type === "structured");
-      const structuredMax = structuredQuestions.reduce((s, q) => s + q.points, 0);
-      const structuredEarned = structuredQuestions.reduce(
-        (s, q) => s + (structuredMarks[q.id] || 0),
-        0
-      );
-      const totalScore = mcqScore + structuredEarned;
-      const maxScore = mcqMax + structuredMax;
-      const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-
-      const studentDetails = getStudentDetails(sub.studentId);
-      const studentMeta = loadStudentMeta(sub.studentId);
-      grades.push({
-        studentId: sub.studentId,
-        studentName: studentDetails.name,
-        classId: studentMeta.classId,
-        className: studentMeta.className,
-        stream: studentMeta.stream,
-        assessmentId: sub.assessmentId,
-        assessmentTitle: assessment.title,
-        submission: {
-          ...sub,
-          marks: (sub as any).marks ?? {},
-          admissionNo: (sub as any).admissionNo ?? studentDetails.admissionNo,
-        } as UnifiedSubmission,
-        responses: respMap,
-        startedAt: (sub as any).startedAt,
-        structuredMarks,
-        mcqScore,
-        mcqMax,
-        totalScore,
-        maxScore,
-        percentage,
-        gradeLevel: computeGradeLevel(percentage),
-      });
-    });
-
-    setStudentGrades(grades);
-    setSelectedStudentId(grades.length > 0 ? grades[0].studentId : null);
-  }, [selectedExamId, assessments]);
+    
+        // Build the grading roster from the Learners Directory (munyaka_learners)
+        // filtered by the selected grade / stream, then attach any saved submission.
+        const rosterSource = directoryLearners.length > 0 ? directoryLearners : loadDirectoryLearnersFromStorage();
+        const roster = rosterSource.filter((l: any) => {
+          const learnerGrade = normaliseGrade(l.grade || l.gradeLevel);
+          const learnerStream = normaliseGrade(l.stream);
+          const matchesGrade = !selectedGrade || selectedGrade === ALL_GRADES_VALUE || learnerGrade === normaliseGrade(selectedGrade);
+          const matchesStream = !selectedStream || selectedStream === ALL_STREAMS_VALUE || learnerStream === normaliseGrade(selectedStream);
+          return matchesGrade && matchesStream;
+        });
+    
+        roster.forEach((learner: any) => {
+          const learnerId = String(learner.id || learner.admissionNo || learner.admissionNumber || learner.admNo || '');
+          // Find submission for this learner in the active exam (or any if "all")
+          const sub = allSubmissions.find(
+            (s) =>
+              s.studentId === learnerId ||
+              s.admissionNo === learnerId ||
+              (s as any).admissionNumber === learnerId
+          );
+          // If a specific exam is active, only include learners who have a submission for it
+          // (or include all roster learners if no exam selected yet)
+          if (activeExam && !sub) return;
+    
+          const assessment = sub ? assessments.find((a) => a.id === sub.assessmentId) || null : activeExam;
+          if (!assessment) return;
+    
+          const respMap: Record<string, StudentResponse> = {};
+          if (sub) {
+            sub.responses.forEach((r) => { respMap[r.questionId] = r; });
+          }
+    
+          const structuredMarks =
+            sub ? structuredMarksCache[`${sub.assessmentId}_${sub.studentId}`] || {} : {};
+          const { score: mcqScore, max: mcqMax } = gradeMCQs(assessment.questions, respMap);
+          const structuredQuestions = assessment.questions.filter((q) => q.type === "structured");
+          const structuredMax = structuredQuestions.reduce((s, q) => s + q.points, 0);
+          const structuredEarned = structuredQuestions.reduce(
+            (s, q) => s + (structuredMarks[q.id] || 0),
+            0
+          );
+          const totalScore = mcqScore + structuredEarned;
+          const maxScore = mcqMax + structuredMax;
+          const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    
+          const studentDetails = getStudentDetails(learnerId);
+          const studentMeta = loadStudentMeta(learnerId);
+          grades.push({
+            studentId: learnerId,
+            studentName: studentDetails.name,
+            classId: studentMeta.classId,
+            className: studentMeta.className,
+            stream: studentMeta.stream,
+            assessmentId: sub?.assessmentId || assessment.id,
+            assessmentTitle: assessment.title,
+            submission: {
+              ...(sub || {}),
+              marks: (sub as any)?.marks ?? {},
+              admissionNo: (sub as any)?.admissionNo ?? studentDetails.admissionNo,
+            } as UnifiedSubmission,
+            responses: respMap,
+            startedAt: (sub as any)?.startedAt,
+            structuredMarks,
+            mcqScore,
+            mcqMax,
+            totalScore,
+            maxScore,
+            percentage,
+            gradeLevel: computeGradeLevel(percentage),
+          });
+        });
+    
+        setStudentGrades(grades);
+        setSelectedStudentId(grades.length > 0 ? grades[0].studentId : null);
+      }, [selectedExamId, assessments, selectedGrade, selectedStream, directoryLearners]);
 
   // ── Structured mark change ────────────────────────────────────────────────
   const handleStructuredMarkChange = useCallback(
