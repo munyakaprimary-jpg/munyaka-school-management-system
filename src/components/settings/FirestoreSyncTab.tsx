@@ -17,7 +17,7 @@ import { HarmonizedLearnerService } from '@/services/harmonizedLearnerService';
  * Used to prevent sync modules from creating fallback/default records when there are zero learners.
  */
 const hasZeroLearners = (): boolean => {
-  const keys = ['munyaka_learners_v2', 'munyaka_learners', 'learners'];
+  const keys = ['munyaka_learners', 'munyaka_learners_v2', 'learners'];
   for (const key of keys) {
     const raw = localStorage.getItem(key);
     if (raw) {
@@ -300,7 +300,7 @@ export default function FirestoreSyncTab() {
     return [];
   });
 
-  const UNIFIED_STORAGE_KEY = 'munyaka_learners_v2';
+  const UNIFIED_STORAGE_KEY = 'munyaka_learners';
 
   const getUnifiedLocalCount = (): number => {
     try {
@@ -338,7 +338,7 @@ export default function FirestoreSyncTab() {
 
   const localLearners = (() => {
     try {
-      const raw = localStorage.getItem(UNIFIED_STORAGE_KEY) || localStorage.getItem('munyaka_learners') || localStorage.getItem('learners');
+      const raw = localStorage.getItem(UNIFIED_STORAGE_KEY) || localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('learners');
       const parsed = raw ? JSON.parse(raw) : [];
       return Array.isArray(parsed) ? parsed : [];
     } catch {
