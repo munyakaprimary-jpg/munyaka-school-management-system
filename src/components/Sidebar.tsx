@@ -127,6 +127,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Dashboard', href: '/', icon: LayoutDashboard, allowedRoles: ['all'] },
     { name: 'My Learners', href: '/learners', icon: Users, allowedRoles: ['all'] },
     { name: 'Roll Call / Attendance', href: '/attendance', icon: CheckSquare, allowedRoles: ['all'] },
+    { name: 'Daily Check-In', href: '/staff/check-in', icon: LogIn, allowedRoles: ['all'] },
     { name: 'Assessments & Marks', href: '/assessments', icon: FileSpreadsheet, allowedRoles: ['all'] },
     { name: 'Sync & Export Package', href: '/teacher-export', icon: FileText, allowedRoles: ['all'] },
     { name: 'Timetable', href: '/timetable', icon: Clock, allowedRoles: ['all'] },
