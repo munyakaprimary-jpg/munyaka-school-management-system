@@ -250,7 +250,9 @@ export const TeacherExportModule: React.FC = () => {
               onClick={() => {
                 const payload = buildPayload();
                 const jsonString = JSON.stringify(payload, null, 2);
-                const filename = `class_package_${selectedGrade.replace(/\s+/g, '_')}_${selectedStream}_${Date.now()}.json`;
+                const staffNameSlug = (user?.name || 'teacher').replace(/\s+/g, '_').toLowerCase();
+                const todayDate = new Date().toISOString().split('T')[0];
+                const filename = `munyaka_teacher_export_${staffNameSlug}_${todayDate}.json`;
                 const blob = new Blob([jsonString], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -258,12 +260,12 @@ export const TeacherExportModule: React.FC = () => {
                 a.download = filename;
                 a.click();
                 URL.revokeObjectURL(url);
-                showSuccess('Class package downloaded successfully!');
+                showSuccess('Teacher export package downloaded successfully!');
               }}
               className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-colors"
             >
               <Download className="w-4 h-4 shrink-0 text-indigo-600" />
-              <span>Export Package File</span>
+              <span>Export Teacher Sync Package (.json)</span>
             </Button>
           </div>
         </CardContent>

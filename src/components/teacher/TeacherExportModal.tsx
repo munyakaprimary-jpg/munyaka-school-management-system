@@ -87,7 +87,7 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
         }
       };
 
-      const filename = `class_package_${selectedGrade.replace(/\s+/g, '_')}_${selectedStream}_${Date.now()}.json`;
+      const filename = `munyaka_teacher_export_${(user?.name || 'teacher').replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.json`;
       const jsonString = JSON.stringify(payload, null, 2);
 
       exportClassPackage(selectedStream, {
@@ -103,7 +103,7 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
         filename,
         data: jsonString,
         mimeType: 'application/json',
-        title: `Class Package (${selectedGrade} - ${selectedStream}) Exported!`
+        title: `Teacher Export Package (${selectedGrade} - ${selectedStream}) Exported!`
       });
     } finally {
       setIsExporting(false);
