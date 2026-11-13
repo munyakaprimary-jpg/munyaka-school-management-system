@@ -426,7 +426,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
           const sub = allSubmissions.find(
             (s) =>
               s.studentId === learnerId ||
-              s.admissionNo === learnerId ||
+              (s as any).admissionNo === learnerId ||
               (s as any).admissionNumber === learnerId
           );
           // If a specific exam is active, only include learners who have a submission for it
