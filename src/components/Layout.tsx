@@ -424,7 +424,19 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     setShowBottomNav(true);
   }, [location.pathname]);
 
-  const menuItems = [
+  const userRoleLower = String(user?.role || '').toLowerCase();
+  const isTeacherRole = userRoleLower === 'teacher' || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher';
+
+  const menuItems = isTeacherRole ? [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: Users, label: 'My Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: ClipboardCheck, label: 'Roll Call / Attendance', path: '/attendance', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: FileSpreadsheet, label: 'Assessments & Marks', path: '/assessments', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: FileText, label: 'Sync & Export Package', path: '/teacher-sync', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+  ] : [
     // ── Dashboard — position #1 for ALL roles; the Dashboard component
     // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
     // based on the user's session role.  Only one Dashboard entry exists.
@@ -539,31 +551,35 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   // Relabel Dashboard for admin users — the Dashboard component internally
   // routes to AdminDashboard, but the sidebar label should reflect that.
   const isAdminRole = (user?.role ?? '').toLowerCase() === 'admin' || (user?.role ?? '').toLowerCase() === 'super_admin';
-  const navMenu = isAdminRole
+  const navMenu = isTeacherRole ? menuItems : (isAdminRole
     ? finalMenu.map(item => item.path === '/dashboard' ? { ...item, label: 'Admin Dashboard' } : item)
-    : finalMenu;
+    : finalMenu);
 
   // Bottom Navigation Bar Quick Links - Filtered by user role.
-    // OWNER is BILLING-ONLY — gets Dashboard + Payments only (plus global Games Hub).
-        // OWNER explicitly does NOT see: Learners, Roll Call, Fees, Server (control center),
-        // Settings, Promote — those are operational routes. LAN Config is now nested
-        // inside the Admin Control Center for elevated roles only.
-    const bottomQuickNav = [
-      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-      { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
-      { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
-      { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
-      { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
-          { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin'] },
-      { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
-            { icon: Database, label: 'Central', path: '/central-data', roles: ['admin'] },
-            { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
-            { icon: Gamepad2, label: 'Games', path: '/games', global: true },
-                        { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
-                        { icon: Wifi, label: 'LAN Server', path: '/lan-config', roles: ['owner'] },
-    ].filter(item => {
-          return true;
-            });
+  const userRoleLower = String(user?.role || '').toLowerCase();
+  const isTeacherRole = userRoleLower === 'teacher' || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher';
+
+  const bottomQuickNav = isTeacherRole ? [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: Users, label: 'Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: FileSpreadsheet, label: 'Assessments', path: '/assessments', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: FileText, label: 'Sync & Export', path: '/teacher-sync', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+  ] : [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
+    { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
+    { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
+        { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin'] },
+    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
+          { icon: Database, label: 'Central', path: '/central-data', roles: ['admin'] },
+          { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
+          { icon: Gamepad2, label: 'Games', path: '/games', global: true },
+                      { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
+                      { icon: Wifi, label: 'LAN Server', path: '/lan-config', roles: ['owner'] },
+  ];
 
   return (
       <div className={cn("flex min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
