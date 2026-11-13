@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
-import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, Table as TableIcon, Wallet } from 'lucide-react';
+import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, Table as TableIcon, Wallet, Download, Upload } from 'lucide-react';
 import { db } from '@/lib/firebaseClient';
 import { collection, doc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
@@ -35,6 +35,240 @@ export default function FirestoreSyncTab() {
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Full Database Backup & Restore handlers
+  const handleExportFullBackup = () => {
+    try {
+      const backupData = {
+        version: '2.4',
+        exportedAt: new Date().toISOString(),
+        centralDb: localStorage.getItem('munyaka_central_db') ? JSON.parse(localStorage.getItem('munyaka_central_db') || '{}') : {},
+        masterState: localStorage.getItem('munyaka_master_state') ? JSON.parse(localStorage.getItem('munyaka_master_state') || '{}') : {},
+        learners: localStorage.getItem('munyaka_learners') ? JSON.parse(localStorage.getItem('munyaka_learners') || '[]') : [],
+        learnersDirectory: localStorage.getItem('munyaka_learners_directory') ? JSON.parse(localStorage.getItem('munyaka_learners_directory') || '[]') : [],
+        staff: localStorage.getItem('munyaka_staff') ? JSON.parse(localStorage.getItem('munyaka_staff') || '[]') : [],
+        fees: localStorage.getItem('munyaka_fees_records') ? JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]') : [],
+        assessments: localStorage.getItem('munyaka_assessments_db') ? JSON.parse(localStorage.getItem('munyaka_assessments_db') || '{}') : {},
+        license: localStorage.getItem('munyaka_school_license') ? JSON.parse(localStorage.getItem('munyaka_school_license') || '{}') : {},
+      };
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `munyaka_backup_${dateStr}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showSuccess("Full database backup exported successfully!");
+    } catch (err: any) {
+      console.error("Export backup failed:", err);
+      showError("Failed to export backup file");
+    }
+  };
+
+  const handleImportFullBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileReader = new FileReader();
+    if (event.target.files && event.target.files[0]) {
+      fileReader.readAsText(event.target.files[0], "UTF-8");
+      fileReader.onload = (e) => {
+        try {
+          const content = e.target?.result as string;
+          const parsed = JSON.parse(content);
+
+          if (!parsed || typeof parsed !== 'object') {
+            throw new Error("Invalid backup file format");
+          }
+
+          if (parsed.centralDb) {
+            localStorage.setItem('munyaka_central_db', JSON.stringify(parsed.centralDb));
+          }
+          if (parsed.masterState) {
+            localStorage.setItem('munyaka_master_state', JSON.stringify(parsed.masterState));
+          }
+          if (parsed.learners) {
+            localStorage.setItem('munyaka_learners', JSON.stringify(parsed.learners));
+            localStorage.setItem('munyaka_learners_directory', JSON.stringify(parsed.learners));
+          }
+          if (parsed.staff) {
+            localStorage.setItem('munyaka_staff', JSON.stringify(parsed.staff));
+          }
+          if (parsed.fees) {
+            localStorage.setItem('munyaka_fees_records', JSON.stringify(parsed.fees));
+          }
+          if (parsed.assessments) {
+            localStorage.setItem('munyaka_assessments_db', JSON.stringify(parsed.assessments));
+          }
+          if (parsed.license) {
+            localStorage.setItem('munyaka_school_license', JSON.stringify(parsed.license));
+          }
+
+          window.dispatchEvent(new Event('munyaka_learners_updated'));
+          showSuccess("Database restored successfully from backup!");
+          setTimeout(() => window.location.reload(), 1000);
+        } catch (err: any) {
+          console.error("Import backup failed:", err);
+          showError(`Restore failed: ${err.message || 'Invalid JSON format'}`);
+        }
+      };
+    }
+  };
+
+  // Full Database Backup & Restore handlers
+  const handleExportFullBackup = () => {
+    try {
+      const backupData = {
+        version: '2.4',
+        exportedAt: new Date().toISOString(),
+        centralDb: localStorage.getItem('munyaka_central_db') ? JSON.parse(localStorage.getItem('munyaka_central_db') || '{}') : {},
+        masterState: localStorage.getItem('munyaka_master_state') ? JSON.parse(localStorage.getItem('munyaka_master_state') || '{}') : {},
+        learners: localStorage.getItem('munyaka_learners') ? JSON.parse(localStorage.getItem('munyaka_learners') || '[]') : [],
+        learnersDirectory: localStorage.getItem('munyaka_learners_directory') ? JSON.parse(localStorage.getItem('munyaka_learners_directory') || '[]') : [],
+        staff: localStorage.getItem('munyaka_staff') ? JSON.parse(localStorage.getItem('munyaka_staff') || '[]') : [],
+        fees: localStorage.getItem('munyaka_fees_records') ? JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]') : [],
+        assessments: localStorage.getItem('munyaka_assessments_db') ? JSON.parse(localStorage.getItem('munyaka_assessments_db') || '{}') : {},
+        license: localStorage.getItem('munyaka_school_license') ? JSON.parse(localStorage.getItem('munyaka_school_license') || '{}') : {},
+      };
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `munyaka_backup_${dateStr}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showSuccess("Full database backup exported successfully!");
+    } catch (err: any) {
+      console.error("Export backup failed:", err);
+      showError("Failed to export backup file");
+    }
+  };
+
+  const handleImportFullBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileReader = new FileReader();
+    if (event.target.files && event.target.files[0]) {
+      fileReader.readAsText(event.target.files[0], "UTF-8");
+      fileReader.onload = (e) => {
+        try {
+          const content = e.target?.result as string;
+          const parsed = JSON.parse(content);
+
+          if (!parsed || typeof parsed !== 'object') {
+            throw new Error("Invalid backup file format");
+          }
+
+          if (parsed.centralDb) {
+            localStorage.setItem('munyaka_central_db', JSON.stringify(parsed.centralDb));
+          }
+          if (parsed.masterState) {
+            localStorage.setItem('munyaka_master_state', JSON.stringify(parsed.masterState));
+          }
+          if (parsed.learners) {
+            localStorage.setItem('munyaka_learners', JSON.stringify(parsed.learners));
+            localStorage.setItem('munyaka_learners_directory', JSON.stringify(parsed.learners));
+          }
+          if (parsed.staff) {
+            localStorage.setItem('munyaka_staff', JSON.stringify(parsed.staff));
+          }
+          if (parsed.fees) {
+            localStorage.setItem('munyaka_fees_records', JSON.stringify(parsed.fees));
+          }
+          if (parsed.assessments) {
+            localStorage.setItem('munyaka_assessments_db', JSON.stringify(parsed.assessments));
+          }
+          if (parsed.license) {
+            localStorage.setItem('munyaka_school_license', JSON.stringify(parsed.license));
+          }
+
+          window.dispatchEvent(new Event('munyaka_learners_updated'));
+          showSuccess("Database restored successfully from backup!");
+          setTimeout(() => window.location.reload(), 1000);
+        } catch (err: any) {
+          console.error("Import backup failed:", err);
+          showError(`Restore failed: ${err.message || 'Invalid JSON format'}`);
+        }
+      };
+    }
+  };
+
+  // Full Database Backup & Restore handlers
+  const handleExportFullBackup = () => {
+    try {
+      const backupData = {
+        version: '2.4',
+        exportedAt: new Date().toISOString(),
+        centralDb: localStorage.getItem('munyaka_central_db') ? JSON.parse(localStorage.getItem('munyaka_central_db') || '{}') : {},
+        masterState: localStorage.getItem('munyaka_master_state') ? JSON.parse(localStorage.getItem('munyaka_master_state') || '{}') : {},
+        learners: localStorage.getItem('munyaka_learners') ? JSON.parse(localStorage.getItem('munyaka_learners') || '[]') : [],
+        learnersDirectory: localStorage.getItem('munyaka_learners_directory') ? JSON.parse(localStorage.getItem('munyaka_learners_directory') || '[]') : [],
+        staff: localStorage.getItem('munyaka_staff') ? JSON.parse(localStorage.getItem('munyaka_staff') || '[]') : [],
+        fees: localStorage.getItem('munyaka_fees_records') ? JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]') : [],
+        assessments: localStorage.getItem('munyaka_assessments_db') ? JSON.parse(localStorage.getItem('munyaka_assessments_db') || '{}') : {},
+        license: localStorage.getItem('munyaka_school_license') ? JSON.parse(localStorage.getItem('munyaka_school_license') || '{}') : {},
+      };
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `munyaka_backup_${dateStr}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showSuccess("Full database backup exported successfully!");
+    } catch (err: any) {
+      console.error("Export backup failed:", err);
+      showError("Failed to export backup file");
+    }
+  };
+
+  const handleImportFullBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileReader = new FileReader();
+    if (event.target.files && event.target.files[0]) {
+      fileReader.readAsText(event.target.files[0], "UTF-8");
+      fileReader.onload = (e) => {
+        try {
+          const content = e.target?.result as string;
+          const parsed = JSON.parse(content);
+
+          if (!parsed || typeof parsed !== 'object') {
+            throw new Error("Invalid backup file format");
+          }
+
+          if (parsed.centralDb) {
+            localStorage.setItem('munyaka_central_db', JSON.stringify(parsed.centralDb));
+          }
+          if (parsed.masterState) {
+            localStorage.setItem('munyaka_master_state', JSON.stringify(parsed.masterState));
+          }
+          if (parsed.learners) {
+            localStorage.setItem('munyaka_learners', JSON.stringify(parsed.learners));
+            localStorage.setItem('munyaka_learners_directory', JSON.stringify(parsed.learners));
+          }
+          if (parsed.staff) {
+            localStorage.setItem('munyaka_staff', JSON.stringify(parsed.staff));
+          }
+          if (parsed.fees) {
+            localStorage.setItem('munyaka_fees_records', JSON.stringify(parsed.fees));
+          }
+          if (parsed.assessments) {
+            localStorage.setItem('munyaka_assessments_db', JSON.stringify(parsed.assessments));
+          }
+          if (parsed.license) {
+            localStorage.setItem('munyaka_school_license', JSON.stringify(parsed.license));
+          }
+
+          window.dispatchEvent(new Event('munyaka_learners_updated'));
+          showSuccess("Database restored successfully from backup!");
+          setTimeout(() => window.location.reload(), 1000);
+        } catch (err: any) {
+          console.error("Import backup failed:", err);
+          showError(`Restore failed: ${err.message || 'Invalid JSON format'}`);
+        }
+      };
+    }
+  };
 
   // CloudDBSyncCard state
   const [isSyncingAllModules, setIsSyncingAllModules] = useState(false);
