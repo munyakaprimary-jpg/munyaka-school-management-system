@@ -465,10 +465,14 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
             assessmentId: sub?.assessmentId || assessment.id,
             assessmentTitle: assessment.title,
             submission: {
-              ...(sub || {}),
+              assessmentId: sub?.assessmentId || assessment.id,
+              studentId: learnerId,
+              responses: sub?.responses || [],
+              startedAt: (sub as any)?.startedAt,
+              submittedAt: (sub as any)?.submittedAt,
               marks: (sub as any)?.marks ?? {},
-              admissionNo: (sub as any)?.admissionNo ?? studentDetails.admissionNo,
-            } as UnifiedSubmission,
+              ...sub
+            } as unknown as UnifiedSubmission,
             responses: respMap,
             startedAt: (sub as any)?.startedAt,
             structuredMarks,
