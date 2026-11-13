@@ -99,6 +99,11 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     const getActiveUserRole = () => {
       if (!user) return 'STAFF';
   
+      const normRole = String(user.role || '').toUpperCase();
+      if (normRole === 'ADMIN' || normRole === 'SUPER_ADMIN' || normRole === 'OWNER' || normRole === 'PRINCIPAL') {
+        return normRole;
+      }
+  
       const staffRegistry = JSON.parse(localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || '[]');
   
       const match = staffRegistry.find((s: any) =>
@@ -111,12 +116,21 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     };
 
   const activeRole = getActiveUserRole();
+  const isStaffOnly = String(activeRole).toUpperCase() === 'STAFF' || String(activeRole).toLowerCase() === 'teacher';
+
   const displayName = currentStaff.name || currentStaff.fullName || user?.name || (user as any)?.username || 'Staff Member';
   const profileName = displayName;
   const profileRole = activeRole;
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
 
-  const navigationItems: NavItem[] = [
+  const navigationItems: NavItem[] = isStaffOnly ? [
+    { name: 'Teacher Dashboard', href: '/', icon: LayoutDashboard, allowedRoles: ['all'] },
+    { name: 'Attendance & Roll Call', href: '/attendance', icon: CheckSquare, allowedRoles: ['all'] },
+    { name: 'Marks & CBC Assessments', href: '/assessments', icon: FileSpreadsheet, allowedRoles: ['all'] },
+    { name: 'Sync & Export Package', href: '/teacher-sync', icon: QrCode, allowedRoles: ['all'] },
+    { name: 'Timetable', href: '/timetable', icon: Clock, allowedRoles: ['all'] },
+    { name: 'Report Cards', href: '/reports', icon: FileText, allowedRoles: ['all'] },
+  ] : [
     { name: 'Home / Dashboard', href: '/', icon: LayoutDashboard, allowedRoles: ['all'] },
     { name: 'Admin Dashboard', href: '/system-management', icon: ShieldCheck, allowedRoles: ['all'] },
     { name: 'Library Workstation', href: '/library', icon: Library, allowedRoles: ['all'] },

@@ -142,7 +142,7 @@ export const TeacherExportView: React.FC = () => {
               className="bg-white text-blue-900 hover:bg-blue-50 font-bold px-6 py-4 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center gap-2 text-sm"
             >
               <Download size={18} className="text-blue-600" />
-              {isExporting ? 'Packaging...' : 'Export Batch Package'}
+              {isExporting ? 'Packaging...' : 'Export Teacher Sync Package (.json)'}
             </Button>
           </div>
         </div>
@@ -297,7 +297,7 @@ export const TeacherExportView: React.FC = () => {
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 text-base"
                 >
                   <Download size={20} />
-                  {isExporting ? 'Generating Secure Package...' : 'Export Batch Package (.JSON)'}
+                  {isExporting ? 'Generating Secure Package...' : 'Export Teacher Sync Package (.json)'}
                 </Button>
               </div>
             </CardContent>

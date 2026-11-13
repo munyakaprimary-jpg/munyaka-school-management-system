@@ -114,9 +114,9 @@ export const batchExportService = {
   async exportAndSavePackage(teacher: { id?: string; name?: string; assignedClass?: string; grade?: string; stream?: string }): Promise<{ success: boolean; fileName: string; size: number }> {
     const packageData = await this.generateClassPackage(teacher);
     const jsonString = JSON.stringify(packageData, null, 2);
-    const safeName = (packageData.header.teacherName || 'Teacher').replace(/[^a-zA-Z0-9]/g, '_');
-    const safeGrade = (packageData.header.assignedGrade || 'Grade').replace(/[^a-zA-Z0-9]/g, '_');
-    const fileName = `Munyaka_MasterPackage_${safeName}_${safeGrade}_${Date.now()}.json`;
+    const safeName = (packageData.header.teacherName || 'teacher').replace(/\s+/g, '_').toLowerCase();
+    const todayDate = new Date().toISOString().split('T')[0];
+    const fileName = `munyaka_teacher_export_${safeName}_${todayDate}.json`;
 
     // 1. Try Capacitor Native Share & Filesystem first (ExternalStorage / Documents)
     try {
