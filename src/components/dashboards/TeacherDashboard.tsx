@@ -563,8 +563,8 @@ export default function TeacherDashboard() {
     );
   }
 
-  // Safely guard layout frame or specialized staff with no homeroom
-  if (!hasAssignedClass || title.includes('ict') || title.includes('bursar') || title.includes('accountant') || title.includes('support')) {
+  // Safely guard layout frame or specialized staff with no homeroom (unless staff/teacher role)
+  if (!hasAssignedClass && (title.includes('ict') || title.includes('bursar') || title.includes('accountant') || title.includes('support')) && !normalizedRole.includes('staff') && !normalizedRole.includes('teacher')) {
     return (
       <div className="space-y-8 pb-12 max-w-5xl mx-auto px-4">
         <div className="bg-gradient-to-r from-emerald-600 via-teal-700 to-cyan-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
