@@ -556,9 +556,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     : finalMenu);
 
   // Bottom Navigation Bar Quick Links - Filtered by user role.
-  const userRoleLower = String(user?.role || '').toLowerCase();
-  const isTeacherRole = userRoleLower === 'teacher' || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher';
-
   const bottomQuickNav = isTeacherRole ? [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: Users, label: 'Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
