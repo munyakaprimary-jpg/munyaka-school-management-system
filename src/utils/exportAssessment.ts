@@ -463,7 +463,11 @@ function openPrintDialog(html: string, title: string): void {
       } catch {
         /* noop */
       }
-      setTimeout(() => document.body.removeChild(iframe), 1500);
+      setTimeout(() => {
+        if (iframe.parentNode) {
+          document.body.removeChild(iframe);
+        }
+      }, 1500);
     }, 250);
     return;
   }
