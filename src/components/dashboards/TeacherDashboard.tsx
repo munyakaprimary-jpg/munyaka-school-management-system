@@ -650,7 +650,7 @@ export default function TeacherDashboard() {
             Enter Exam Marks
           </Button>
           <Button
-            onClick={() => navigate('/teacher-sync')}
+            onClick={() => navigate('/teacher-export')}
             className="bg-emerald-600 text-white hover:bg-emerald-500 font-bold rounded-xl shadow-sm"
           >
             <Sparkles className="w-4 h-4 mr-2 text-white" />

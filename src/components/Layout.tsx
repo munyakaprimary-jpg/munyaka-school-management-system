@@ -432,7 +432,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Users, label: 'My Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: ClipboardCheck, label: 'Roll Call / Attendance', path: '/attendance', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: FileSpreadsheet, label: 'Assessments & Marks', path: '/assessments', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: FileText, label: 'Sync & Export Package', path: '/teacher-sync', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: FileText, label: 'Sync & Export Package', path: '/teacher-export', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
