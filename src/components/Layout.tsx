@@ -821,8 +821,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   </div>
         
                   <div className="flex items-center gap-2">
-                    {/* Sticky Sync Button in Header */}
-                    <SyncButton />
+                    {/* Sticky Sync Button in Header (Admin/Owner only) */}
+                    {user && !['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher'].includes(String(user.role || '').toLowerCase()) && (
+                      <SyncButton />
+                    )}
                     <NotificationBell />
                     {(() => {
                       const hour = new Date().getHours();
