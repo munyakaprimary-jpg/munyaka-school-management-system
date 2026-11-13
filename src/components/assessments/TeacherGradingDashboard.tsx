@@ -148,6 +148,22 @@ interface StudentGrade {
   gradeLevel: AssessmentResult["gradeLevel"];
 }
 
+// ─── Dynamic Learners Directory Loader ─────────────────────────────────────────
+function loadDirectoryLearnersFromStorage(): any[] {
+  try {
+    for (const key of ['munyaka_learners', 'munyaka_learners_directory', 'munyaka_learners_v2', 'munyaka_learners_db', 'school_learners_data', 'learners']) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    }
+  } catch { /* ignore */ }
+  return [];
+}
+
 // ─── Data loaders ──────────────────────────────────────────────────────────────
 function loadAssessments(): Assessment[] {
   const result: Assessment[] = [];
@@ -213,19 +229,20 @@ function loadSubmissions(assessmentId: string): StudentSubmission[] {
 
 function getStudentDetails(studentId: string): { name: string; admissionNo: string } {
   try {
-    const raw = localStorage.getItem("school_learners_data");
+    const raw = localStorage.getItem("munyaka_learners");
     if (raw) {
       const learners = JSON.parse(raw);
       const student = learners.find(
         (l: any) =>
           l.id === studentId ||
           l.admissionNumber === studentId ||
-          l.admNo === studentId
+          l.admNo === studentId ||
+          l.admissionNo === studentId
       );
       if (student) {
         return {
-          name: student.name || studentId,
-          admissionNo: student.admissionNumber || student.admNo || studentId || 'No Admission No.'
+          name: student.fullName || student.name || student.studentName || studentId,
+          admissionNo: student.admissionNumber || student.admNo || student.admissionNo || studentId || 'No Admission No.'
         };
       }
     }
@@ -238,14 +255,15 @@ function getStudentDetails(studentId: string): { name: string; admissionNo: stri
 
 function loadStudentMeta(studentId: string): { classId: string; className: string; stream?: string } {
   try {
-    const raw = localStorage.getItem("school_learners_data");
+    const raw = localStorage.getItem("munyaka_learners");
     if (raw) {
       const learners = JSON.parse(raw);
       const found = learners.find(
         (l: any) =>
           l.id === studentId ||
           l.admissionNumber === studentId ||
-          l.admNo === studentId
+          l.admNo === studentId ||
+          l.admissionNo === studentId
       );
       if (found) {
         return {
@@ -297,8 +315,31 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-
-  // ── Filter controls ────────────────────────────────────────────────────────
+  
+    // ── Dynamic Learners Directory state ─────────────────────────────────────────
+    const [directoryLearners, setDirectoryLearners] = useState<any[]>([]);
+  
+    useEffect(() => {
+          const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'munyaka_learners' || e.key === 'munyaka_learners_directory') {
+              setDirectoryLearners(loadDirectoryLearnersFromStorage());
+            }
+          };
+          setDirectoryLearners(loadDirectoryLearnersFromStorage());
+          // Listen for updates from the Learners Directory component
+          window.addEventListener('munyaka_learners_updated', () => {
+            setDirectoryLearners(loadDirectoryLearnersFromStorage());
+          });
+          window.addEventListener('storage', handleStorageChange);
+          return () => {
+            window.removeEventListener('munyaka_learners_updated', () => {
+              setDirectoryLearners(loadDirectoryLearnersFromStorage());
+            });
+            window.removeEventListener('storage', handleStorageChange);
+          };
+        }, []);
+  
+    // ── Filter controls ────────────────────────────────────────────────────────
   const [selectedGrade, setSelectedGrade] = useState<string>(!isAdmin ? assignedGrade : ALL_GRADES_VALUE);
   const [selectedStream, setSelectedStream] = useState<string>(!isAdmin ? assignedStream : ALL_STREAMS_VALUE);
 
@@ -647,20 +688,27 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const filteredGrades = useMemo(() => {
-    return studentGrades.filter((sub) => {
-      const subWithExtras = sub as any;
-      const matchesGrade = !selectedGrade || selectedGrade === ALL_GRADES_VALUE || normaliseGrade(sub.classId) === normaliseGrade(selectedGrade) || normaliseGrade(sub.className) === normaliseGrade(selectedGrade) || normaliseGrade(subWithExtras.grade) === normaliseGrade(selectedGrade);
-      const matchesStream = !selectedStream || selectedStream === ALL_STREAMS_VALUE || normaliseGrade(sub.stream) === normaliseGrade(selectedStream);
-      const matchesExam = !selectedExamId || selectedExamId === ALL_EXAMS_VALUE || sub.assessmentId === selectedExamId || subWithExtras.examId === selectedExamId || subWithExtras.assessmentTitle === selectedExamId;
-      const matchesSearch =
-              !String(searchTerm || '').trim() ||
-              sub.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              sub.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              sub.classId.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      return matchesGrade && matchesStream && matchesExam && matchesSearch;
-    });
-  }, [studentGrades, searchTerm, selectedGrade, selectedStream, selectedExamId]);
+      return studentGrades.filter((sub) => {
+        const subWithExtras = sub as any;
+        const matchesGrade = !selectedGrade || selectedGrade === ALL_GRADES_VALUE ||
+          normaliseGrade(sub.classId) === normaliseGrade(selectedGrade) ||
+          normaliseGrade(sub.className) === normaliseGrade(selectedGrade) ||
+          normaliseGrade(subWithExtras.grade) === normaliseGrade(selectedGrade);
+        const matchesStream = !selectedStream || selectedStream === ALL_STREAMS_VALUE ||
+          normaliseGrade(sub.stream) === normaliseGrade(selectedStream);
+        const matchesExam = !selectedExamId || selectedExamId === ALL_EXAMS_VALUE ||
+          sub.assessmentId === selectedExamId ||
+          subWithExtras.examId === selectedExamId ||
+          subWithExtras.assessmentTitle === selectedExamId;
+        const matchesSearch =
+                !String(searchTerm || '').trim() ||
+                sub.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                sub.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                sub.classId.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        return matchesGrade && matchesStream && matchesExam && matchesSearch;
+      });
+    }, [studentGrades, searchTerm, selectedGrade, selectedStream, selectedExamId]);
 
   const selectedStudent = studentGrades.find((g) => g.studentId === selectedStudentId) || null;
 
@@ -708,8 +756,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
         markedSubs.some(
           (s) =>
             s.examId === exam.id &&
-            (s.stream || "").trim().toLowerCase() ===
-              (selectedStream || "").trim().toLowerCase()
+            normaliseGrade(s.stream) === normaliseGrade(selectedStream)
         );
 
       return matchesGrade && matchesStream;
