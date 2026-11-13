@@ -158,15 +158,15 @@ export const TeacherExportModule: React.FC = () => {
         <CardHeader className="p-6 pb-4">
           <div className="flex items-center justify-between">
             <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100 font-bold uppercase tracking-wider text-[10px]">
-              Offline QR-Code Batch Sync (Centre: {SCHOOL_CENTRE_CODE})
+              Teacher Class Package Export (Centre: {SCHOOL_CENTRE_CODE})
             </Badge>
             <ShieldCheck size={18} className="text-indigo-600" />
           </div>
           <CardTitle className="text-xl font-black text-slate-900 mt-2">
-            Teacher Offline QR Sync & File Export
+            Export My Class Package (.json)
           </CardTitle>
           <CardDescription className="text-xs text-slate-600">
-            Generate offline QR code batches for instant camera scanning by the Admin Hub, or export package files.
+            Package your recorded attendance, check-ins, and CBC assessment marks to send to the administrator.
           </CardDescription>
         </CardHeader>
 
@@ -235,17 +235,8 @@ export const TeacherExportModule: React.FC = () => {
             </div>
           </div>
 
-          {/* Action Buttons: Generate Sync QR Code & File Export */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-            <Button
-              onClick={handleGenerateSyncQR}
-              disabled={isExporting}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold rounded-xl shadow-md hover:from-indigo-700 hover:to-purple-700 transition-all active:scale-95"
-            >
-              {isExporting ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <QrCode className="w-4 h-4 shrink-0" />}
-              <span>{isExporting ? 'Generating QR...' : 'Generate Sync QR Code'}</span>
-            </Button>
-
+          {/* Action Buttons: Export Class Package */}
+          <div className="mt-3">
             <Button
               onClick={() => {
                 const payload = buildPayload();
@@ -262,10 +253,10 @@ export const TeacherExportModule: React.FC = () => {
                 URL.revokeObjectURL(url);
                 showSuccess('Teacher export package downloaded successfully!');
               }}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl shadow-sm hover:bg-slate-50 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black rounded-xl shadow-md transition-all active:scale-95"
             >
-              <Download className="w-4 h-4 shrink-0 text-indigo-600" />
-              <span>Export Teacher Sync Package (.json)</span>
+              <Download className="w-5 h-5 shrink-0 text-white" />
+              <span>Export My Class Package (.json)</span>
             </Button>
           </div>
         </CardContent>
