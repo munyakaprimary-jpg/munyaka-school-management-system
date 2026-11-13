@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { SuccessShareModal } from '@/components/modals/SuccessShareModal';
 
 interface TeacherExportModalProps {
   isOpen: boolean;
@@ -18,6 +19,19 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
 }) => {
   const { user } = useAuth();
   const [isExporting, setIsExporting] = useState(false);
+  const [successShareData, setSuccessShareData] = useState<{
+    isOpen: boolean;
+    filename: string;
+    data: string;
+    mimeType: string;
+    title: string;
+  }>({
+    isOpen: false,
+    filename: '',
+    data: '',
+    mimeType: 'application/json',
+    title: ''
+  });
 
   if (!isOpen) return null;
 
@@ -66,6 +80,13 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
       URL.revokeObjectURL(url);
 
       onClose();
+      setSuccessShareData({
+        isOpen: true,
+        filename,
+        data: jsonString,
+        mimeType: 'application/json',
+        title: `Teacher Export Package (${selectedGrade} - ${selectedStream}) Exported!`
+      });
     } catch (err) {
       console.error("Export error:", err);
     } finally {
@@ -98,6 +119,15 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
           </Button>
         </div>
       </div>
+
+      <SuccessShareModal
+        isOpen={successShareData.isOpen}
+        onClose={() => setSuccessShareData(prev => ({ ...prev, isOpen: false }))}
+        filename={successShareData.filename}
+        data={successShareData.data}
+        mimeType={successShareData.mimeType}
+        title={successShareData.title}
+      />
     </div>
   );
 };
