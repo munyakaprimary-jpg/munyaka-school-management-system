@@ -1,46 +1,22 @@
-import React, { useState, useMemo } from 'react';
-import Modal from '@/components/ui/Modal';
+import React, { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, ShieldCheck } from 'lucide-react';
-import { exportClassPackage } from '@/services/departmentExportService';
-import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
-import { ExportSuccessShareModal } from './ExportSuccessShareModal';
+import { Download, CheckCircle2, QrCode } from 'lucide-react';
 
 interface TeacherExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultGrade?: string;
-  defaultStream?: string;
+  selectedGrade?: string;
+  selectedStream?: string;
 }
 
 export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
   isOpen,
   onClose,
-  defaultGrade,
-  defaultStream
+  selectedGrade = 'Grade 4',
+  selectedStream = 'Blue'
 }) => {
-  // Pure dynamic fetch from the Grades and Streams Menu configuration
-  const config = useMemo(() => readGradesAndStreams(), []);
-  const grades = config.grades;
-
-  const [selectedGrade, setSelectedGrade] = useState(() => defaultGrade || grades[0] || 'Grade 1');
-
-  const availableStreams = useMemo(() => {
-    const s = getStreamsForGrade(selectedGrade, config);
-    return s.length > 0 ? s : config.streams;
-  }, [selectedGrade, config]);
-
-  const [selectedStream, setSelectedStream] = useState(() => defaultStream || availableStreams[0] || '');
-
-  // Keep selected stream in sync if grade changes
-  React.useEffect(() => {
-    if (availableStreams.length > 0 && !availableStreams.includes(selectedStream)) {
-      setSelectedStream(availableStreams[0]);
-    }
-  }, [availableStreams, selectedStream]);
-
+  const { user } = useAuth();
   const [isExporting, setIsExporting] = useState(false);
   const [successShareData, setSuccessShareData] = useState<{
     isOpen: boolean;
@@ -56,25 +32,24 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
     title: ''
   });
 
-  const handleExport = () => {
+  if (!isOpen) return null;
+
+  const handleExportPackage = async () => {
     setIsExporting(true);
     try {
-      localStorage.setItem('munyaka_temp_export_override', JSON.stringify({
-        assignedClass: selectedGrade,
-        assignedStream: selectedStream
-      }));
-
-      // Generate package payload to pass directly to share modal
       const attendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
       const marks = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
-      const checkIns = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || '[]');
+      const checkIns = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || localStorage.getItem('munyaka_staff_checkins') || '[]');
+      const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
 
       const payload = {
+        centreCode: '26534178',
         metadata: {
-          senderName: 'Class Teacher',
-          staffId: 'TCH-001',
+          senderName: user?.name || 'Class Teacher',
+          staffId: (user as any)?.staffId || user?.staff_id || user?.id || 'TCH-001',
+          email: user?.email || 'teacher@munyaka.ac.ke',
           departmentOrStream: selectedStream,
-          packageType: 'CLASS_PACKAGE',
+          packageType: 'TEACHER_OFFLINE_BATCH',
           assignedClass: selectedGrade,
           assignedStream: selectedStream,
           exportedAt: new Date().toISOString(),
@@ -83,103 +58,68 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
         data: {
           attendance,
           marks,
-          checkIns
+          checkIns,
+          munyaka_central_db: centralDb
         }
       };
 
-      const filename = `munyaka_teacher_export_${(user?.name || 'teacher').replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.json`;
+      const staffNameSlug = (user?.name || 'teacher').replace(/\s+/g, '_').toLowerCase();
+      const todayDate = new Date().toISOString().split('T')[0];
+      const filename = `munyaka_teacher_export_${staffNameSlug}_${todayDate}.json`;
       const jsonString = JSON.stringify(payload, null, 2);
 
-      exportClassPackage(selectedStream, {
-        assignedClass: selectedGrade,
-        assignedStream: selectedStream
-      });
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
       onClose();
-
-      // Immediately trigger the Quick Share modal prompt
-      setSuccessShareData({
-        isOpen: true,
-        filename,
-        data: jsonString,
-        mimeType: 'application/json',
-        title: `Teacher Export Package (${selectedGrade} - ${selectedStream}) Exported!`
-      });
+    } catch (err) {
+      console.error("Export error:", err);
     } finally {
       setIsExporting(false);
     }
   };
 
   return (
-    <>
-      <Modal isOpen={isOpen} onClose={onClose} title="Select Grade & Stream for Export">
-      <div className="space-y-6 py-4">
-        <div className="bg-indigo-50 dark:bg-indigo-950/40 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 flex items-start gap-3">
-          <ShieldCheck className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
-          <div className="text-xs text-indigo-900 dark:text-indigo-200">
-            <span className="font-bold">Stream Isolation Lock:</span> Select the exact class and stream you are exporting data for. This stamps the metadata headers dynamically so the Admin Harmonization Hub can verify stream integrity.
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md overflow-hidden p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-black text-slate-900 dark:text-white">Export Teacher Sync Package</h3>
+            <p className="text-xs text-slate-500">Centre Code: 26534178</p>
           </div>
+          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-slate-600">✕</button>
         </div>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-500">
-              Select Grade / Class
-            </Label>
-            <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-              <SelectTrigger className="h-12 rounded-xl border-slate-200 font-bold">
-                <SelectValue placeholder="Select Grade" />
-              </SelectTrigger>
-              <SelectContent>
-                {grades.map(g => (
-                  <SelectItem key={g} value={g}>{g}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-500">
-              Select Stream
-            </Label>
-            <Select value={selectedStream} onValueChange={setSelectedStream}>
-              <SelectTrigger className="h-12 rounded-xl border-slate-200 font-bold">
-                <SelectValue placeholder="Select Stream" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableStreams.map(s => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 space-y-2">
+          <p className="text-xs text-indigo-900 dark:text-indigo-200 font-medium leading-relaxed">
+            Download your attendance records, CBC assessment marks, and check-ins as a securely formatted JSON package ready for Admin Harmonization.
+          </p>
         </div>
 
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="outline" onClick={onClose} className="rounded-xl h-11 px-5 font-bold">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleExport}
-            disabled={isExporting || !selectedStream}
-            className="rounded-xl h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center gap-2"
-          >
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={onClose} className="flex-1 rounded-xl">Cancel</Button>
+          <Button onClick={handleExportPackage} disabled={isExporting} className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2">
             <Download size={16} />
-            {isExporting ? 'Generating...' : 'Confirm & Export Package'}
+            {isExporting ? 'Exporting...' : 'Download .JSON'}
           </Button>
         </div>
       </div>
-    </Modal>
 
-      <ExportSuccessShareModal
+      <SuccessShareModal
         isOpen={successShareData.isOpen}
         onClose={() => setSuccessShareData(prev => ({ ...prev, isOpen: false }))}
         filename={successShareData.filename}
         data={successShareData.data}
         mimeType={successShareData.mimeType}
         title={successShareData.title}
-        description="File generated & downloaded successfully! Beam this package instantly to the Admin Harmonization Hub or WhatsApp."
       />
-    </>
+    </div>
   );
 };
