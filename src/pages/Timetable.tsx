@@ -61,7 +61,7 @@ export default function Timetable() {
   }, [staffMembers]);
 
   const role = (currentUser?.role || 'admin').toLowerCase();
-  const isAdmin = role === 'admin' || role === 'headteacher' || role === 'principal' || role === 'super_admin' || true;
+  const isAdmin = role === 'admin' || role === 'headteacher' || role === 'principal' || role === 'super_admin';
 
   // Grade, Stream, Year & Term state
   const [selectedGrade, setSelectedGrade] = useState('Grade 4');
