@@ -751,7 +751,7 @@ export default function TeacherDashboard() {
             Mark Attendance
           </Button>
           <Button
-            onClick={() => navigate('/assessments/grading')}
+            onClick={() => navigate('/assessments')}
             className="bg-indigo-600 text-white hover:bg-indigo-500 font-bold rounded-xl border border-indigo-400 shadow-sm"
           >
             <FileSpreadsheet className="w-4 h-4 mr-2 text-white" />
@@ -891,7 +891,7 @@ export default function TeacherDashboard() {
               </div>
 
               <div
-                onClick={() => navigate('/assessments/grading')}
+                onClick={() => navigate('/assessments')}
                 className="p-5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-indigo-50/50 hover:border-indigo-200 transition-all cursor-pointer group flex items-start gap-4"
               >
                 <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
