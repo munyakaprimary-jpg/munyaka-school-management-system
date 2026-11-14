@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { showSuccess, showError } from "@/utils/toast";
 import { sortGradesAscending } from "@/utils/gradeSort";
 import { CentralDataService } from "@/services/centralDataService";
+import { findAssessmentBirthCertDuplicate, formatAssessmentDuplicateError } from "@/utils/learnerIdentity";
 
 const STUDENTS_STORAGE_KEYS = ["students_data", "school_learners_data"];
 
@@ -453,15 +454,11 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
       // Read existing students using CentralDataService
       const existing: RegisteredStudent[] = (CentralDataService.getLearners() || []) as RegisteredStudent[];
 
-      // Check for duplicates
-      const duplicate = existing.some(
-        (s: any) =>
-          s.admissionNumber === newStudent.admissionNumber ||
-          s.admNo === newStudent.admNo ||
-          s.assessmentNo === newStudent.assessmentNo
-      );
-      if (duplicate) {
-        setRegError("A learner with this number already exists.");
+      // Strict duplicate check: block if this Assessment / Birth Certificate
+      // number is already registered under a different learner record.
+      const dup = findAssessmentBirthCertDuplicate(existing, newStudent.assessmentNo);
+      if (dup) {
+        setRegError(formatAssessmentDuplicateError(dup));
         return;
       }
 

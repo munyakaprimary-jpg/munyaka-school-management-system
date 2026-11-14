@@ -187,6 +187,74 @@ export const isDuplicateLearner = (
   return findLearnerByIdentity(list, admissionNo, assessmentNo) >= 0;
 };
 
+// ---------- Strict Assessment / Birth Certificate duplicate check ----------
+
+export interface AssessmentDuplicateMatch {
+  /** The existing learner record that already owns this number. */
+  learner: any;
+  /** Which field(s) on the existing record collided. */
+  matchedFields: string[];
+}
+
+/**
+ * Strictly find an existing learner whose Assessment / Birth Certificate number
+ * collides with the submitted one, on a DIFFERENT record (excluding `excludeId`).
+ *
+ * The submitted number is compared against the existing record's `assessmentNo`,
+ * `assessmentNumber`, `birthCertNo`, and `birthCertificateNo` fields.
+ * Comparison is case-insensitive and whitespace-normalized.
+ *
+ * Returns the match (record + collided fields) or null when the number is free.
+ */
+export const findAssessmentBirthCertDuplicate = (
+  list: any[],
+  submittedNo: string,
+  excludeId?: string | null
+): AssessmentDuplicateMatch | null => {
+  const target = normalizeId(submittedNo);
+  if (!target) return null;
+
+  for (const l of list || []) {
+    if (!l) continue;
+
+    // Skip the record currently being edited (self-match is allowed on update).
+    if (excludeId != null && excludeId !== '') {
+      const recId = String(l.id || l._id || '').trim();
+      if (recId && recId === String(excludeId).trim()) continue;
+    }
+
+    const matchedFields: string[] = [];
+    const candidates: Array<[string, string]> = [
+      ['assessmentNo', normalizeId(l.assessmentNo)],
+      ['assessmentNumber', normalizeId(l.assessmentNumber)],
+      ['birthCertNo', normalizeId(l.birthCertNo)],
+      ['birthCertificateNo', normalizeId(l.birthCertificateNo)],
+    ];
+    for (const [field, value] of candidates) {
+      if (value && value === target) matchedFields.push(field);
+    }
+
+    if (matchedFields.length > 0) {
+      return { learner: l, matchedFields };
+    }
+  }
+  return null;
+};
+
+/**
+ * Build the user-facing error message for a duplicate Assessment / Birth
+ * Certificate number, e.g.
+ * "Error: Assessment / Birth Certificate number already registered under Jane Doe (MUN-1234)."
+ */
+export const formatAssessmentDuplicateError = (match: AssessmentDuplicateMatch): string => {
+  const l = match.learner || {};
+  const name = String(l.fullName || l.name || l.studentName || 'Unknown Learner').trim();
+  const admNo = String(
+    l.admissionNo || l.admissionNumber || l.admNo || l.id || 'N/A'
+  ).trim();
+  return `Error: Assessment / Birth Certificate number already registered under ${name} (${admNo})`;
+};
+
 /**
  * Remove duplicate learners from a list, keeping only the first occurrence
  * keyed by admission number or assessment number. Returns a cleaned list.

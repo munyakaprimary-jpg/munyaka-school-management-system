@@ -12,7 +12,7 @@ import { logActivity } from '@/services/activityLog';
 import { notifyDataChanged } from '@/hooks/useDashboardData';
 import { RegistrationConfirmationSlip, RegistrationSlipData } from '@/components/learners/RegistrationConfirmationSlip';
 import { generateLearnerId, findExistingLearner } from '@/services/learnerService';
-import { findLearnerByIdentity, getLearnerAdmissionNo, getLearnerAssessmentNo } from '@/utils/learnerIdentity';
+import { findAssessmentBirthCertDuplicate, formatAssessmentDuplicateError } from '@/utils/learnerIdentity';
 
 const Registration = () => {
   const { toast } = useToast();
@@ -61,13 +61,21 @@ const Registration = () => {
     const generatedAdmNumber = `MUN-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
     const generatedAssessmentNumber = admNo || `B${Math.floor(100000000 + Math.random() * 900000000)}`;
 
-    let wasUpsert = false;
     let resolvedAdmNumber = generatedAdmNumber;
     let resolvedAssessmentNumber = generatedAssessmentNumber;
 
     try {
       const saved = localStorage.getItem('school_learners_data');
       const learners: any[] = saved ? JSON.parse(saved) : [];
+
+      // Strict duplicate check: block registration if the Assessment / Birth
+      // Certificate number is already registered under a different learner.
+      const dup = findAssessmentBirthCertDuplicate(learners, generatedAssessmentNumber);
+      if (dup) {
+        setFormError(formatAssessmentDuplicateError(dup));
+        return;
+      }
+
       const newLearner = {
         id: generateLearnerId(),
         admNo: generatedAdmNumber,
@@ -82,42 +90,13 @@ const Registration = () => {
         address: String(formData.address || '').trim(),
       };
 
-      // Unique-identifier validation against the master registry.
-      // If the Assessment / Birth Certificate Number already exists, we
-      // UPSERT (update) the existing record instead of creating a duplicate.
-      const existingIdx = findLearnerByIdentity(learners, newLearner.admNo, newLearner.assessmentNo);
-      if (existingIdx >= 0) {
-        const existing = learners[existingIdx];
-        const merged = {
-          ...existing,
-          // Preserve the existing admission number so we never re-key a learner
-          admNo: getLearnerAdmissionNo(existing) || existing.admNo || existing.admissionNo || generatedAdmNumber,
-          assessmentNo: newLearner.assessmentNo,
-          birthCertificateNo: bcNo || existing.birthCertificateNo,
-          name: newLearner.name,
-          grade: newLearner.grade,
-          stream: newLearner.stream,
-          gender: newLearner.gender,
-          guardian: newLearner.guardian,
-          phone: newLearner.phone,
-          address: newLearner.address,
-          updatedAt: new Date().toISOString(),
-        };
-        learners[existingIdx] = merged;
-        wasUpsert = true;
-        resolvedAdmNumber = merged.admNo;
-        resolvedAssessmentNumber = merged.assessmentNo;
-      } else {
-        learners.unshift(newLearner);
-      }
+      learners.unshift(newLearner);
 
       localStorage.setItem('school_learners_data', JSON.stringify(learners));
       notifyDataChanged('school_learners_data');
       logActivity({
         type: 'student_registration',
-        title: wasUpsert
-          ? `Existing learner updated (matched by identifier): ${String(formData.fullName || '').trim()} (${formData.gender}, Grade ${formData.grade})`
-          : `New student registered: ${String(formData.fullName || '').trim()} (${formData.gender}, Grade ${formData.grade})`,
+        title: `New student registered: ${String(formData.fullName || '').trim()} (${formData.gender}, Grade ${formData.grade})`,
       });
     } catch (err) {
       console.error('Failed to persist learner:', err);

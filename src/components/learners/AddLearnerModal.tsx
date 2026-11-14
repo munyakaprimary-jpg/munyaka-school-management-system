@@ -11,7 +11,7 @@ import { generateUniqueCohortAdmissionNumber, generateCohortAdmissionNumber } fr
 import { Learner } from '@/types/learners';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { useLearners } from '@/context/LearnerContext';
-import { upsertLearnerIntoList, findLearnerByIdentity, getLearnerAdmissionNo, getLearnerAssessmentNo } from '@/utils/learnerIdentity';
+import { upsertLearnerIntoList, findLearnerByIdentity, getLearnerAdmissionNo, getLearnerAssessmentNo, findAssessmentBirthCertDuplicate, formatAssessmentDuplicateError } from '@/utils/learnerIdentity';
 
 interface AddLearnerModalProps {
   isOpen: boolean;
@@ -134,7 +134,17 @@ export default function AddLearnerModal({
         const dobVal = formData.dob || '';
         const parentNameVal = (formData.guardianName || '').trim() || 'Parent / Guardian';
         const idVal = (formData.assessmentNo || '').trim() || '';
-  
+
+        // Strict duplicate check: block if this Assessment / Birth Certificate
+        // number is already registered under a different learner record.
+        if (idVal) {
+          const dup = findAssessmentBirthCertDuplicate(existingLearners, idVal);
+          if (dup) {
+            showError(formatAssessmentDuplicateError(dup));
+            return;
+          }
+        }
+ 
         const newLearner: Learner = {
           id: admissionNumber,
           admissionNo: admissionNumber,

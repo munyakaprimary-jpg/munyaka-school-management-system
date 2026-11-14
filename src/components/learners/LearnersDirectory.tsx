@@ -7,6 +7,7 @@ import TransferInModal from './TransferInModal';
 import { showSuccess, showError } from '@/utils/toast';
 import { generateUniqueCohortAdmissionNumber } from '@/utils/admissionUtils';
 import { getActiveAdminPassword } from '@/services/adminCredentials';
+import { findAssessmentBirthCertDuplicate, formatAssessmentDuplicateError } from '@/utils/learnerIdentity';
 
 interface Learner {
   id: string;
@@ -803,6 +804,19 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
       alert("Please enter the learner's full name.");
       return;
     }
+
+    // Strict duplicate check: block if this Assessment / Birth Certificate
+    // number is already registered under a DIFFERENT learner record.
+    const submittedAssess = String(formData.assessmentNumber || '').trim();
+    if (submittedAssess) {
+      const allLearners = getStoredLearnersList();
+      const dup = findAssessmentBirthCertDuplicate(allLearners, submittedAssess, learner?.id);
+      if (dup) {
+        alert(formatAssessmentDuplicateError(dup));
+        return;
+      }
+    }
+
     onSave({
       ...formData,
       name: formData.fullName,

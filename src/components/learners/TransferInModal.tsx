@@ -34,6 +34,7 @@ import {
 import { Learner } from '@/types/learners';
 import { registerTransferredInLearner } from '@/lib/rosterService';
 import { showSuccess, showError } from '@/utils/toast';
+import { findAssessmentBirthCertDuplicate, formatAssessmentDuplicateError } from '@/utils/learnerIdentity';
 
 export interface TransferInModalProps {
   isOpen: boolean;
@@ -250,6 +251,17 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
         `Admission Number ${admNo} already exists. Please choose another.`,
       );
       return null;
+    }
+
+    // Strict duplicate check: block if the Assessment / Birth Certificate
+    // number is already registered under a different learner record.
+    const identityNo = assessmentNo || birthCertNo;
+    if (identityNo) {
+      const dup = findAssessmentBirthCertDuplicate(existing, identityNo);
+      if (dup) {
+        showError(formatAssessmentDuplicateError(dup));
+        return null;
+      }
     }
 
     const gradeVal = String(form.grade || 'Grade 1').trim();
