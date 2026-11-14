@@ -53,6 +53,8 @@ import { notifyDataChanged } from '@/utils/storage';
 import { format, isToday, isSameDay, addDays } from 'date-fns';
 import { Notice, SchoolEvent } from '@/types/notice';
 import { useAuth } from '@/context/AuthContext';
+import { db } from '@/config/firebase';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 
 // Generate mock blob URLs at module load time so seed attachments are genuinely downloadable
 const createMockPdfBlob = (filename: string, content: string) => {
@@ -86,19 +88,30 @@ const INITIAL_EVENTS: SchoolEvent[] = [];
 export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defaultTab?: 'announcements' | 'events' }) {
   const { user } = useAuth();
 
-  // Permission helper: only super admins, head teachers, and the original
-  // creator of the notice may delete it. All other roles see no action menu.
-  const canDeleteNotice = (notice: Notice): boolean => {
+  // Determine if the current user is a teacher (teacher, subject_teacher, class_teacher, senior_teacher)
+  const isTeacher = useMemo(() => {
     if (!user) return false;
-    const isAdmin = user.role === 'admin';
+    const role = (user.role || '').toLowerCase();
+    return role === 'teacher' || role === 'subject_teacher' || role === 'class_teacher' || role === 'senior_teacher';
+  }, [user]);
+
+  // Permission helper: only super admins, head teachers, and the original
+  // creator of the notice may delete it. Teachers are strictly read-only.
+  const canDeleteNotice = (notice: Notice): boolean => {
+    if (isTeacher) return false;
+    if (!user) return false;
+    const role = (user.role || '').toLowerCase();
+    const isAdmin = role === 'admin' || role === 'head_teacher';
     const isCreator = notice.createdBy === user.id;
     return isAdmin || isCreator;
   };
 
-  // Permission helper for deleting events. Same RBAC logic as notices for consistency.
+  // Permission helper for deleting events. Teachers are strictly read-only.
   const canDeleteEvent = (): boolean => {
+    if (isTeacher) return false;
     if (!user) return false;
-    return user.role === 'admin' || user.role === 'accountant';
+    const role = (user.role || '').toLowerCase();
+    return role === 'admin' || role === 'head_teacher' || role === 'accountant';
   };
   // LocalStorage Persistence for Notices and Events
   const [notices, setNotices] = useState<Notice[]>(() => {
@@ -134,6 +147,50 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     }
     return [];
   });
+
+  // Firestore live subscription for events_notices collection
+  useEffect(() => {
+    try {
+      const q = query(collection(db, 'events_notices'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const firestoreDocs = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as any[];
+        
+        if (firestoreDocs.length > 0) {
+          // Separate into notices and events or map accordingly
+          const cloudNotices = firestoreDocs.filter(item => item.type !== 'event' && !item.eventDate);
+          const cloudEvents = firestoreDocs.filter(item => item.type === 'event' || item.eventDate);
+
+          if (cloudNotices.length > 0) {
+            setNotices(prev => {
+              // Merge or replace with Firestore records sorted by newest
+              return cloudNotices.map((n: any) => ({
+                id: n.id,
+                title: n.title || n.subject || 'Notice',
+                content: n.content || n.message || '',
+                description: n.description || '',
+                date: n.date || 'Today',
+                category: n.category || 'Normal',
+                pinned: n.pinned || false,
+                color: n.color || 'bg-indigo-50 text-indigo-600 border-indigo-200',
+                attachmentName: n.attachmentName,
+                attachmentUrl: n.attachmentUrl,
+                createdBy: n.createdBy
+              }));
+            });
+          }
+        }
+      }, (err) => {
+        console.warn('Firestore events_notices live subscription notice:', err);
+      });
+
+      return () => unsubscribe();
+    } catch (e) {
+      console.error('Error setting up events_notices listener:', e);
+    }
+  }, []);
 
   // Mobile/responsive segmented toggle: 'announcements' | 'events'
   const [mobileTab, setMobileTab] = useState<'announcements' | 'events'>(defaultTab);
@@ -387,20 +444,24 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
         <div className="flex items-center gap-3">
           {mobileTab === 'announcements' ? (
-            <Button
-              onClick={() => setIsNoticeModalOpen(true)}
-              className="rounded-2xl gap-2 h-12 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none active:scale-95 transition-transform"
-            >
-              <Plus size={18} /> Publish Notice
-            </Button>
+            !isTeacher && (
+              <Button
+                onClick={() => setIsNoticeModalOpen(true)}
+                className="rounded-2xl gap-2 h-12 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none active:scale-95 transition-transform"
+              >
+                <Plus size={18} /> Publish Notice
+              </Button>
+            )
           ) : (
-            <Button
-              onClick={() => setIsEventModalOpen(true)}
-              variant="outline"
-              className="rounded-2xl gap-2 h-12 px-6 border-slate-200 dark:border-slate-800 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-transform"
-            >
-              <Plus size={18} /> Add Event
-            </Button>
+            !isTeacher && (
+              <Button
+                onClick={() => setIsEventModalOpen(true)}
+                variant="outline"
+                className="rounded-2xl gap-2 h-12 px-6 border-slate-200 dark:border-slate-800 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-transform"
+              >
+                <Plus size={18} /> Add Event
+              </Button>
+            )
           )}
         </div>
       </div>
