@@ -83,7 +83,13 @@ export const TeacherExportModule: React.FC = () => {
   const buildPayload = () => {
     const attendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
     const marks = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
-    const checkIns = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || '[]');
+    const checkIns = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || localStorage.getItem('munyaka_staff_checkins') || '[]');
+    let centralDb: any = {};
+    try {
+      centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+    } catch {
+      centralDb = {};
+    }
 
     return {
       centreCode: SCHOOL_CENTRE_CODE,
@@ -100,9 +106,32 @@ export const TeacherExportModule: React.FC = () => {
       data: {
         attendance,
         marks,
-        checkIns
+        checkIns,
+        munyaka_central_db: centralDb
       }
     };
+  };
+
+  const handleDownloadJsonFallback = () => {
+    try {
+      const payload = buildPayload();
+      const jsonString = JSON.stringify(payload, null, 2);
+      const staffNameSlug = (user?.name || 'teacher').replace(/\s+/g, '_').toLowerCase();
+      const todayDate = new Date().toISOString().split('T')[0];
+      const filename = `munyaka_teacher_sync_${staffNameSlug}_${todayDate}.json`;
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showSuccess('Teacher sync package JSON downloaded successfully!');
+    } catch (err: any) {
+      showError(err?.message || 'Failed to download JSON fallback.');
+    }
   };
 
   const handleGenerateSyncQR = () => {
@@ -235,8 +264,16 @@ export const TeacherExportModule: React.FC = () => {
             </div>
           </div>
 
-          {/* Action Buttons: Export Class Package */}
-          <div className="mt-3">
+          {/* Action Buttons: Generate Sync QR Code + Export Class Package */}
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button
+              onClick={handleGenerateSyncQR}
+              disabled={isExporting}
+              className="flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-black rounded-xl shadow-md transition-all active:scale-95"
+            >
+              <QrCode className="w-5 h-5 shrink-0 text-white" />
+              <span>Generate Sync QR Code</span>
+            </Button>
             <Button
               onClick={() => {
                 const payload = buildPayload();
@@ -253,10 +290,10 @@ export const TeacherExportModule: React.FC = () => {
                 URL.revokeObjectURL(url);
                 showSuccess('Teacher export package downloaded successfully!');
               }}
-              className="w-full flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black rounded-xl shadow-md transition-all active:scale-95"
+              className="flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black rounded-xl shadow-md transition-all active:scale-95"
             >
               <Download className="w-5 h-5 shrink-0 text-white" />
-              <span>Export My Class Package (.json)</span>
+              <span>Export Teacher Sync Package (.json)</span>
             </Button>
           </div>
         </CardContent>
