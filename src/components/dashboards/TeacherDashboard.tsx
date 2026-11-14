@@ -162,57 +162,6 @@ export default function TeacherDashboard() {
     const pct = totalEnrollmentCount > 0 ? Math.round((present / totalEnrollmentCount) * 100) : 0;
     return { presentCount: present, attendancePercentage: present > 0 ? pct : (totalEnrollmentCount > 0 ? 95 : 0) };
   }, [classLearners, totalEnrollmentCount, assignedGradePart, assignedStreamPart, todayStr, attendanceRecords]);
-    let present = 0;
-    const enrolledIds = new Set(classLearners.map((l: any) => String(l.id || l.admissionNumber || l.admNo)));
-    
-    // Try v2 storage key: munyaka_attendance_v2_{grade}_{stream}_{date}
-    const v2Key = `munyaka_attendance_v2_${assignedGradePart.replace(/\s+/g, '_')}_${assignedStreamPart}_${todayStr}`;
-    const v2Data = localStorage.getItem(v2Key);
-    if (v2Data) {
-      try {
-        const parsedV2 = JSON.parse(v2Data);
-        // parsedV2 can be an object map or array of attendance entries
-        if (Array.isArray(parsedV2)) {
-          present = parsedV2.filter((rec: any) =>
-            (enrolledIds.has(String(rec.learnerId || rec.id)) || enrolledIds.has(String(rec.admissionNumber))) &&
-            (rec.status === 'present' || rec.status === 'Present' || rec.present === true)
-          ).length;
-        } else if (parsedV2 && typeof parsedV2 === 'object') {
-          // Record map { [learnerId]: { status: 'present' } }
-          for (const [id, val]: [string, any] of Object.entries(parsedV2)) {
-            if (enrolledIds.has(id) && (val?.status === 'present' || val?.status === 'Present' || val === true || val?.present === true)) {
-              present++;
-            }
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
-
-    if (present === 0 && attendanceRecords.length > 0) {
-      // Fallback to attendanceRecords
-      const todayRecords = attendanceRecords.filter((rec: any) => {
-        const recDate = String(rec.date || '').split('T')[0];
-        const recGrade = String(rec.grade || rec.class || '').trim().toLowerCase();
-        const recStream = String(rec.stream || '').trim().toLowerCase();
-        const dateMatch = recDate === todayStr;
-        const gradeMatch = recGrade.includes(assignedGradePart.toLowerCase()) || assignedGradePart.toLowerCase().includes(recGrade);
-        const streamMatch = !assignedStreamPart || recStream.includes(assignedStreamPart.toLowerCase());
-        return dateMatch && gradeMatch && streamMatch;
-      });
-
-      if (todayRecords.length > 0) {
-        present = todayRecords.filter((rec: any) =>
-          rec.status === 'present' || rec.status === 'Present' || rec.present === true
-        ).length;
-      }
-    }
-
-    // If still 0 and we have active attendance data, default to healthy 95% or actual count
-    const pct = totalEnrollmentCount > 0 ? Math.round((present / totalEnrollmentCount) * 100) : 0;
-    return { presentCount: present, attendancePercentage: present > 0 ? pct : (totalEnrollmentCount > 0 ? 95 : 0) };
-  }, [classLearners, totalEnrollmentCount, assignedGradePart, assignedStreamPart, todayStr, attendanceRecords]);
 
   const rawRole = currUserObj.rbacRole || currUserObj.role || currUserObj.department || (user as any)?.rbacRole || user?.role || '';
   const normalizedRole = String(rawRole).toLowerCase().trim();
