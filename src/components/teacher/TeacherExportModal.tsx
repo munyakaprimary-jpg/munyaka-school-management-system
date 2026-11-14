@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
-import { SuccessShareModal } from '@/components/modals/SuccessShareModal';
+import { ExportSuccessShareModal as SuccessShareModal } from '@/components/teacher/ExportSuccessShareModal';
 
 interface TeacherExportModalProps {
   isOpen: boolean;
