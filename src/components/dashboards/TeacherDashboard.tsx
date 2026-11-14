@@ -35,13 +35,6 @@ export default function TeacherDashboard() {
   const centralData = useCentralData();
   const students = (centralData as any)?.students || [];
   const marks = (centralData as any)?.marks || [];
-  const attendanceRecords = React.useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
-    } catch {
-      return [];
-    }
-  }, []);
   const notices = (centralData as any)?.notices || [];
   const settings = (centralData as any)?.settings || {};
 
@@ -63,105 +56,6 @@ export default function TeacherDashboard() {
   const [selectedClass, setSelectedClass] = React.useState<string>(() => {
     return currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || 'Grade 4 Blue';
   });
-
-  // Extract grade and stream
-  const [assignedGradePart, assignedStreamPart] = React.useMemo(() => {
-    const parts = selectedClass.split(' ');
-    if (parts.length >= 2) {
-      const stream = parts[parts.length - 1];
-      const grade = parts.slice(0, parts.length - 1).join(' ');
-      return [grade, stream];
-    }
-    return [selectedClass, ''];
-  }, [selectedClass]);
-
-  // Load learners from munyaka_central_db.learners or munyaka_learners
-  const allLearners = React.useMemo(() => {
-    try {
-      const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-      if (Array.isArray(centralDb.learners) && centralDb.learners.length > 0) {
-        return centralDb.learners;
-      }
-    } catch {
-      // ignore
-    }
-    try {
-      const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || '[]';
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {
-      // ignore
-    }
-    return students;
-  }, [students]);
-
-  // Exact matching learners for enrollment
-  const classLearners = React.useMemo(() => {
-    if (!selectedClass || selectedClass === 'No Class Assigned') return [];
-    return allLearners.filter((l: any) => {
-      const lGrade = String(l.grade || l.currentGrade || l.class || '').trim().toLowerCase();
-      const lStream = String(l.stream || '').trim().toLowerCase();
-      const targetGrade = assignedGradePart.toLowerCase();
-      const targetStream = assignedStreamPart.toLowerCase();
-      
-      const gradeMatch = lGrade === targetGrade || lGrade.includes(targetGrade) || targetGrade.includes(lGrade);
-      const streamMatch = !targetStream || lStream === targetStream || lStream.includes(targetStream) || targetStream.includes(lStream);
-      return gradeMatch && streamMatch;
-    });
-  }, [allLearners, selectedClass, assignedGradePart, assignedStreamPart]);
-
-  const totalEnrollmentCount = classLearners.length;
-
-  // Calculate live attendance for today
-  const todayStr = new Date().toISOString().split('T')[0];
-  const { presentCount, attendancePercentage } = React.useMemo(() => {
-    if (totalEnrollmentCount === 0) return { presentCount: 0, attendancePercentage: 0 };
-    
-    let present = 0;
-    const enrolledIds = new Set(classLearners.map((l: any) => String(l.id || l.admissionNumber || l.admNo)));
-    
-    // Try v2 storage key: munyaka_attendance_v2_{grade}_{stream}_{date}
-    const v2Key = `munyaka_attendance_v2_${assignedGradePart.replace(/\s+/g, '_')}_${assignedStreamPart}_${todayStr}`;
-    const v2Data = localStorage.getItem(v2Key);
-    if (v2Data) {
-      try {
-        const parsedV2 = JSON.parse(v2Data);
-        if (Array.isArray(parsedV2)) {
-          present = parsedV2.filter((rec: any) =>
-            (enrolledIds.has(String(rec.learnerId || rec.id)) || enrolledIds.has(String(rec.admissionNumber))) &&
-            (rec.status === 'present' || rec.status === 'Present' || rec.present === true)
-          ).length;
-        } else if (parsedV2 && typeof parsedV2 === 'object') {
-          for (const [id, val]: [string, any] of Object.entries(parsedV2)) {
-            if (enrolledIds.has(id) && (val?.status === 'present' || val?.status === 'Present' || val === true || val?.present === true)) {
-              present++;
-            }
-          }
-        }
-      } catch {}
-    }
-
-    if (present === 0 && attendanceRecords.length > 0) {
-      const todayRecords = attendanceRecords.filter((rec: any) => {
-        const recDate = String(rec.date || '').split('T')[0];
-        const recGrade = String(rec.grade || rec.class || '').trim().toLowerCase();
-        const recStream = String(rec.stream || '').trim().toLowerCase();
-        const dateMatch = recDate === todayStr;
-        const gradeMatch = recGrade.includes(assignedGradePart.toLowerCase()) || assignedGradePart.toLowerCase().includes(recGrade);
-        const streamMatch = !assignedStreamPart || recStream.includes(assignedStreamPart.toLowerCase()) || assignedStreamPart.toLowerCase().includes(recStream);
-        return dateMatch && gradeMatch && streamMatch;
-      });
-
-      if (todayRecords.length > 0) {
-        present = todayRecords.filter((rec: any) =>
-          rec.status === 'present' || rec.status === 'Present' || rec.present === true
-        ).length;
-      }
-    }
-
-    const pct = totalEnrollmentCount > 0 ? Math.round((present / totalEnrollmentCount) * 100) : 0;
-    return { presentCount: present, attendancePercentage: present > 0 ? pct : (totalEnrollmentCount > 0 ? 95 : 0) };
-  }, [classLearners, totalEnrollmentCount, assignedGradePart, assignedStreamPart, todayStr, attendanceRecords]);
 
   const rawRole = currUserObj.rbacRole || currUserObj.role || currUserObj.department || (user as any)?.rbacRole || user?.role || '';
   const normalizedRole = String(rawRole).toLowerCase().trim();
@@ -743,16 +637,19 @@ export default function TeacherDashboard() {
 
   // Load learners from munyaka_central_db.learners or munyaka_learners
   const allLearners = React.useMemo(() => {
-    if (Array.isArray(centralDb.learners) && centralDb.learners.length > 0) {
-      return centralDb.learners;
-    }
+    try {
+      const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+      if (Array.isArray(centralDb?.learners) && centralDb.learners.length > 0) {
+        return centralDb.learners;
+      }
+    } catch {}
     try {
       const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || '[]';
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     } catch {}
     return students;
-  }, [centralDb, students]);
+  }, [students]);
 
   // Parse grade and stream from activeAssignedClass (e.g. "Grade 4 Blue")
   const [gradePart, streamPart] = React.useMemo(() => {
@@ -798,7 +695,7 @@ export default function TeacherDashboard() {
             (rec.status === 'present' || rec.status === 'Present' || rec.present === true)
           ).length;
         } else if (parsedV2 && typeof parsedV2 === 'object') {
-          for (const [id, val]: [string, any] of Object.entries(parsedV2)) {
+          for (const [id, val] of Object.entries(parsedV2)) {
             if (enrolledIds.has(id) && (val?.status === 'present' || val?.status === 'Present' || val === true || val?.present === true)) {
               present++;
             }
@@ -861,8 +758,8 @@ export default function TeacherDashboard() {
             Enter Exam Marks
           </Button>
           <TeacherSyncQrGenerator
-            grade={assignedGrade}
-            stream={assignedStream}
+            grade={gradePart}
+            stream={streamPart}
             className="bg-emerald-600 text-white hover:bg-emerald-500 font-bold rounded-xl shadow-sm flex items-center gap-2"
           />
           <Button
@@ -963,38 +860,6 @@ export default function TeacherDashboard() {
               <span className="text-purple-600 font-semibold">{attendanceToday} present today</span> ({Math.max(0, totalLearners - attendanceToday)} absent)
             </p>
           </CardContent>
-        </Card>
-      </div>
-          <div className="space-y-1">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Class Enrollment</p>
-            <h3 className="text-2xl font-black text-slate-900">{totalLearners} Learners</h3>
-            <p className="text-xs text-blue-600 font-bold">Registered Learners</p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
-            <BookOpen size={22} />
-          </div>
-        </Card>
-
-        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Attendance Today</p>
-            <h3 className="text-2xl font-black text-slate-900">{attendanceRate}%</h3>
-            <p className="text-xs text-emerald-600 font-bold">{attendanceToday} present today</p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-            <ClipboardCheck size={22} />
-          </div>
-        </Card>
-
-        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Term</p>
-            <h3 className="text-2xl font-black text-slate-900">{settings?.term || settings?.academic?.activeTerm || 'Term 1'}</h3>
-            <p className="text-xs text-indigo-600 font-bold">{settings?.academicYear || settings?.year || '2026'} Academic Year</p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center text-violet-600">
-            <Calendar size={22} />
-          </div>
         </Card>
       </div>
 
