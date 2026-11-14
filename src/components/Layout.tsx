@@ -362,6 +362,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showBottomNav, setShowBottomNav] = useState(true);
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const lastScrollY = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
@@ -432,8 +433,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Users, label: 'My Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: ClipboardCheck, label: 'Roll Call / Attendance', path: '/attendance', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: FileSpreadsheet, label: 'Assessments & Marks', path: '/assessments', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: FileText, label: 'Sync & Export Package', path: '/teacher-export', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: FileSpreadsheet, label: 'Assessments & Marks', path: '/assessments', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'], subItems: [
+          { icon: ClipboardCheck, label: 'Grading Review', path: '/grading', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+          { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+          { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+          { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+          { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+        ] },
+        { icon: FileText, label: 'Sync & Export Package', path: '/teacher-export', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
@@ -658,26 +665,90 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               );
             }
             const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setIsOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
-                  isActive
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
-                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
-                )}
-              >
-                <item.icon size={20} className={cn(
-                  "shrink-0",
-                  isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
-                )} />
-                {!isCollapsed && <span className="truncate">{item.label}</span>}
-              </Link>
-            );
-          })}
+                        const subItems = (item as any).subItems as Array<{ icon: any; label: string; path: string; roles: string[] }> | undefined;
+                        const hasSubItems = !!(subItems && subItems.length > 0);
+                        const isSubItemActive = hasSubItems && subItems!.some((sub) => location.pathname === sub.path);
+                        const isExpanded = hasSubItems ? (expandedMenus[item.path] ?? isSubItemActive) : false;
+            
+                        if (hasSubItems) {
+                          return (
+                            <div key={item.path} className="space-y-1">
+                              <div
+                                className={cn(
+                                  "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
+                                  isActive || isSubItemActive
+                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
+                                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                )}
+                              >
+                                <Link
+                                  to={item.path}
+                                  onClick={() => setIsOpen(false)}
+                                  className="flex items-center gap-3 flex-1 min-w-0"
+                                >
+                                  <item.icon size={20} className={cn(
+                                    "shrink-0",
+                                    isActive || isSubItemActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                                  )} />
+                                  {!isCollapsed && <span className="truncate">{item.label}</span>}
+                                </Link>
+                                {!isCollapsed && (
+                                  <button
+                                    onClick={() => setExpandedMenus((prev) => ({ ...prev, [item.path]: !isExpanded }))}
+                                    className="p-1 rounded-lg hover:bg-white/20 transition-colors shrink-0"
+                                    aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                                  >
+                                    <ChevronRight size={16} className={cn("transition-transform", isExpanded && "rotate-90")} />
+                                  </button>
+                                )}
+                              </div>
+                              {!isCollapsed && isExpanded && (
+                                <div className="ml-4 pl-3 border-l-2 border-slate-200 dark:border-slate-700 space-y-1">
+                                  {subItems!.map((sub) => {
+                                    const cActive = location.pathname === sub.path;
+                                    return (
+                                      <Link
+                                        key={sub.path}
+                                        to={sub.path}
+                                        onClick={() => setIsOpen(false)}
+                                        className={cn(
+                                          "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 min-h-[40px] group",
+                                          cActive
+                                            ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300"
+                                            : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                        )}
+                                      >
+                                        <sub.icon size={16} className={cn("shrink-0", cActive ? "text-indigo-600 dark:text-indigo-300" : "text-slate-400 group-hover:text-indigo-600")} />
+                                        <span className="truncate">{sub.label}</span>
+                                      </Link>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+            
+                        return (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => setIsOpen(false)}
+                            className={cn(
+                              "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
+                              isActive
+                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
+                                : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
+                            )}
+                          >
+                            <item.icon size={20} className={cn(
+                              "shrink-0",
+                              isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                            )} />
+                            {!isCollapsed && <span className="truncate">{item.label}</span>}
+                          </Link>
+                        );
+                      })}
 
           {/* ── Hardcoded LAN Config links for teacher roles ──
               Placed between Dashboard and Games Hub in the sidebar.
