@@ -1,4 +1,5 @@
 import { showSuccess, showError } from '@/utils/toast';
+import { findLearnerByIdentity, getLearnerAdmissionNo, getLearnerAssessmentNo, upsertLearnerIntoList, dedupeLearnersByIdentity } from '@/utils/learnerIdentity';
 
 export interface MasterImportResult {
   success: boolean;
@@ -10,6 +11,51 @@ export function validateMasterPackage(pkg: any): boolean {
   if (!pkg || typeof pkg !== 'object') return false;
   if (!pkg.packageType && !pkg.data && !pkg.version && !pkg.exportVersion) return false;
   return true;
+}
+
+/**
+ * Load the current master learner list from all known storage keys.
+ */
+function loadMasterLearners(): any[] {
+  const keys = ['munyaka_learners_db', 'munyaka_central_db', 'school_learners_master', 'school_learners_data', 'munyaka_students', 'students', 'munyaka_learners_directory', 'munyaka_learners'];
+  for (const key of keys) {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+  }
+  return [];
+}
+
+/**
+ * Upsert incoming learners into the master list, keyed by Admission Number +
+ * Assessment / Birth Certificate Number. Incoming duplicates within the same
+ * package are collapsed; existing records are updated rather than duplicated.
+ */
+function upsertMasterLearners(incoming: any[]): { merged: any[]; created: number; updated: number } {
+  const master = loadMasterLearners();
+  const merged = [...master];
+  let created = 0;
+  let updated = 0;
+
+  for (const learner of incoming) {
+    const { list, merged: wasMerged } = upsertLearnerIntoList(merged, learner);
+    if (wasMerged) {
+      updated++;
+    } else {
+      created++;
+    }
+    merged.length = 0;
+    merged.push(...list);
+  }
+
+  // Final safety net: collapse any residual duplicates by identity key
+  const finalList = dedupeLearnersByIdentity(merged);
+
+  return { merged: finalList, created, updated };
 }
 
 export async function importMasterSyncPackage(file: File): Promise<MasterImportResult> {
@@ -65,17 +111,23 @@ export async function importMasterSyncPackage(file: File): Promise<MasterImportR
 
         console.log(`[MasterImport] Extracted learners count: ${extractedLearners.length}`);
 
-        // 2. Write the full array directly into munyaka_learners_db and all synchronized learner keys
-        if (extractedLearners.length > 0) {
-          const learnersJson = JSON.stringify(extractedLearners);
-          localStorage.setItem('munyaka_learners_db', learnersJson);
-          localStorage.setItem('munyaka_central_db', learnersJson);
-          localStorage.setItem('school_learners_master', learnersJson);
-          localStorage.setItem('school_learners_data', learnersJson);
-          localStorage.setItem('munyaka_students', learnersJson);
-          localStorage.setItem('students', learnersJson);
-          updatedKeys.push('munyaka_learners_db', 'school_learners_master', 'school_learners_data');
-        }
+        // 2. Upsert learners into the master list, keyed by Admission Number +
+                //    Assessment / Birth Certificate Number. This prevents duplicate rows
+                //    and merges incoming profile updates into existing master records.
+                if (extractedLearners.length > 0) {
+                  const { merged, created, updated } = upsertMasterLearners(extractedLearners);
+                  const learnersJson = JSON.stringify(merged);
+                  localStorage.setItem('munyaka_learners_db', learnersJson);
+                  localStorage.setItem('munyaka_central_db', learnersJson);
+                  localStorage.setItem('school_learners_master', learnersJson);
+                  localStorage.setItem('school_learners_data', learnersJson);
+                  localStorage.setItem('munyaka_students', learnersJson);
+                  localStorage.setItem('students', learnersJson);
+                  localStorage.setItem('munyaka_learners_directory', learnersJson);
+                  localStorage.setItem('munyaka_learners', learnersJson);
+                  updatedKeys.push('munyaka_learners_db', 'school_learners_master', 'school_learners_data');
+                  console.log(`[MasterImport] Upserted learners: ${created} created, ${updated} updated, ${merged.length} total`);
+                }
 
         // 3. Iterate and save every other table / key found in the master package
         const recordsToSave = payloadData.data || payloadData;

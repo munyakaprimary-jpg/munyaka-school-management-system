@@ -1,4 +1,5 @@
 import { CentralDataService } from '@/services/centralDataService';
+import { findLearnerByIdentity, getLearnerAdmissionNo, getLearnerAssessmentNo, upsertLearnerIntoList } from '@/utils/learnerIdentity';
 
 export interface HarmonizationAuditItem {
   id: string;
@@ -143,13 +144,19 @@ export const harmonizationService = {
         const assignedStream = meta.assignedStream || item.header?.assignedStream || 'Green';
 
         // 1. Harmonize Learners / Roster
+        // Deduplicate by Admission Number + Assessment / Birth Certificate Number.
+        // If a learner with the same identifiers already exists, UPSERT (merge) into
+        // the existing master record instead of creating a duplicate row.
         const learners = data.learners || raw.learners;
         if (Array.isArray(learners) && learners.length > 0) {
           const existingLearners = CentralDataService.getLearners();
           const mergedLearners = [...existingLearners];
           for (const incoming of learners) {
-            const idx = mergedLearners.findIndex((l: any) => l.id === incoming.id || (l.admissionNumber && l.admissionNumber === incoming.admissionNumber) || (l.admNo && l.admNo === incoming.admNo));
+            const incomingAdm = getLearnerAdmissionNo(incoming);
+            const incomingAss = getLearnerAssessmentNo(incoming);
+            const idx = findLearnerByIdentity(mergedLearners, incomingAdm, incomingAss);
             if (idx >= 0) {
+              // Upsert: merge incoming data into the existing master record
               mergedLearners[idx] = { ...mergedLearners[idx], ...incoming, grade: assignedClass, stream: assignedStream };
             } else {
               mergedLearners.push({ ...incoming, grade: assignedClass, stream: assignedStream });
@@ -159,42 +166,56 @@ export const harmonizationService = {
         }
 
         // 2. Harmonize Attendance Records
-        const attendance = data.attendance || raw.attendanceRecords;
-        if (Array.isArray(attendance) && attendance.length > 0) {
-          try {
-            const stored = localStorage.getItem('munyaka_attendance_records');
-            const allAtt = stored ? JSON.parse(stored) : [];
-            const mergedAtt = [...allAtt];
-            for (const att of attendance) {
-              const idx = mergedAtt.findIndex((r: any) => r.id === att.id || (r.studentId === att.studentId && r.date === att.date));
-              if (idx >= 0) {
-                mergedAtt[idx] = { ...mergedAtt[idx], ...att, assignedClass, assignedStream };
-              } else {
-                mergedAtt.push({ ...att, assignedClass, assignedStream });
-              }
-            }
-            localStorage.setItem('munyaka_attendance_records', JSON.stringify(mergedAtt));
-          } catch {}
-        }
-
-        // 3. Harmonize Marks / Assessments
-        const marks = data.marks || raw.cbcAssessments;
-        if (Array.isArray(marks) && marks.length > 0) {
-          try {
-            const stored = localStorage.getItem('marked_student_submissions');
-            const allMarks = stored ? JSON.parse(stored) : [];
-            const mergedMarks = [...allMarks];
-            for (const m of marks) {
-              const idx = mergedMarks.findIndex((r: any) => r.id === m.id || (r.studentId === m.studentId && r.assessmentId === m.assessmentId));
-              if (idx >= 0) {
-                mergedMarks[idx] = { ...mergedMarks[idx], ...m, assignedClass, assignedStream };
-              } else {
-                mergedMarks.push({ ...m, assignedClass, assignedStream });
-              }
-            }
-            localStorage.setItem('marked_student_submissions', JSON.stringify(mergedMarks));
-          } catch {}
-        }
+                // Deduplicate by learner identity (admission/assessment number) + date.
+                const attendance = data.attendance || raw.attendanceRecords;
+                if (Array.isArray(attendance) && attendance.length > 0) {
+                  try {
+                    const stored = localStorage.getItem('munyaka_attendance_records');
+                    const allAtt = stored ? JSON.parse(stored) : [];
+                    const mergedAtt = [...allAtt];
+                    for (const att of attendance) {
+                      const attStudentId = String(att.studentId || att.studentAdmNo || att.admissionNo || att.admissionNumber || att.assessmentNo || att.assessmentNumber || '');
+                      const attDate = String(att.date || att.attendanceDate || att.sessionDate || '');
+                      const idx = mergedAtt.findIndex((r: any) => {
+                        const rStudentId = String(r.studentId || r.studentAdmNo || r.admissionNo || r.admissionNumber || r.assessmentNo || r.assessmentNumber || '');
+                        const rDate = String(r.date || r.attendanceDate || r.sessionDate || '');
+                        return r.id === att.id || (rStudentId && rStudentId === attStudentId && rDate && rDate === attDate);
+                      });
+                      if (idx >= 0) {
+                        mergedAtt[idx] = { ...mergedAtt[idx], ...att, assignedClass, assignedStream };
+                      } else {
+                        mergedAtt.push({ ...att, assignedClass, assignedStream });
+                      }
+                    }
+                    localStorage.setItem('munyaka_attendance_records', JSON.stringify(mergedAtt));
+                  } catch {}
+                }
+        
+                // 3. Harmonize Marks / Assessments
+                // Deduplicate by learner identity (admission/assessment number) + assessmentId.
+                const marks = data.marks || raw.cbcAssessments;
+                if (Array.isArray(marks) && marks.length > 0) {
+                  try {
+                    const stored = localStorage.getItem('marked_student_submissions');
+                    const allMarks = stored ? JSON.parse(stored) : [];
+                    const mergedMarks = [...allMarks];
+                    for (const m of marks) {
+                      const mStudentId = String(m.studentId || m.studentAdmNo || m.admissionNo || m.admissionNumber || m.assessmentNo || m.assessmentNumber || '');
+                      const mAssessmentId = String(m.assessmentId || m.assessmentNo || m.examId || m.testId || '');
+                      const idx = mergedMarks.findIndex((r: any) => {
+                        const rStudentId = String(r.studentId || r.studentAdmNo || r.admissionNo || r.admissionNumber || r.assessmentNo || r.assessmentNumber || '');
+                        const rAssessmentId = String(r.assessmentId || r.assessmentNo || r.examId || r.testId || '');
+                        return r.id === m.id || (rStudentId && rStudentId === mStudentId && rAssessmentId && rAssessmentId === mAssessmentId);
+                      });
+                      if (idx >= 0) {
+                        mergedMarks[idx] = { ...mergedMarks[idx], ...m, assignedClass, assignedStream };
+                      } else {
+                        mergedMarks.push({ ...m, assignedClass, assignedStream });
+                      }
+                    }
+                    localStorage.setItem('marked_student_submissions', JSON.stringify(mergedMarks));
+                  } catch {}
+                }
 
         successCount++;
       } catch (err: any) {

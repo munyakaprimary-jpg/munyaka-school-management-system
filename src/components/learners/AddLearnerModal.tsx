@@ -11,6 +11,7 @@ import { generateUniqueCohortAdmissionNumber, generateCohortAdmissionNumber } fr
 import { Learner } from '@/types/learners';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { useLearners } from '@/context/LearnerContext';
+import { upsertLearnerIntoList, findLearnerByIdentity, getLearnerAdmissionNo, getLearnerAssessmentNo } from '@/utils/learnerIdentity';
 
 interface AddLearnerModalProps {
   isOpen: boolean;
@@ -107,82 +108,85 @@ export default function AddLearnerModal({
   };
 
   const handleSaveLearner = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const fullNameVal = (formData.fullName || '').trim();
-    if (!fullNameVal) {
-      showError("Please enter full name.");
-      return;
-    }
-
-    const phoneVal = (formData.guardianPhone || '').trim();
-    if (!phoneVal) {
-      showError("Please enter guardian phone number.");
-      return;
-    }
-    if (!phoneVal.startsWith('+254')) {
-      showError("Phone number must start with +254.");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const selectedGrade = formData.grade || 'Grade 6';
-      const selectedStream = formData.stream || 'Blue';
-      const admissionNumber = formData.admissionNo || generateCohortAdmissionNumber(selectedGrade, existingLearners);
-      const genderVal = formData.gender || 'Male';
-      const dobVal = formData.dob || '';
-      const parentNameVal = (formData.guardianName || '').trim() || 'Parent / Guardian';
-      const idVal = (formData.assessmentNo || '').trim() || '';
-
-      const newLearner: Learner = {
-        id: admissionNumber,
-        admissionNo: admissionNumber,
-        assessmentNo: idVal,
-        fullName: fullNameVal,
-        grade: selectedGrade,
-        stream: selectedStream,
-        gender: genderVal,
-        dob: dobVal,
-        guardianName: parentNameVal,
-        guardianPhone: phoneVal,
-        createdAt: new Date().toISOString()
-      };
-
-      await contextAddLearner(newLearner);
-
-      const existingRaw = localStorage.getItem(STORAGE_KEYS.LEARNERS) || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_directory') || '[]';
-      const existingLearnersStore = JSON.parse(existingRaw);
-      const newStoreList = Array.isArray(existingLearnersStore) ? [newLearner, ...existingLearnersStore] : [newLearner];
-
-      localStorage.setItem(STORAGE_KEYS.LEARNERS, JSON.stringify(newStoreList));
-      localStorage.setItem('munyaka_learners', JSON.stringify(newStoreList));
-      localStorage.setItem('munyaka_learners_directory', JSON.stringify(newStoreList));
-      localStorage.setItem('munyaka_students', JSON.stringify(newStoreList));
-      localStorage.setItem('school_learners_data', JSON.stringify(newStoreList));
-
-      window.dispatchEvent(new CustomEvent('learners-updated', { detail: newStoreList }));
-      window.dispatchEvent(new CustomEvent('munyaka:learners-updated', { detail: newStoreList }));
-      window.dispatchEvent(new Event('storage'));
-
-      addPendingSyncItem({
-        id: newLearner.id,
-        type: 'learner',
-        action: 'create',
-        payload: newLearner,
-      });
-
-      showSuccess("Learner successfully registered and saved to directory!");
-      if (onLearnerAdded) {
-        onLearnerAdded(newLearner);
+      e.preventDefault();
+      const fullNameVal = (formData.fullName || '').trim();
+  if (!fullNameVal) {
+        showError("Please enter full name.");
+        return;
       }
-      onClose();
-    } catch (err: any) {
-      console.error("[AddLearnerModal] Failed to register learner:", err);
-      showError(err?.message || "Failed to save learner. Please check form fields.");
-    } finally {
-      setIsSaving(false);
+  
+      const phoneVal = (formData.guardianPhone || '').trim();
+      if (!phoneVal) {
+        showError("Please enter guardian phone number.");
+        return;
+      }
+      if (!phoneVal.startsWith('+254')) {
+        showError("Phone number must start with +254.");
+        return;
+      }
+  
+      setIsSaving(true);
+      try {
+        const selectedGrade = formData.grade || 'Grade 6';
+        const selectedStream = formData.stream || 'Blue';
+        const admissionNumber = formData.admissionNo || generateCohortAdmissionNumber(selectedGrade, existingLearners);
+        const genderVal = formData.gender || 'Male';
+        const dobVal = formData.dob || '';
+        const parentNameVal = (formData.guardianName || '').trim() || 'Parent / Guardian';
+        const idVal = (formData.assessmentNo || '').trim() || '';
+  
+        const newLearner: Learner = {
+          id: admissionNumber,
+          admissionNo: admissionNumber,
+          assessmentNo: idVal,
+          fullName: fullNameVal,
+          grade: selectedGrade,
+          stream: selectedStream,
+          gender: genderVal,
+          dob: dobVal,
+          guardianName: parentNameVal,
+          guardianPhone: phoneVal,
+          createdAt: new Date().toISOString()
+        };
+  
+        // Check for existing learner by admission number or assessment number
+        const existing = getLearners();
+        const { list: updatedList, merged, existingIndex } = upsertLearnerIntoList(existing, newLearner);
+  
+        // Save to all storage keys
+        localStorage.setItem(STORAGE_KEYS.LEARNERS, JSON.stringify(updatedList));
+        localStorage.setItem('munyaka_learners', JSON.stringify(updatedList));
+        localStorage.setItem('munyaka_learners_directory', JSON.stringify(updatedList));
+        localStorage.setItem('munyaka_students', JSON.stringify(updatedList));
+        localStorage.setItem('school_learners_data', JSON.stringify(updatedList));
+  
+        window.dispatchEvent(new CustomEvent('learners-updated', { detail: updatedList }));
+        window.dispatchEvent(new CustomEvent('munyaka:learners-updated', { detail: updatedList }));
+        window.dispatchEvent(new Event('storage'));
+  
+        // Sync queue action depends on whether we created or updated
+        const syncAction = merged ? 'update' : 'create';
+        addPendingSyncItem({
+          id: newLearner.id,
+          type: 'learner',
+          action: syncAction,
+          payload: newLearner,
+        });
+  
+        showSuccess(merged
+          ? "Learner record updated (matched by identifier)."
+          : "Learner successfully registered and saved to directory!");
+        if (onLearnerAdded) {
+          onLearnerAdded(newLearner);
+        }
+        onClose();
+      } catch (err: any) {
+        console.error("[AddLearnerModal] Failed to register learner:", err);
+        showError(err?.message || "Failed to save learner. Please check form fields.");
+      } finally {
+        setIsSaving(false);
+      }
     }
-  };
 
   return (
     <Modal

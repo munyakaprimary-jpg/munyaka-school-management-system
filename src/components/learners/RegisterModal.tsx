@@ -15,6 +15,7 @@ import {
   getTeacherAllowedStreamsForGrade,
   isTeacherWithRestrictedLoad,
 } from '@/utils/teacherLoadUtils';
+import { findLearnerByIdentity, getLearnerAdmissionNo, getLearnerAssessmentNo } from '@/utils/learnerIdentity';
 
 interface RegisterModalProps {
   isOpen: boolean;
@@ -183,10 +184,23 @@ export default function RegisterModal({
       const queue = JSON.parse(localStorage.getItem('munyaka_sync_queue') || '[]');
       const normalizedBirthCert = birthCertificateNo || assessmentNo || '';
       const normalizedAssessment = assessmentNo || birthCertificateNo || '';
+
+      // Check for existing learner by admission number or assessment number
+      // to determine whether this is an UPSERT (update) or INSERT (create).
+      const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners_directory') || '[]');
+      const existingIdx = findLearnerByIdentity(
+        existingLearners,
+        admissionNumber,
+        normalizedAssessment
+      );
+
+      const action = existingIdx >= 0 ? 'UPSERT' : 'INSERT';
+      const existingRecord = existingIdx >= 0 ? existingLearners[existingIdx] : null;
+
       queue.push({
         id: crypto.randomUUID?.() || `sync-${Date.now()}`,
         table_name: 'learners',
-        action: 'INSERT',
+        action,
         payload: {
           admissionNumber,
           fullName,
@@ -194,7 +208,8 @@ export default function RegisterModal({
           regStream,
           phone,
           birthCertificateNo: normalizedBirthCert,
-          assessmentNo: normalizedAssessment
+          assessmentNo: normalizedAssessment,
+          ...(existingRecord && { existingId: existingRecord.id || existingRecord.admissionNo || existingRecord.admNo })
         },
         synced: false,
         created_at: new Date().toISOString()

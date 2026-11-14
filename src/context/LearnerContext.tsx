@@ -32,6 +32,8 @@ export const saveStoredLearners = (learners: any[]) => {
   // Write only to the single unified storage key
   localStorage.setItem(STORAGE_KEY, serialized);
 };
+
+import { upsertLearnerIntoList, findLearnerByIdentity, getLearnerAdmissionNo, getLearnerAssessmentNo } from '@/utils/learnerIdentity';
 const deduplicateLearners = (list: any[]) => {
   const seen = new Set<string>();
   const unique: any[] = [];
@@ -116,29 +118,31 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const addLearner = useCallback(async (newLearner: any) => {
-    try {
-      const current = getStoredLearners();
-      const formatted = {
-        ...newLearner,
-        id: newLearner.id || `learner-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        admissionNumber: newLearner.admissionNumber || newLearner.admissionNo || newLearner.admNo || `MUN-${String(current.length + 1).padStart(3, '0')}-${new Date().getFullYear()}`,
-        admissionNo: newLearner.admissionNo || newLearner.admissionNumber || newLearner.admNo || `MUN-${String(current.length + 1).padStart(3, '0')}-${new Date().getFullYear()}`,
-        fullName: newLearner.fullName || newLearner.name || '',
-        name: newLearner.name || newLearner.fullName || '',
-        createdAt: newLearner.createdAt || new Date().toISOString()
-      };
-
-      const updated = [formatted, ...current];
-      const clean = deduplicateLearners(updated);
-      setLearnersState(clean);
-      saveStoredLearners(clean);
-
-      window.dispatchEvent(new Event('munyaka_learners_updated'));
-      window.dispatchEvent(new Event('munyaka:data-changed'));
-    } catch (err) {
-      console.error('[LearnerContext] addLearner error:', err);
-    }
-  }, []);
+      try {
+        const current = getStoredLearners();
+        const formatted = {
+          ...newLearner,
+          id: newLearner.id || `learner-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          admissionNumber: newLearner.admissionNumber || newLearner.admissionNo || newLearner.admNo || `MUN-${String(current.length + 1).padStart(3, '0')}-${new Date().getFullYear()}`,
+          admissionNo: newLearner.admissionNo || newLearner.admissionNumber || newLearner.admNo || `MUN-${String(current.length + 1).padStart(3, '0')}-${new Date().getFullYear()}`,
+          fullName: newLearner.fullName || newLearner.name || '',
+          name: newLearner.name || newLearner.fullName || '',
+          createdAt: newLearner.createdAt || new Date().toISOString()
+        };
+  
+        // Upsert: if a learner with the same admissionNo or assessmentNo exists,
+        // update the existing record instead of creating a duplicate.
+        const { list: updatedList, merged } = upsertLearnerIntoList(current, formatted);
+        const clean = deduplicateLearners(updatedList);
+        setLearnersState(clean);
+        saveStoredLearners(clean);
+  
+        window.dispatchEvent(new Event('munyaka_learners_updated'));
+        window.dispatchEvent(new Event('munyaka:data-changed'));
+      } catch (err) {
+        console.error('[LearnerContext] addLearner error:', err);
+      }
+    }, []);
 
   const updateLearner = useCallback((id: string, updatedData: any) => {
     try {
