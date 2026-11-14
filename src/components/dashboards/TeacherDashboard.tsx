@@ -678,7 +678,7 @@ export default function TeacherDashboard() {
             ) : (
               <>
                 <Button onClick={() => navigate('/staff/attendance')} className="bg-white text-emerald-800 font-bold rounded-xl">Staff Attendance</Button>
-                <Button onClick={() => navigate('/communication')} className="bg-teal-600 text-white font-bold rounded-xl border border-teal-400">School Notices</Button>
+                <Button onClick={() => navigate('/notices')} className="bg-teal-600 text-white font-bold rounded-xl border border-teal-400">School Notices</Button>
               </>
             )}
           </div>
@@ -1028,11 +1028,14 @@ export default function TeacherDashboard() {
         {/* Sidebar Announcements & Quick Notice */}
         <div className="space-y-6">
           <Card className="border-none shadow-sm rounded-3xl bg-white p-6">
-            <CardHeader className="px-0 pt-0 pb-4 border-b">
+            <CardHeader className="px-0 pt-0 pb-4 border-b flex flex-row items-center justify-between">
               <CardTitle className="text-base font-black text-slate-900 flex items-center gap-2">
                 <Megaphone className="text-indigo-600" size={18} />
                 School Notices & Events
               </CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/notices')} className="text-xs text-indigo-600 font-bold hover:bg-indigo-50 h-8 px-2">
+                View All
+              </Button>
             </CardHeader>
             <CardContent className="px-0 pt-4 space-y-3">
               {notices && notices.length > 0 ? (

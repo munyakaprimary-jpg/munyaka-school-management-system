@@ -442,6 +442,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         ] },
         { icon: FileText, label: 'Sync & Export Package', path: '/teacher-export', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
   ] : [
@@ -463,7 +464,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
         { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher'] },
         { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication', roles: ['teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'ict_technician', 'ict_teacher'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'ict_technician', 'ict_teacher', 'accountant'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin'] },
         { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
         { icon: ClipboardCheck, label: 'Learner Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
