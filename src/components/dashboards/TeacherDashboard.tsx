@@ -140,6 +140,95 @@ export default function TeacherDashboard() {
     const activeDevices = devices.filter(d => String(d.status || '').toLowerCase() === 'active' || String(d.status || '').toLowerCase() === 'operational').length;
     const underMaintenance = devices.filter(d => String(d.status || '').toLowerCase().includes('repair') || String(d.status || '').toLowerCase().includes('maintenance') || String(d.status || '').toLowerCase().includes('damaged')).length;
 
+    // Load learners from munyaka_central_db.learners or munyaka_learners for ICT dashboard if needed
+    const allLearners = React.useMemo(() => {
+      try {
+        const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+        if (Array.isArray(centralDb?.learners) && centralDb.learners.length > 0) {
+          return centralDb.learners;
+        }
+      } catch {}
+      try {
+        const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || '[]';
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+      return students;
+    }, [students]);
+
+    // Parse grade and stream from activeAssignedClass (e.g. "Grade 4 Blue")
+    const [gradePart, streamPart] = React.useMemo(() => {
+      const parts = assignedClassLabel.split(' ');
+      if (parts.length >= 2) {
+        return [parts.slice(0, parts.length - 1).join(' '), parts[parts.length - 1]];
+      }
+      return [assignedClassLabel, ''];
+    }, [assignedClassLabel]);
+
+    // Exact matching learners in munyaka_central_db.learners
+    const classStudents = React.useMemo(() => {
+      if (!assignedClassLabel || assignedClassLabel === 'No Class Assigned') return [];
+      return allLearners.filter((s: any) => {
+        const sGrade = String(s?.grade || s?.currentGrade || s?.gradeLevel || s?.class || '').trim().toLowerCase();
+        const sStream = String(s?.stream || '').trim().toLowerCase();
+        const targetGrade = gradePart.toLowerCase();
+        const targetStream = streamPart.toLowerCase();
+        const gradeMatch = sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade);
+        const streamMatch = !targetStream || sStream === targetStream || sStream.includes(targetStream) || targetStream.includes(sStream);
+        return gradeMatch && streamMatch;
+      });
+    }, [allLearners, assignedClassLabel, gradePart, streamPart]);
+
+    const totalLearners = classStudents.length;
+
+    // Live attendance calculation for today from munyaka_central_db.attendance or v2 session registers
+    const todayStr = new Date().toISOString().split('T')[0];
+    const { attendanceToday, attendanceRate } = React.useMemo(() => {
+      if (totalLearners === 0) return { attendanceToday: 0, attendanceRate: 0 };
+      let present = 0;
+      const enrolledIds = new Set(classStudents.map((l: any) => String(l.id || l.admissionNumber || l.admNo)));
+
+      // Try v2 session key
+      const v2Key = `munyaka_attendance_v2_${gradePart.replace(/\s+/g, '_')}_${streamPart}_${todayStr}`;
+      const v2Data = localStorage.getItem(v2Key);
+      if (v2Data) {
+        try {
+          const parsedV2 = JSON.parse(v2Data);
+          if (Array.isArray(parsedV2)) {
+            present = parsedV2.filter((rec: any) =>
+              (enrolledIds.has(String(rec.learnerId || rec.id)) || enrolledIds.has(String(rec.admissionNumber))) &&
+              (rec.status === 'present' || rec.status === 'Present' || rec.present === true)
+            ).length;
+          } else if (parsedV2 && typeof parsedV2 === 'object') {
+            for (const [id, valEntry] of Object.entries(parsedV2)) {
+              const val: any = valEntry;
+              if (enrolledIds.has(id) && (val?.status === 'present' || val?.status === 'Present' || val === true || val?.present === true)) {
+                present++;
+              }
+            }
+          }
+        } catch {}
+      }
+
+      if (present === 0) {
+        try {
+          const attRecords = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
+          const todayRecs = attRecords.filter((rec: any) => {
+            const recDate = String(rec.date || '').split('T')[0];
+            const recGrade = String(rec.grade || rec.class || '').trim().toLowerCase();
+            const recStream = String(rec.stream || '').trim().toLowerCase();
+            return recDate === todayStr && (recGrade.includes(gradePart.toLowerCase()) || gradePart.toLowerCase().includes(recGrade)) && (!streamPart || recStream.includes(streamPart.toLowerCase()));
+          });
+          if (todayRecs.length > 0) {
+            present = todayRecs.filter((rec: any) => rec.status === 'present' || rec.status === 'Present' || rec.present === true).length;
+          }
+        } catch {}
+      }
+
+      const rate = totalLearners > 0 ? Math.round((present / totalLearners) * 100) : 0;
+      return { attendanceToday: present, attendanceRate: rate };
+    }, [classStudents, totalLearners, gradePart, streamPart, todayStr]);
+
     return (
       <div className="space-y-8 pb-12 max-w-6xl mx-auto px-4">
         {/* Banner */}
@@ -695,7 +784,8 @@ export default function TeacherDashboard() {
             (rec.status === 'present' || rec.status === 'Present' || rec.present === true)
           ).length;
         } else if (parsedV2 && typeof parsedV2 === 'object') {
-          for (const [id, val] of Object.entries(parsedV2)) {
+          for (const [id, valEntry] of Object.entries(parsedV2)) {
+            const val: any = valEntry;
             if (enrolledIds.has(id) && (val?.status === 'present' || val?.status === 'Present' || val === true || val?.present === true)) {
               present++;
             }
