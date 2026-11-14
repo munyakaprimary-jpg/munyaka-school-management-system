@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCentralData } from '@/hooks/useCentralData';
 import TeacherExportModule from '@/components/teacher/TeacherExportModule';
+import TeacherSyncQrGenerator from '@/components/teacher/TeacherSyncQrGenerator';
 import { getFormattedRoleLabel } from '@/utils/staffRoleUtils';
 
 export default function TeacherDashboard() {
@@ -649,6 +650,11 @@ export default function TeacherDashboard() {
             <FileSpreadsheet className="w-4 h-4 mr-2 text-white" />
             Enter Exam Marks
           </Button>
+          <TeacherSyncQrGenerator
+            grade={assignedGrade}
+            stream={assignedStream}
+            className="bg-emerald-600 text-white hover:bg-emerald-500 font-bold rounded-xl shadow-sm flex items-center gap-2"
+          />
           <Button
             onClick={() => navigate('/teacher-export')}
             className="bg-emerald-600 text-white hover:bg-emerald-500 font-bold rounded-xl shadow-sm"

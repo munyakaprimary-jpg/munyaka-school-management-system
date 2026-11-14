@@ -1,23 +1,20 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Upload, CheckCircle2, ShieldCheck, QrCode, RefreshCw, Loader2, ArrowRight, Share2, Copy } from 'lucide-react';
+import { Download, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
-import { ExportSuccessShareModal } from './ExportSuccessShareModal';
-import { importMasterSyncPackage } from '@/utils/importMasterSyncPackage';
 import { showSuccess, showError } from '@/utils/toast';
-import { QRCodeSVG } from 'qrcode.react';
+import TeacherSyncQrGenerator from '@/components/teacher/TeacherSyncQrGenerator';
 
 const SCHOOL_CENTRE_CODE = '26534178';
 
 export const TeacherExportModule: React.FC = () => {
   const { user } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const config = useMemo(() => readGradesAndStreams(), []);
   const grades = config.grades;
   const streams = useMemo(() => config.streams, [config]);
@@ -29,15 +26,6 @@ export const TeacherExportModule: React.FC = () => {
   }, [selectedGrade, config]);
 
   const [selectedStream, setSelectedStream] = useState<string>(() => availableStreams[0] || 'Green');
-  const [isExporting, setIsExporting] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-
-  // QR Sync State
-  const [showQrModal, setShowQrModal] = useState(false);
-  const [qrPayloadString, setQrPayloadString] = useState('');
-  const [qrChunks, setQrChunks] = useState<string[]>([]);
-  const [activeChunkIndex, setActiveChunkIndex] = useState(0);
-  const [isAnimatedQr, setIsAnimatedQr] = useState(false);
 
   // Fetch counts of teacher records in offline local state
   const attendanceCount = (() => {
@@ -134,53 +122,6 @@ export const TeacherExportModule: React.FC = () => {
     }
   };
 
-  const handleGenerateSyncQR = () => {
-    setIsExporting(true);
-    try {
-      const payload = buildPayload();
-      const jsonString = JSON.stringify(payload);
-      
-      // If payload is large (> 2000 chars), split into chunks for animated/multi-part QR
-      if (jsonString.length > 2000) {
-        const chunkSize = 1800;
-        const chunks: string[] = [];
-        for (let i = 0; i < jsonString.length; i += chunkSize) {
-          const chunkData = jsonString.slice(i, i + chunkSize);
-          const chunkEnvelope = JSON.stringify({
-            chunkIndex: chunks.length,
-            totalChunks: Math.ceil(jsonString.length / chunkSize),
-            centreCode: SCHOOL_CENTRE_CODE,
-            data: chunkData
-          });
-          chunks.push(chunkEnvelope);
-        }
-        setQrChunks(chunks);
-        setIsAnimatedQr(true);
-      } else {
-        setQrChunks([jsonString]);
-        setIsAnimatedQr(false);
-      }
-
-      setQrPayloadString(jsonString);
-      setActiveChunkIndex(0);
-      setShowQrModal(true);
-      showSuccess('Sync QR Code package generated successfully!');
-    } catch (err: any) {
-      showError(err?.message || 'Failed to generate QR code');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  // Auto-advance chunks if multi-part animated QR
-  useEffect(() => {
-    if (!showQrModal || !isAnimatedQr || qrChunks.length <= 1) return;
-    const interval = setInterval(() => {
-      setActiveChunkIndex((prev) => (prev + 1) % qrChunks.length);
-    }, 1500);
-    return () => clearInterval(interval);
-  }, [showQrModal, isAnimatedQr, qrChunks.length]);
-
   return (
     <>
       <Card className="rounded-3xl border-slate-200 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/30 shadow-sm overflow-hidden font-sans">
@@ -266,30 +207,13 @@ export const TeacherExportModule: React.FC = () => {
 
           {/* Action Buttons: Generate Sync QR Code + Export Class Package */}
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button
-              onClick={handleGenerateSyncQR}
-              disabled={isExporting}
+            <TeacherSyncQrGenerator
+              grade={selectedGrade}
+              stream={selectedStream}
               className="flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-black rounded-xl shadow-md transition-all active:scale-95"
-            >
-              <QrCode className="w-5 h-5 shrink-0 text-white" />
-              <span>Generate Sync QR Code</span>
-            </Button>
+            />
             <Button
-              onClick={() => {
-                const payload = buildPayload();
-                const jsonString = JSON.stringify(payload, null, 2);
-                const staffNameSlug = (user?.name || 'teacher').replace(/\s+/g, '_').toLowerCase();
-                const todayDate = new Date().toISOString().split('T')[0];
-                const filename = `munyaka_teacher_export_${staffNameSlug}_${todayDate}.json`;
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                a.click();
-                URL.revokeObjectURL(url);
-                showSuccess('Teacher export package downloaded successfully!');
-              }}
+              onClick={handleDownloadJsonFallback}
               className="flex items-center justify-center gap-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black rounded-xl shadow-md transition-all active:scale-95"
             >
               <Download className="w-5 h-5 shrink-0 text-white" />
@@ -298,76 +222,6 @@ export const TeacherExportModule: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* QR Code Modal for Teacher Export */}
-      {showQrModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <Badge className="bg-indigo-100 text-indigo-800 font-bold uppercase tracking-wider text-[10px]">
-                  Centre: {SCHOOL_CENTRE_CODE}
-                </Badge>
-                <h3 className="text-lg font-black text-slate-900 mt-1">Teacher Sync QR Code</h3>
-              </div>
-              <button
-                onClick={() => setShowQrModal(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="flex flex-col items-center justify-center py-4 bg-slate-50 rounded-2xl border border-slate-100 p-4 space-y-4">
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 inline-block">
-                <QRCodeSVG
-                  value={qrChunks[activeChunkIndex] || qrPayloadString}
-                  size={240}
-                  level="M"
-                  includeMargin={true}
-                />
-              </div>
-
-              {isAnimatedQr && qrChunks.length > 1 && (
-                <div className="text-center space-y-1">
-                  <Badge className="bg-purple-100 text-purple-800 font-mono text-xs">
-                    Multi-Part Animated QR: Part {activeChunkIndex + 1} of {qrChunks.length}
-                  </Badge>
-                  <p className="text-[11px] text-slate-500">
-                    Displaying rotating parts for high-volume attendance & marks payload. Admin scanner will automatically assemble.
-                  </p>
-                </div>
-              )}
-
-              <div className="text-center space-y-1">
-                <p className="text-xs font-bold text-slate-800">{selectedGrade} - {selectedStream}</p>
-                <p className="text-[11px] text-slate-500">
-                  {attendanceCount} Roll Call records, {marksCount} Assessment marks queued.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                onClick={() => {
-                  navigator.clipboard.writeText(qrPayloadString);
-                  showSuccess('Sync JSON payload copied to clipboard!');
-                }}
-                variant="outline"
-                className="flex-1 rounded-xl text-xs font-bold"
-              >
-                <Copy className="w-4 h-4 mr-2" /> Copy JSON Payload
-              </Button>
-              <Button
-                onClick={() => setShowQrModal(false)}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold"
-              >
-                Done
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };
