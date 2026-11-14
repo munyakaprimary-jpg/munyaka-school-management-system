@@ -154,7 +154,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Timetable', href: '/timetable', icon: Clock, allowedRoles: ['all'] },
     { name: 'Attendance Management', href: '/attendance', icon: CheckSquare, allowedRoles: ['all'] },
     { name: 'Daily Check-In', href: '/staff/check-in', icon: LogIn, allowedRoles: ['all'] },
-    { name: 'Enter Marks', href: '/assessments', icon: FileSpreadsheet, allowedRoles: ['all'] },
+    { name: 'Enter Marks', href: '/assessments/grading', icon: FileSpreadsheet, allowedRoles: ['all'] },
     { name: 'Results Analysis', href: '/analysis', icon: BarChart3, allowedRoles: ['all'] },
     { name: 'Digital Hub', href: '/digital-hub', icon: Laptop, allowedRoles: ['all'] },
     { name: 'Science Lab Workstation', href: '/science-lab', icon: FlaskConical, allowedRoles: ['all'] },
