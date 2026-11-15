@@ -152,40 +152,6 @@ const ResultsAnalysis = () => {
     );
     return () => unsubscribe();
   }, []);
-      (snapshot) => {
-        const types: any[] = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          const title = data.name || data.examName || data.title || data.code || "Exam";
-          return {
-            id: doc.id,
-            title,
-            name: title,
-            term: data.term || "Term 1",
-            academicYear: data.academicYear || data.year || new Date().getFullYear(),
-            status: data.status || "Active",
-          };
-        });
-        setExamTypesList(types);
-        setLoadingExamTypes(false);
-
-        if (types.length > 0) {
-          setExamType((prev) => {
-            if (prev && types.some((t) => t.title === prev || t.id === prev || t.name === prev)) {
-              return prev;
-            }
-            return types[0].title;
-          });
-        } else {
-          setExamType("");
-        }
-      },
-      (err) => {
-        console.error("Error listening to exam_types in ResultsAnalysis:", err);
-        setLoadingExamTypes(false);
-      }
-    );
-    return () => unsubscribe();
-  }, []);
 
   // ====== Unified file-download state for CSV export ======
   const resultsExport = useFileDownload();
@@ -571,15 +537,22 @@ const ResultsAnalysis = () => {
 
           <div className="space-y-1.5">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Exam Type</label>
-            <Select value={examType} onValueChange={setExamType}>
+            <Select value={examType} onValueChange={setExamType} disabled={loadingExamTypes}>
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue />
+                <SelectValue placeholder={loadingExamTypes ? "Loading exam types..." : "Select exam type"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="FORMATIVE">Formative Assessment</SelectItem>
-                <SelectItem value="SUMMATIVE">Summative Assessment</SelectItem>
-                <SelectItem value="OPENER">Opener Exam</SelectItem>
-                <SelectItem value="MIDTERM">Mid-Term Exam</SelectItem>
+                {loadingExamTypes ? (
+                  <SelectItem value="" disabled>Loading exam types...</SelectItem>
+                ) : examTypesList.length === 0 ? (
+                  <SelectItem value="" disabled>No exam types configured</SelectItem>
+                ) : (
+                  examTypesList.map((type: any) => (
+                    <SelectItem key={type.id} value={type.title}>
+                      {type.title} ({type.term} - {type.academicYear})
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
