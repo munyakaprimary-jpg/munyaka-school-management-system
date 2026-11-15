@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select";
 import Modal from "@/components/ui/Modal";
 import BackButton from "@/components/ui/BackButton";
-import { Plus, Trash2, AlertTriangle, Search, Filter, CheckCircle2, XCircle, FileSpreadsheet } from "lucide-react";
+import AdminAuthModal from "@/components/common/AdminAuthModal";
+import { Plus, Trash2, AlertTriangle, Search, Filter, CheckCircle2, XCircle, FileSpreadsheet, Pencil } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -63,6 +64,10 @@ const ExamTypes = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [examToDelete, setExamToDelete] = useState<{ id: string; title: string } | null>(null);
+
+  // Admin password gate state
+  const [adminAuthOpen, setAdminAuthOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"add" | "edit" | "delete" | null>(null);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -188,6 +193,34 @@ const ExamTypes = () => {
     navigate("/assessments");
   };
 
+  // Admin password gate: intercept add/edit/delete actions
+  const requireAdminAuth = (action: "add" | "edit" | "delete", payload?: { id: string; title: string }) => {
+    if (!isAdmin) {
+      showError("Only administrators can manage exam types.");
+      return;
+    }
+    setPendingAction(action);
+    if (action === "delete" && payload) {
+      setExamToDelete(payload);
+    }
+    setAdminAuthOpen(true);
+  };
+
+  const handleAdminAuthSuccess = () => {
+    if (pendingAction === "add") {
+      setIsOpen(true);
+    } else if (pendingAction === "delete" && examToDelete) {
+      setIsDeleteOpen(true);
+    }
+    setPendingAction(null);
+  };
+
+  const handleAdminAuthClose = () => {
+    setAdminAuthOpen(false);
+    setPendingAction(null);
+    setExamToDelete(null);
+  };
+
   const clearFilters = () => {
     setSearchTerm("");
     setFilterTerm("all");
@@ -255,7 +288,7 @@ const ExamTypes = () => {
         {isAdmin && (
           <Button
             className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700"
-            onClick={() => setIsOpen(true)}
+            onClick={() => requireAdminAuth("add")}
           >
             <Plus size={18} /> Add Exam Type
           </Button>
@@ -331,7 +364,7 @@ const ExamTypes = () => {
             {isAdmin && examTypes.length === 0 && (
               <Button
                 className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100"
-                onClick={() => setIsOpen(true)}
+                onClick={() => requireAdminAuth("add")}
               >
                 <Plus size={18} className="mr-2" /> Create Exam Type
               </Button>
@@ -358,17 +391,26 @@ const ExamTypes = () => {
                       {exam.status}
                     </Badge>
                     {isAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 h-9 w-9"
-                        onClick={() => {
-                          setExamToDelete({ id: exam.id, title: exam.title });
-                          setIsDeleteOpen(true);
-                        }}
-                      >
-                        <Trash2 size={16} />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 h-9 w-9"
+                          onClick={() => requireAdminAuth("edit", { id: exam.id, title: exam.title })}
+                          title="Edit exam type"
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 h-9 w-9"
+                          onClick={() => requireAdminAuth("delete", { id: exam.id, title: exam.title })}
+                          title="Delete exam type"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
                     )}
                   </div>
                   <h4 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
@@ -516,6 +558,20 @@ const ExamTypes = () => {
           </p>
         </div>
       </Modal>
+
+      {/* Admin Password Gate Modal */}
+      <AdminAuthModal
+        isOpen={adminAuthOpen}
+        onClose={handleAdminAuthClose}
+        onSuccess={handleAdminAuthSuccess}
+        actionLabel={
+          pendingAction === "add"
+            ? "Add Exam Type"
+            : pendingAction === "edit"
+            ? "Edit Exam Type"
+            : "Delete Exam Type"
+        }
+      />
     </div>
   );
 };
