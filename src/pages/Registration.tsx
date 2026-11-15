@@ -65,8 +65,8 @@ const Registration = () => {
     let resolvedAssessmentNumber = generatedAssessmentNumber;
 
     try {
-      const saved = localStorage.getItem('school_learners_data');
-      const learners: any[] = saved ? JSON.parse(saved) : [];
+      const { mergeStoredLearners, saveMergedLearners } = await import('@/utils/learnerStorageMerge');
+      const learners = mergeStoredLearners();
 
       // Strict duplicate check: block registration if the Assessment / Birth
       // Certificate number is already registered under a different learner.
@@ -78,10 +78,11 @@ const Registration = () => {
 
       const newLearner = {
         id: generateLearnerId(),
-        admNo: generatedAdmNumber,
+        admissionNo: generatedAdmNumber,
         assessmentNo: generatedAssessmentNumber,
         birthCertificateNo: bcNo || undefined,
         name: String(formData.fullName || '').trim(),
+        fullName: String(formData.fullName || '').trim(),
         grade: formData.grade,
         stream: formData.stream,
         gender: formData.gender,
@@ -90,9 +91,8 @@ const Registration = () => {
         address: String(formData.address || '').trim(),
       };
 
-      learners.unshift(newLearner);
-
-      localStorage.setItem('school_learners_data', JSON.stringify(learners));
+      const updatedList = [newLearner, ...learners];
+      saveMergedLearners(updatedList);
       notifyDataChanged('school_learners_data');
       logActivity({
         type: 'student_registration',

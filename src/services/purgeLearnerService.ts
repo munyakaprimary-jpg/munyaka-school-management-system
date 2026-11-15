@@ -94,16 +94,10 @@ export const purgeLearnerPermanently = async (targetLearner: any, setLearnersLis
   if (targetAssess) existingDeleted.add(targetAssess);
   localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(Array.from(existingDeleted)));
 
-  // 3. Purge from Central Local Storage (`munyaka_learners_v2`)
-  let existingRecords: any[] = [];
-  try {
-    const parsed = JSON.parse(localStorage.getItem(UNIFIED_STORAGE_KEY) || '[]');
-    if (Array.isArray(parsed)) existingRecords = parsed;
-  } catch {
-    existingRecords = [];
-  }
-
-  const filteredLocal = existingRecords.filter((item: any) => {
+  // 3. Purge from Central Local Storage (`munyaka_learners_v2`) and all other storage keys using unified merge utility
+  const { mergeStoredLearners, saveMergedLearners } = await import('@/utils/learnerStorageMerge');
+  const currentMerged = mergeStoredLearners();
+  const remainingMerged = currentMerged.filter((item: any) => {
     if (!item) return false;
     const itemRawId = toRawLearnerId(item.id || item._id || item.learnerId || item.documentId || '');
     const itemAdm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
@@ -117,16 +111,11 @@ export const purgeLearnerPermanently = async (targetLearner: any, setLearnersLis
     return !isMatch;
   });
 
-  localStorage.setItem(UNIFIED_STORAGE_KEY, JSON.stringify(filteredLocal));
-
-  // 4. Wipe legacy cache keys so nothing can re-seed the purged learner
-  ['cached_learners', 'students', 'learners', 'school_learners', 'munyaka_students', 'school_learners_data'].forEach((key) => {
-    localStorage.removeItem(key);
-  });
+  saveMergedLearners(remainingMerged);
 
   // 5. Update UI state directly if setter provided
   if (setLearnersList && typeof setLearnersList === 'function') {
-    setLearnersList(filteredLocal);
+    setLearnersList(remainingMerged);
   }
 
   // 6. Broadcast global refresh events
@@ -135,5 +124,5 @@ export const purgeLearnerPermanently = async (targetLearner: any, setLearnersLis
   window.dispatchEvent(new Event('storage'));
   window.dispatchEvent(new Event('munyaka:data-changed'));
 
-  return filteredLocal;
+  return remainingMerged;
 };

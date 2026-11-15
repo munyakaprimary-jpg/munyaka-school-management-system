@@ -22,14 +22,9 @@ export const registerLearnerGuarded = async (newLearnerData: any) => {
     createdAt: newLearnerData.createdAt || new Date().toISOString()
   };
 
-  // C. STRICT GUARD: Write exclusively to UNIFIED_STORAGE_KEY
-  let currentRecords: any[] = [];
-  try {
-    currentRecords = JSON.parse(localStorage.getItem(UNIFIED_STORAGE_KEY) || '[]');
-    if (!Array.isArray(currentRecords)) currentRecords = [];
-  } catch {
-    currentRecords = [];
-  }
+  // C. STRICT GUARD: Write using mergeStoredLearners / saveMergedLearners
+  const { mergeStoredLearners, saveMergedLearners } = await import('@/utils/learnerStorageMerge');
+  const currentRecords = mergeStoredLearners();
   
   // Deduplicate by ID or Admission Number
   const updatedRecords = [
@@ -42,13 +37,8 @@ export const registerLearnerGuarded = async (newLearnerData: any) => {
     })
   ];
 
-  // Save to unified local storage
-  localStorage.setItem(UNIFIED_STORAGE_KEY, JSON.stringify(updatedRecords));
-
-  // D. STRICT GUARD: Purge any attempt to save into legacy keys
-  ['cached_learners', 'students', 'learners', 'school_learners', 'school_learners_data', 'munyaka_students'].forEach((legacyKey) => {
-    localStorage.removeItem(legacyKey);
-  });
+  // Save to all unified storage keys
+  saveMergedLearners(updatedRecords);
 
   // E. Sync to Firestore central database
     if (db) {

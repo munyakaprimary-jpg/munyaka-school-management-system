@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-const initialSeedData: { learners: any[] } = { learners: [] };
+import { mergeStoredLearners, saveMergedLearners } from '@/utils/learnerStorageMerge';
 
 const STORAGE_KEY = 'munyaka_learners_directory';
 
@@ -16,21 +16,11 @@ interface LearnerContextType {
 const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
 export const getStoredLearners = () => {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (!data) return [];
-    const parsed = JSON.parse(data);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    console.error("Failed to parse learners storage", e);
-    return [];
-  }
+  return mergeStoredLearners();
 };
 
 export const saveStoredLearners = (learners: any[]) => {
-  const serialized = JSON.stringify(learners);
-  // Write only to the single unified storage key
-  localStorage.setItem(STORAGE_KEY, serialized);
+  saveMergedLearners(learners);
 };
 
 import { upsertLearnerIntoList, findLearnerByIdentity, getLearnerAdmissionNo, getLearnerAssessmentNo } from '@/utils/learnerIdentity';
@@ -56,12 +46,8 @@ const deduplicateLearners = (list: any[]) => {
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [learners, setLearnersState] = useState<any[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('munyaka_learners');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return deduplicateLearners(parsed);
-      }
-      return [];
+      const merged = mergeStoredLearners();
+      return merged;
     } catch (e) {
       console.error("Failed to parse learners storage", e);
       return [];
@@ -95,25 +81,32 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     const handleStorage = () => {
       try {
-        const data = localStorage.getItem('munyaka_learners');
-        if (data) {
-          const parsed = JSON.parse(data);
-          if (Array.isArray(parsed)) {
-            setLearnersState(deduplicateLearners(parsed));
-          }
+        const merged = mergeStoredLearners();
+        if (merged.length > 0) {
+          setLearnersState(merged);
         }
       } catch (e) {
         console.error("Storage sync error", e);
       }
     };
 
+    const handleOnline = () => {
+      handleStorage();
+    };
+
     window.addEventListener('storage', handleStorage);
     window.addEventListener('munyaka_learners_updated', handleStorage);
     window.addEventListener('munyaka:data-changed', handleStorage);
+    window.addEventListener('online', handleOnline);
+    
+    // Initial sync on mount
+    handleStorage();
+
     return () => {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('munyaka_learners_updated', handleStorage);
       window.removeEventListener('munyaka:data-changed', handleStorage);
+      window.removeEventListener('online', handleOnline);
     };
   }, []);
 
