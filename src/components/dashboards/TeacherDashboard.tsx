@@ -24,6 +24,8 @@ import { useCentralData } from '@/hooks/useCentralData';
 import TeacherExportModule from '@/components/teacher/TeacherExportModule';
 import TeacherSyncQrGenerator from '@/components/teacher/TeacherSyncQrGenerator';
 import { getFormattedRoleLabel } from '@/utils/staffRoleUtils';
+import { db } from '@/config/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
@@ -724,6 +726,25 @@ export default function TeacherDashboard() {
   const activeAssignedClass = selectedClassOverride !== null ? selectedClassOverride : (defaultAssignedClass || '');
   const fullClassTitle = activeAssignedClass ? activeAssignedClass : 'No Class Assigned';
 
+  // Persist the teacher's assigned class selection to their document in the
+  // Firestore `staff` collection so the choice survives across devices/sessions.
+  const persistAssignedClassToFirestore = async (val: string) => {
+    try {
+      const staffDocId = String(
+        matchedStaffRecord?.id ||
+        matchedStaffRecord?.staffId ||
+        matchedStaffRecord?.staff_id ||
+        currentUserObj.id ||
+        user?.id ||
+        ''
+      );
+      if (!staffDocId) return;
+      await setDoc(doc(db, 'staff', staffDocId), { assignedClass: val, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (err) {
+      console.warn('Failed to persist assignedClass to Firestore staff collection:', err);
+    }
+  };
+
   // Load learners from munyaka_central_db.learners or munyaka_learners
   const allLearners = React.useMemo(() => {
     try {
@@ -879,40 +900,39 @@ export default function TeacherDashboard() {
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
               <span>Primary Homeroom & Subject Stream</span>
             </p>
-            {!defaultAssignedClass && (
-              <div className="mt-3 pt-2 border-t border-slate-100">
-                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Select Assigned Class:</label>
-                <select
-                  value={activeAssignedClass}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSelectedClassOverride(val);
-                    try {
-                      const updated = { ...currentUserObj, assignedClass: val };
-                      localStorage.setItem('munyaka_current_user', JSON.stringify(updated));
-                    } catch {}
-                  }}
-                  className="w-full text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="No Class Assigned">No Class Assigned</option>
-                  <option value="Grade 1 Blue">Grade 1 Blue</option>
-                  <option value="Grade 1 Green">Grade 1 Green</option>
-                  <option value="Grade 2 Blue">Grade 2 Blue</option>
-                  <option value="Grade 2 Green">Grade 2 Green</option>
-                  <option value="Grade 3 Blue">Grade 3 Blue</option>
-                  <option value="Grade 3 Green">Grade 3 Green</option>
-                  <option value="Grade 4 Blue">Grade 4 Blue</option>
-                  <option value="Grade 4 Green">Grade 4 Green</option>
-                  <option value="Grade 5 Blue">Grade 5 Blue</option>
-                  <option value="Grade 5 Green">Grade 5 Green</option>
-                  <option value="Grade 6 Blue">Grade 6 Blue</option>
-                  <option value="Grade 6 Green">Grade 6 Green</option>
-                  <option value="Grade 7 Blue">Grade 7 Blue</option>
-                  <option value="Grade 8 Blue">Grade 8 Blue</option>
-                  <option value="Grade 9 Blue">Grade 9 Blue</option>
-                </select>
-              </div>
-            )}
+            <div className="mt-3 pt-2 border-t border-slate-100">
+              <label className="text-[11px] font-semibold text-slate-600 block mb-1">Select Assigned Class:</label>
+              <select
+                value={activeAssignedClass}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedClassOverride(val);
+                  try {
+                    const updated = { ...currentUserObj, assignedClass: val };
+                    localStorage.setItem('munyaka_current_user', JSON.stringify(updated));
+                  } catch {}
+                  persistAssignedClassToFirestore(val);
+                }}
+                className="w-full text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="No Class Assigned">No Class Assigned</option>
+                <option value="Grade 1 Blue">Grade 1 Blue</option>
+                <option value="Grade 1 Green">Grade 1 Green</option>
+                <option value="Grade 2 Blue">Grade 2 Blue</option>
+                <option value="Grade 2 Green">Grade 2 Green</option>
+                <option value="Grade 3 Blue">Grade 3 Blue</option>
+                <option value="Grade 3 Green">Grade 3 Green</option>
+                <option value="Grade 4 Blue">Grade 4 Blue</option>
+                <option value="Grade 4 Green">Grade 4 Green</option>
+                <option value="Grade 5 Blue">Grade 5 Blue</option>
+                <option value="Grade 5 Green">Grade 5 Green</option>
+                <option value="Grade 6 Blue">Grade 6 Blue</option>
+                <option value="Grade 6 Green">Grade 6 Green</option>
+                <option value="Grade 7 Blue">Grade 7 Blue</option>
+                <option value="Grade 8 Blue">Grade 8 Blue</option>
+                <option value="Grade 9 Blue">Grade 9 Blue</option>
+              </select>
+            </div>
           </CardContent>
         </Card>
 
