@@ -69,7 +69,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/', { replace: true });
   };
 
   const [currentStaff, setCurrentStaff] = useState<any>(() => {

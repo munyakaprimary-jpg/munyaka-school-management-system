@@ -1219,6 +1219,7 @@ export default function ParentPortal() {
     setSession(null);
     setStudent(null);
     showSuccess('You have been logged out successfully.');
+    window.location.href = '/';
   }, []);
 
   if (isLoading) {
