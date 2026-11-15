@@ -968,22 +968,22 @@ export default function Attendance() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-100/80 text-slate-600 font-bold border-b border-slate-200 text-[11px] uppercase tracking-wider">
-                  <th className="py-3 px-4 w-12 text-center">#</th>
-                  <th className="py-3 px-4">Admission No</th>
-                  <th className="py-3 px-4">Learner Name</th>
-                  <th className="py-3 px-4">Grade / Stream</th>
-                  <th className="py-3 px-4 text-center">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold ${activeSession === 'morning' ? 'bg-emerald-600 text-white shadow' : 'bg-slate-200 text-slate-700'}`}>
+                <tr className="bg-slate-100/80 text-slate-600 font-semibold border-b border-slate-200 text-[11px] uppercase tracking-wider">
+                  <th className="py-2 px-3 w-10 text-center">#</th>
+                  <th className="py-2 px-3">Admission No</th>
+                  <th className="py-2 px-3">Learner Name</th>
+                  <th className="py-2 px-3">Grade / Stream</th>
+                  <th className="py-2 px-3 text-center">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${activeSession === 'morning' ? 'bg-emerald-600 text-white shadow' : 'bg-slate-200 text-slate-700'}`}>
                       Morning Roll Call {activeSession === 'morning' && '• Active'}
                     </span>
                   </th>
-                  <th className="py-3 px-4 text-center">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold ${activeSession === 'afternoon' ? 'bg-indigo-600 text-white shadow' : 'bg-slate-200 text-slate-700'}`}>
+                  <th className="py-2 px-3 text-center">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${activeSession === 'afternoon' ? 'bg-indigo-600 text-white shadow' : 'bg-slate-200 text-slate-700'}`}>
                       Afternoon Roll Call {activeSession === 'afternoon' && '• Active'}
                     </span>
                   </th>
-                  <th className="py-3 px-4">Remarks</th>
+                  <th className="py-2 px-3">Remarks</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1009,15 +1009,15 @@ export default function Attendance() {
 
                     return (
                       <tr key={id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3 px-4 text-center font-medium text-slate-400">{idx + 1}</td>
-                        <td className="py-3 px-4 font-mono font-medium text-slate-700">{adm}</td>
-                        <td className="py-3 px-4 font-semibold text-slate-900">{name}</td>
-                        <td className="py-3 px-4 text-slate-600">
+                        <td className="py-2 px-3 text-center font-medium text-slate-400 text-xs">{idx + 1}</td>
+                        <td className="py-2 px-3 font-mono font-medium text-slate-700 text-xs">{adm}</td>
+                        <td className="py-2 px-3 font-semibold text-slate-900 text-xs">{name}</td>
+                        <td className="py-2 px-3 text-slate-600">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-700">
                             {grade} {stream && stream !== '-' ? `• ${stream}` : ''}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-2 px-3 text-center">
                           <div className={`inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 ${morningLocked && (!isAdmin || !bypassCutoff) ? 'opacity-60 cursor-not-allowed' : ''}`}>
                             {['Present', 'Absent', 'Late', 'Excused'].map(status => {
                               const active = currentData.morning === status;
@@ -1028,7 +1028,7 @@ export default function Attendance() {
                                   type="button"
                                   disabled={isLocked}
                                   onClick={() => handleStatusChange(id, 'morning', status)}
-                                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
                                     isLocked ? 'cursor-not-allowed' : ''
                                   } ${
                                     active
@@ -1045,7 +1045,7 @@ export default function Attendance() {
                             })}
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-2 px-3 text-center">
                           <div className={`inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 ${afternoonLocked && (!isAdmin || !bypassCutoff) ? 'opacity-60 cursor-not-allowed' : ''}`}>
                             {['Present', 'Absent', 'Late', 'Excused'].map(status => {
                               const active = currentData.afternoon === status;
