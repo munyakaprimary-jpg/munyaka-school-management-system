@@ -17,7 +17,7 @@ import { useFileDownload } from "@/utils/fileDownloader";
 import { MUNYAKA_HEADERS } from "@/utils/downloadHelper";
 import { saveTeacherInputResult } from "@/utils/assessmentResults";
 import { cn } from "@/lib/utils";
-import { useFirestoreLearners } from "@/hooks/useFirestoreLearners";
+import { useBackToAssessmentsMenu } from "@/hooks/useBackToAssessmentsMenu";
 
 // Educational Tier Subject Mappings & Parsing Logic
 const TIER_SUBJECTS: Record<string, string[]> = {
@@ -331,14 +331,9 @@ const Assessments = () => {
   const tierKey = useMemo(() => getTierKey(currentGrade), [currentGrade]);
   const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
 
-  // Integrate real-time Firestore learners hook sorted by admissionNo
-  const { learners: firestoreLearners, filteredLearners: firestoreFilteredLearners, loading: learnersLoading } = useFirestoreLearners(grade, stream);
-
-  // 1. Retrieve Students Directory from Firestore live subscription, with localStorage fallback
-  const studentsList = useMemo(() => {
-    if (firestoreLearners && firestoreLearners.length > 0) {
-      return firestoreLearners;
-    }
+  // 1. Retrieve Students Directory from localStorage with munyaka_learners_db and school_learners_data (unified Learner Management state) and fallbacks
+  // Cold start: returns [] when localStorage is empty — no mock data.
+  const [studentsList, setStudentsList] = useState<Student[]>(() => {
     try {
       const stored =
         localStorage.getItem("munyaka_learners_db") ||
@@ -359,11 +354,40 @@ const Assessments = () => {
       console.error("Error loading munyaka_learners_db / school_learners_data:", e);
     }
     return [];
-  }, [firestoreLearners]);
+  });
 
   // State listener for dynamic updates to student profiles / localStorage changes
   useEffect(() => {
-    // Already synchronized via useFirestoreLearners live subscription hook
+    const loadLearners = () => {
+      try {
+        const stored =
+          localStorage.getItem("munyaka_learners_db") ||
+          localStorage.getItem("school_learners_data") ||
+          localStorage.getItem("munyaka_students") ||
+          localStorage.getItem("students_directory") ||
+          localStorage.getItem("learners") ||
+          localStorage.getItem("munyaka_students_master");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setStudentsList(
+              parsed.filter((item): item is Student =>
+                item !== null && typeof item === "object"
+              )
+            );
+          }
+        }
+      } catch (e) {
+        console.error("Error reloading learners in event listener:", e);
+      }
+    };
+
+    window.addEventListener("storage", loadLearners);
+    window.addEventListener("munyaka:data-changed" as any, loadLearners);
+    return () => {
+      window.removeEventListener("storage", loadLearners);
+      window.removeEventListener("munyaka:data-changed" as any, loadLearners);
+    };
   }, []);
 
   // 2. Grades & Streams from munyaka_grades with fallback protection
