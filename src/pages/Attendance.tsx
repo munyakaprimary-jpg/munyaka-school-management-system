@@ -46,12 +46,18 @@ export default function Attendance() {
     return localStorage.getItem('manual_afternoon_lock') === 'true';
   });
 
-  // Configurable Cutoff Time Settings
+  // Configurable Cutoff Time Settings (From and To ranges)
+  const [morningFromTime, setMorningFromTime] = useState<string>(() => {
+    return localStorage.getItem('attendance_morning_from') || '08:00';
+  });
   const [morningCutoffTime, setMorningCutoffTime] = useState<string>(() => {
     return localStorage.getItem('attendance_morning_cutoff') || '09:40';
   });
+  const [afternoonFromTime, setAfternoonFromTime] = useState<string>(() => {
+    return localStorage.getItem('attendance_afternoon_from') || '14:00';
+  });
   const [afternoonCutoffTime, setAfternoonCutoffTime] = useState<string>(() => {
-    return localStorage.getItem('attendance_afternoon_cutoff') || '15:00';
+    return localStorage.getItem('attendance_afternoon_cutoff') || '17:00';
   });
   
   const [attendanceMap, setAttendanceMap] = useState<Record<string, { morning: string; afternoon: string; remarks: string }>>({});
@@ -71,8 +77,10 @@ export default function Attendance() {
   };
 
   const checkSessionLockStatus = (
+    morningFromStr = '08:00',
     morningCutoffStr = '09:40',
-    afternoonCutoffStr = '15:00',
+    afternoonFromStr = '14:00',
+    afternoonCutoffStr = '17:00',
     isBypassed = false,
     manualMorningOverride?: 'Locked' | 'Unlocked',
     manualAfternoonOverride?: 'Locked' | 'Unlocked'
@@ -84,19 +92,18 @@ export default function Attendance() {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-    // Standard Windows in Minutes
-    const morningStartMinutes = 8 * 60; // 08:00 AM
+    const morningStartMinutes = timeToMinutes(morningFromStr);
     const morningCutoffMinutes = timeToMinutes(morningCutoffStr);
 
-    const afternoonStartMinutes = 14 * 60; // 02:00 PM / 14:00
+    const afternoonStartMinutes = timeToMinutes(afternoonFromStr);
     const afternoonCutoffMinutes = timeToMinutes(afternoonCutoffStr);
 
-    // Evaluate Morning Status
+    // Evaluate Morning Status: strict between Morning From and Morning To
     let isMorningOpen = currentMinutes >= morningStartMinutes && currentMinutes <= morningCutoffMinutes;
     if (manualMorningOverride === 'Unlocked') isMorningOpen = true;
     if (manualMorningOverride === 'Locked') isMorningOpen = false;
 
-    // Evaluate Afternoon Status
+    // Evaluate Afternoon Status: strict between Afternoon From and Afternoon To
     let isAfternoonOpen = currentMinutes >= afternoonStartMinutes && currentMinutes <= afternoonCutoffMinutes;
     if (manualAfternoonOverride === 'Unlocked') isAfternoonOpen = true;
     if (manualAfternoonOverride === 'Locked') isAfternoonOpen = false;
@@ -109,7 +116,9 @@ export default function Attendance() {
     const manualAfternoon = manualAfternoonLock ? 'Locked' : (bypassCutoff ? 'Unlocked' : undefined);
 
     const { isMorningOpen, isAfternoonOpen } = checkSessionLockStatus(
+      morningFromTime,
       morningCutoffTime,
+      afternoonFromTime,
       afternoonCutoffTime,
       bypassCutoff,
       manualMorning,
@@ -121,7 +130,9 @@ export default function Attendance() {
   };
 
   const { isMorningOpen, isAfternoonOpen } = checkSessionLockStatus(
+    morningFromTime,
     morningCutoffTime,
+    afternoonFromTime,
     afternoonCutoffTime,
     bypassCutoff,
     manualMorningLock ? 'Locked' : undefined,
@@ -131,16 +142,28 @@ export default function Attendance() {
   const morningLocked = !isMorningOpen;
   const afternoonLocked = !isAfternoonOpen;
 
+  const handleMorningFromChange = (newVal: string) => {
+    setMorningFromTime(newVal);
+    localStorage.setItem('attendance_morning_from', newVal);
+    toast.success(`Morning start time updated to ${newVal}`);
+  };
+
   const handleMorningCutoffChange = (newVal: string) => {
     setMorningCutoffTime(newVal);
     localStorage.setItem('attendance_morning_cutoff', newVal);
-    toast.success(`Morning attendance cutoff updated to ${newVal}`);
+    toast.success(`Morning cutoff time updated to ${newVal}`);
+  };
+
+  const handleAfternoonFromChange = (newVal: string) => {
+    setAfternoonFromTime(newVal);
+    localStorage.setItem('attendance_afternoon_from', newVal);
+    toast.success(`Afternoon start time updated to ${newVal}`);
   };
 
   const handleAfternoonCutoffChange = (newVal: string) => {
     setAfternoonCutoffTime(newVal);
     localStorage.setItem('attendance_afternoon_cutoff', newVal);
-    toast.success(`Afternoon attendance cutoff updated to ${newVal}`);
+    toast.success(`Afternoon cutoff time updated to ${newVal}`);
   };
 
   const toggleManualMorningLock = () => {
@@ -649,20 +672,30 @@ export default function Attendance() {
   {/* Admin Cutoff Settings Box */}
   {isAdmin && (
     <Card className="border-indigo-100 bg-indigo-50/40 shadow-sm">
-      <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <CardContent className="p-4 flex flex-col lg:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
             <Clock className="w-5 h-5" />
           </div>
           <div>
             <h4 className="text-sm font-bold text-indigo-950">Configurable Attendance Cutoff Times</h4>
-            <p className="text-xs text-indigo-700">Customize the exact locking hours for morning and afternoon sessions across the school.</p>
+            <p className="text-xs text-indigo-700">Customize the exact locking hours and time ranges for morning and afternoon sessions across the school.</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-200">
-            <span className="text-xs font-semibold text-slate-700">Morning Cutoff:</span>
+            <span className="text-xs font-semibold text-slate-700">Morning From:</span>
+            <input
+              type="time"
+              value={morningFromTime}
+              onChange={(e) => handleMorningFromChange(e.target.value)}
+              className="text-xs font-mono font-bold text-indigo-900 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-200">
+            <span className="text-xs font-semibold text-slate-700">Morning To:</span>
             <input
               type="time"
               value={morningCutoffTime}
@@ -672,7 +705,17 @@ export default function Attendance() {
           </div>
 
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-200">
-            <span className="text-xs font-semibold text-slate-700">Afternoon Cutoff:</span>
+            <span className="text-xs font-semibold text-slate-700">Afternoon From:</span>
+            <input
+              type="time"
+              value={afternoonFromTime}
+              onChange={(e) => handleAfternoonFromChange(e.target.value)}
+              className="text-xs font-mono font-bold text-indigo-900 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-200">
+            <span className="text-xs font-semibold text-slate-700">Afternoon To:</span>
             <input
               type="time"
               value={afternoonCutoffTime}
