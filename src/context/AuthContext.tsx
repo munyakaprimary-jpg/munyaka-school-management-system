@@ -725,7 +725,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch {}
     persistCurrentAuthRole(null);
     setUser(null);
-    window.location.href = '/';
   };
 
   const switchRole = (role: UserRole) => {

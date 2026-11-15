@@ -35,9 +35,6 @@ const ProtectedRoute = ({
   const isAuth = isAuthenticated || localStorage.getItem('isAuthenticated') === 'true';
 
   if (!isAuth || !user) {
-    if (window.location.pathname === '/' || window.location.pathname === '') {
-      return <>{children}</>;
-    }
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
