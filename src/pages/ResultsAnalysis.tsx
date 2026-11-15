@@ -543,9 +543,9 @@ const ResultsAnalysis = () => {
               </SelectTrigger>
               <SelectContent>
                 {loadingExamTypes ? (
-                  <SelectItem value="" disabled>Loading exam types...</SelectItem>
+                  <SelectItem value="__loading__" disabled>Loading exam types...</SelectItem>
                 ) : examTypesList.length === 0 ? (
-                  <SelectItem value="" disabled>No exam types configured</SelectItem>
+                  <SelectItem value="__empty__" disabled>No exam types configured</SelectItem>
                 ) : (
                   examTypesList.map((type: any) => (
                     <SelectItem key={type.id} value={type.title}>
