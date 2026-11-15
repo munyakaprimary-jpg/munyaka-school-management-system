@@ -122,12 +122,19 @@ export default function PromotePage() {
   const availableGrades = useMemo(() => {
     const gradeMap = new Map<string, { id: string; name: string }>();
     
+    // Seed standard SEQUENCE so grades appear in clean pedagogical order
+    GRADE_SEQUENCE.forEach(seq => {
+      gradeMap.set(normalizeStr(seq), { id: seq, name: seq });
+    });
+
     gradesList.forEach(g => {
       if (g) {
-        const id = g.id || g.name;
-        const name = g.name || g.id;
-        if (id && name) {
-          gradeMap.set(String(id).trim().toLowerCase(), { id: String(id).trim(), name: String(name).trim() });
+        const rawName = g.name || g.id;
+        if (rawName) {
+          const strG = String(rawName).trim();
+          const cleanName = strG.toLowerCase().startsWith('grade') ? strG : (/^[0-9]+$/.test(strG) ? `Grade ${strG}` : strG);
+          const key = normalizeStr(cleanName);
+          gradeMap.set(key, { id: g.id || strG, name: cleanName });
         }
       }
     });
@@ -168,7 +175,7 @@ export default function PromotePage() {
         }
       });
     } else {
-      const matchedGradeObj = gradesList.find(g => g && (g.id === sourceGrade || normalizeStr(g.name) === normalizeStr(sourceGrade)));
+      const matchedGradeObj = gradesList.find(g => g && (g.id === sourceGrade || normalizeStr(g.name) === normalizeStr(sourceGrade) || normalizeStr(g.id) === normalizeStr(sourceGrade)));
       if (matchedGradeObj && Array.isArray(matchedGradeObj.streams)) {
         matchedGradeObj.streams.forEach((s: any) => {
           if (s) {
@@ -184,11 +191,12 @@ export default function PromotePage() {
       const learnerStream = l.streamId || l.stream || l.currentStream || l.classStream;
       
       if (learnerStream) {
-        const matchesGrade = 
-          sourceGrade === 'all' || 
-          String(learnerGradeIdentifier) === sourceGrade ||
-          normalizeStr(learnerGradeIdentifier) === normalizeStr(sourceGrade) ||
-          normalizeStr(learnerGradeIdentifier).replace(/[^0-9]/g, '') === normalizeStr(sourceGrade).replace(/[^0-9]/g, '');
+        const normL = normalizeStr(learnerGradeIdentifier);
+        const normSource = normalizeStr(sourceGrade);
+        const matchesGrade =
+          sourceGrade === 'all' ||
+          normL === normSource ||
+          normL.replace(/[^0-9]/g, '') === normSource.replace(/[^0-9]/g, '');
 
         if (matchesGrade) {
           streamSet.add(String(learnerStream).trim().toUpperCase());
@@ -199,24 +207,20 @@ export default function PromotePage() {
     return Array.from(streamSet).sort();
   }, [gradesList, learners, sourceGrade]);
 
-  // Grade student counts calculation with exact robust matching
+  // Grade student counts calculation with exact robust normalized matching
   const gradeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     availableGrades.forEach(gradeObj => {
       const count = learners.filter(l => {
         const lGrade = l.gradeId || l.grade || l.gradeLevel || l.currentGrade || l.class;
         const normL = normalizeStr(lGrade);
-        const normObjId = normalizeStr(gradeObj.id);
         const normObjName = normalizeStr(gradeObj.name);
-        const lNum = normL.replace(/[^0-9]/g, '');
-        const objNum = normObjName.replace(/[^0-9]/g, '');
+        const normObjId = normalizeStr(gradeObj.id);
 
         return (
-          normL === normObjId ||
           normL === normObjName ||
-          (lNum && objNum && lNum === objNum) ||
-          normL.includes(normObjName) ||
-          normObjName.includes(normL)
+          normL === normObjId ||
+          normL.replace(/[^0-9]/g, '') === normObjName.replace(/[^0-9]/g, '')
         );
       }).length;
       counts[gradeObj.id] = count;
@@ -244,9 +248,7 @@ export default function PromotePage() {
       const matchesGrade =
         sourceGrade === 'all' ||
         normLGrade === normSourceGrade ||
-        (lNum && sourceNum && lNum === sourceNum) ||
-        normLGrade.includes(normSourceGrade) ||
-        normSourceGrade.includes(normLGrade);
+        (lNum && sourceNum && lNum === sourceNum);
 
       const learnerStream = String(learner.streamId || learner.stream || learner.currentStream || learner.classStream || '').trim().toUpperCase();
       const selectedStreamUpper = String(sourceStream || '').trim().toUpperCase();
