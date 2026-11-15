@@ -36,7 +36,10 @@ export default function Attendance() {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [activeSession, setActiveSession] = useState<'morning' | 'afternoon'>('morning');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [bypassCutoff, setBypassCutoff] = useState<boolean>(true);
+  const [bypassCutoff, setBypassCutoff] = useState<boolean>(() => {
+    const saved = localStorage.getItem('adminScheduleOverride');
+    return saved ? JSON.parse(saved) : false;
+  });
   
   // Independent Manual Attendance Locks
   const [manualMorningLock, setManualMorningLock] = useState<boolean>(() => {
@@ -552,8 +555,10 @@ export default function Attendance() {
                   variant={bypassCutoff ? 'default' : 'outline'}
                   className={`h-7 text-xs px-3 ${bypassCutoff ? 'bg-emerald-500 text-white hover:bg-emerald-600 border-none' : 'bg-white/10 text-white hover:bg-white/20 border-white/20'}`}
                   onClick={() => {
-                    setBypassCutoff(!bypassCutoff);
-                    toast.success(bypassCutoff ? 'Admin Schedule Override turned off (enforcing cutoff times).' : 'Admin Schedule Override Active (bypassing time cutoffs)!');
+                    const nextVal = !bypassCutoff;
+                    setBypassCutoff(nextVal);
+                    localStorage.setItem('adminScheduleOverride', JSON.stringify(nextVal));
+                    toast.success(nextVal ? 'Admin Schedule Override Active (bypassing time cutoffs)!' : 'Admin Schedule Override turned off (enforcing cutoff times).');
                   }}
                 >
                   {bypassCutoff ? 'Active' : 'Off'}
