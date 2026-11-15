@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { getStoredLearners } from '@/utils/learnersStore';
+import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 
 interface Learner {
   id?: string;
@@ -186,18 +187,27 @@ export default function Attendance() {
 
   const loadMasterLearners = () => {
     try {
-      // 1. Try unified getStoredLearners from learnersStore
+      // 1. Try unified mergeStoredLearners
       let list: Learner[] = [];
       try {
-        const storedFromHelper = getStoredLearners();
+        const storedFromHelper = mergeStoredLearners();
         if (Array.isArray(storedFromHelper) && storedFromHelper.length > 0) {
           list = storedFromHelper;
         }
       } catch (err) {}
 
-      // 2. Fallback to direct keys if needed
+      // 2. Fallback to getStoredLearners or direct keys
       if (list.length === 0) {
-        const raw = localStorage.getItem('munyaka_learners');
+        try {
+          const direct = getStoredLearners();
+          if (Array.isArray(direct) && direct.length > 0) {
+            list = direct;
+          }
+        } catch (e) {}
+      }
+
+      if (list.length === 0) {
+        const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
         if (raw) {
           try {
             const parsed = JSON.parse(raw);
