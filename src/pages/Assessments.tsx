@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileDown, FileText, Save, Loader2, Search, CheckCircle2, ClipboardCheck, ArrowLeft } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { MUNYAKA_HEADERS } from "@/utils/downloadHelper";
@@ -93,11 +93,6 @@ interface Student {
 }
 
 const Assessments = () => {
-  // Read selected exam from URL params or localStorage
-  const [searchParams] = useSearchParams();
-  const selectedExamIdFromUrl = searchParams.get('selectedExamId');
-  const selectedExamTitleFromUrl = searchParams.get('examType');
-  
   // Control States bound to localStorage / defaults
   const [academicYear, setAcademicYear] = useState<string>(() => new Date().getFullYear().toString());
   const [academicYearOptions, setAcademicYearOptions] = useState<string[]>(() => {
@@ -107,15 +102,7 @@ const Assessments = () => {
   
   const [grade, setGrade] = useState<string>(() => "Grade 4");
   const [stream, setStream] = useState<string>("All Streams");
-  const [examType, setExamType] = useState<string>(() => {
-    // First try URL param, then localStorage, then default
-    if (selectedExamTitleFromUrl) return selectedExamTitleFromUrl;
-    try {
-      const stored = localStorage.getItem("selectedExamTitle");
-      if (stored) return stored;
-    } catch (e) {}
-    return "Formative Assessment";
-  });
+  const [examType, setExamType] = useState<string>("Formative Assessment");
   // Helper function to ensure consistent string formatting
   const formatTerm = (val: any): string => {
     if (!val) return 'Term 3'; // Safety fallback
@@ -127,9 +114,6 @@ const Assessments = () => {
     try {
       localStorage.removeItem("munyaka_term_filter_stale");
       localStorage.removeItem("selectedTerm");
-      // First check if an exam type was selected for marks entry
-      const activeExamTerm = localStorage.getItem('munyaka_active_term');
-      if (activeExamTerm) return formatTerm(activeExamTerm);
       const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
       if (settingsRaw) {
         const settings = JSON.parse(settingsRaw);
@@ -448,34 +432,6 @@ const Assessments = () => {
       setExamType(examTypesList[0]?.name || examTypesList[0]?.code || "Formative Assessment");
     }
   }, [examTypesList, examType]);
-
-  // Sync examType from URL params or localStorage when they change
-  useEffect(() => {
-    if (selectedExamTitleFromUrl) {
-      setExamType(selectedExamTitleFromUrl);
-    } else {
-      try {
-        const stored = localStorage.getItem("selectedExamTitle");
-        if (stored) setExamType(stored);
-      } catch (e) {}
-    }
-  }, [selectedExamTitleFromUrl]);
-
-  // Sync term from selected exam data
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("munyaka_active_exam_type");
-      if (stored) {
-        const examData = JSON.parse(stored);
-        if (examData.term) {
-          setTerm(formatTerm(examData.term));
-        }
-        if (examData.academicYear) {
-          setAcademicYear(String(examData.academicYear));
-        }
-      }
-    } catch (e) {}
-  }, [selectedExamIdFromUrl]);
 
   // 4. Learning Areas / Subjects from munyaka_learning_areas with robust nested parsing logic
   const learningAreasFromStorage = useMemo(() => {

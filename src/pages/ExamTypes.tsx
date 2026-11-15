@@ -179,19 +179,19 @@ const ExamTypes = () => {
 
   const handleSelectForMarksEntry = (exam: ExamType) => {
     // Store the selected exam type for marks entry
-    const selectedData = {
-      id: exam.id,
-      title: exam.title,
-      term: exam.term,
-      academicYear: exam.academicYear,
-      maxMarks: exam.maxMarks,
-    };
-    localStorage.setItem("munyaka_active_exam_type", JSON.stringify(selectedData));
-    localStorage.setItem("selectedExamId", exam.id);
-    localStorage.setItem("selectedExamTitle", exam.title);
+    localStorage.setItem(
+      "munyaka_active_exam_type",
+      JSON.stringify({
+        id: exam.id,
+        title: exam.title,
+        term: exam.term,
+        academicYear: exam.academicYear,
+        maxMarks: exam.maxMarks,
+      })
+    );
     // Also set the active term for the marks entry page
     localStorage.setItem("munyaka_active_term", exam.term);
-    navigate("/assessments?selectedExamId=" + encodeURIComponent(exam.id) + "&examType=" + encodeURIComponent(exam.title));
+    navigate("/assessments");
   };
 
   const clearFilters = () => {
