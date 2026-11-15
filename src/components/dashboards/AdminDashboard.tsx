@@ -1,4 +1,4 @@
-import { getNormalizedLearners } from '@/utils/dataLoader';
+import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,20 +20,14 @@ const SCHOOL_CENTRE_CODE = '26534178';
 export const AdminDashboardComponent: React.FC = () => {
   const navigate = useNavigate();
 
-  // ── Centralized LocalStorage DB Sync (Strictly bound to munyaka_learners_v2 & shared helpers) ──
-  const UNIFIED_STORAGE_KEY = 'munyaka_learners_v2';
-
-  const getCleanCount = (): number => {
-    return getNormalizedLearners().length;
-  };
-
-  const [reactiveLearners, setReactiveLearners] = useState<any[]>(() => getNormalizedLearners());
+  // ── Centralized LocalStorage DB Sync (unified merge across all learner storage keys) ──
+  const [reactiveLearners, setReactiveLearners] = useState<any[]>(() => mergeStoredLearners());
 
   const [localStaff, setLocalStaff] = useState<any[]>(() => getStoredStaff());
 
   useEffect(() => {
     const handleSync = () => {
-          setReactiveLearners(getNormalizedLearners());
+          setReactiveLearners(mergeStoredLearners());
           setLocalStaff(getStoredStaff());
         };
 
@@ -53,24 +47,8 @@ export const AdminDashboardComponent: React.FC = () => {
     };
   }, []);
 
-  const learners = (() => {
-    try {
-      const raw = localStorage.getItem(UNIFIED_STORAGE_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      const map = new Map<string, any>();
-      parsed.forEach((item: any) => {
-        if (item && (item.id || item.admissionNo || item.admission_number || item.name)) {
-          const key = String(item.id || item.admissionNo || item.admission_number || item.name).trim().toLowerCase();
-          if (!map.has(key)) map.set(key, item);
-        }
-      });
-      return Array.from(map.values());
-    } catch {
-      return [];
-    }
-  })();
+  const learners = reactiveLearners;
+
   const staff = getStoredStaff();
 
   const teaching = staff.filter((s: any) => {
