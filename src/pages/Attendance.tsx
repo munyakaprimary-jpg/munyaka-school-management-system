@@ -545,10 +545,10 @@ export default function Attendance() {
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <Badge variant="outline" className="bg-white/20 text-white border-white/30 text-xs px-2.5 py-0.5 whitespace-nowrap">
-              Teacher Portal
+              {isAdmin ? 'Admin Portal' : 'Teacher Portal'}
             </Badge>
             <Badge variant="outline" className="bg-emerald-500/30 text-emerald-100 border-emerald-400/40 text-xs flex items-center gap-1 whitespace-nowrap">
-              <Sparkles className="w-3 h-3" /> Master Directory Sync (`munyaka_learners_db`)
+              <Sparkles className="w-3 h-3" /> Master Directory Synced
             </Badge>
           </div>
           <h1 className="text-2xl font-black tracking-tight">Learner Attendance & Roll Call</h1>
@@ -563,7 +563,7 @@ export default function Attendance() {
               <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
                   {bypassCutoff ? <Unlock className="w-4 h-4 text-emerald-300" /> : <Lock className="w-4 h-4 text-amber-300" />}
-                  <span>Time-Lock Bypass:</span>
+                  <span>Admin Schedule Override:</span>
                 </div>
                 <Button
                   size="sm"
@@ -571,10 +571,10 @@ export default function Attendance() {
                   className={`h-7 text-xs px-3 ${bypassCutoff ? 'bg-emerald-500 text-white hover:bg-emerald-600 border-none' : 'bg-white/10 text-white hover:bg-white/20 border-white/20'}`}
                   onClick={() => {
                     setBypassCutoff(!bypassCutoff);
-                    toast.success(bypassCutoff ? 'Time cutoff lock active.' : 'Time cutoff restrictions bypassed for testing!');
+                    toast.success(bypassCutoff ? 'Admin Schedule Override turned off (enforcing cutoff times).' : 'Admin Schedule Override Active (bypassing time cutoffs)!');
                   }}
                 >
-                  {bypassCutoff ? 'Bypassed (Dev/Testing)' : 'Enforced'}
+                  {bypassCutoff ? 'Active' : 'Off'}
                 </Button>
               </div>
 
@@ -638,7 +638,7 @@ export default function Attendance() {
 
         {/* Helper Message */}
         <p className="text-xs text-slate-500">
-          * Morning marking active 08:00 AM – {morningCutoffTime}. Afternoon marking active 02:00 PM – {afternoonCutoffTime}.
+          * Morning marking active {morningFromTime} – {morningCutoffTime}. Afternoon marking active {afternoonFromTime} – {afternoonCutoffTime}.
         </p>
       </div>
 
