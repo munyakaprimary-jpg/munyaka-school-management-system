@@ -13,6 +13,7 @@ import { notifyDataChanged } from '@/hooks/useDashboardData';
 import { RegistrationConfirmationSlip, RegistrationSlipData } from '@/components/learners/RegistrationConfirmationSlip';
 import { generateLearnerId, findExistingLearner } from '@/services/learnerService';
 import { findAssessmentBirthCertDuplicate, formatAssessmentDuplicateError } from '@/utils/learnerIdentity';
+import { mergeStoredLearners, saveMergedLearners } from '@/utils/learnerStorageMerge';
 
 const Registration = () => {
   const { toast } = useToast();
@@ -65,7 +66,6 @@ const Registration = () => {
     let resolvedAssessmentNumber = generatedAssessmentNumber;
 
     try {
-      const { mergeStoredLearners, saveMergedLearners } = await import('@/utils/learnerStorageMerge');
       const learners = mergeStoredLearners();
 
       // Strict duplicate check: block registration if the Assessment / Birth
