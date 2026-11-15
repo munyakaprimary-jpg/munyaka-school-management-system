@@ -38,6 +38,8 @@ import { getStudents } from '@/services/persistentStore';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useFileDownload } from '@/utils/fileDownloader';
+import { db } from '@/config/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 
 // Types
 interface StudentResult {
@@ -101,10 +103,89 @@ const ResultsAnalysis = () => {
   const [academicYear, setAcademicYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedGradeId, setSelectedGradeId] = useState<string>(GRADES_DATA[0]?.id || '');
   const [selectedStreamId, setSelectedStreamId] = useState<string>("all");
-  const [examType, setExamType] = useState<string>("FORMATIVE");
+  const [examType, setExamType] = useState<string>("");
   const [term, setTerm] = useState<string>("term1");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showSavedBadge, setShowSavedBadge] = useState<boolean>(false);
+
+  // Dynamic exam types from Firestore 'exam_types' collection (matching Exam Types menu)
+  const [examTypesList, setExamTypesList] = useState<any[]>([]);
+  const [loadingExamTypes, setLoadingExamTypes] = useState<boolean>(true);
+
+  // Firestore live listener for exam_types collection
+  useEffect(() => {
+    setLoadingExamTypes(true);
+    const q = query(collection(db, "exam_types"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const types: any[] = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          const title = data.name || data.examName || data.title || data.code || "Exam";
+          return {
+            id: doc.id,
+            title,
+            name: title,
+            term: data.term || "Term 1",
+            academicYear: data.academicYear || data.year || new Date().getFullYear(),
+            status: data.status || "Active",
+          };
+        });
+        setExamTypesList(types);
+        setLoadingExamTypes(false);
+
+        if (types.length > 0) {
+          setExamType((prev) => {
+            if (prev && types.some((t) => t.title === prev || t.id === prev || t.name === prev)) {
+              return prev;
+            }
+            return types[0].title;
+          });
+        } else {
+          setExamType("");
+        }
+      },
+      (err) => {
+        console.error("Error listening to exam_types in ResultsAnalysis:", err);
+        setLoadingExamTypes(false);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+      (snapshot) => {
+        const types: any[] = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          const title = data.name || data.examName || data.title || data.code || "Exam";
+          return {
+            id: doc.id,
+            title,
+            name: title,
+            term: data.term || "Term 1",
+            academicYear: data.academicYear || data.year || new Date().getFullYear(),
+            status: data.status || "Active",
+          };
+        });
+        setExamTypesList(types);
+        setLoadingExamTypes(false);
+
+        if (types.length > 0) {
+          setExamType((prev) => {
+            if (prev && types.some((t) => t.title === prev || t.id === prev || t.name === prev)) {
+              return prev;
+            }
+            return types[0].title;
+          });
+        } else {
+          setExamType("");
+        }
+      },
+      (err) => {
+        console.error("Error listening to exam_types in ResultsAnalysis:", err);
+        setLoadingExamTypes(false);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   // ====== Unified file-download state for CSV export ======
   const resultsExport = useFileDownload();
