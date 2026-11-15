@@ -443,7 +443,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         { icon: FileText, label: 'Sync & Export Package', path: '/teacher-export', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+        { icon: ClipboardList, label: 'Exam Types', path: '/teacher/exam-types', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+        { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
     { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
   ] : [
     // ── Dashboard — position #1 for ALL roles; the Dashboard component
