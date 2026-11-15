@@ -213,14 +213,14 @@ export default function PromotePage() {
     availableGrades.forEach(gradeObj => {
       const count = learners.filter(l => {
         const lGrade = l.gradeId || l.grade || l.gradeLevel || l.currentGrade || l.class;
+        if (!lGrade) return false;
         const normL = normalizeStr(lGrade);
         const normObjName = normalizeStr(gradeObj.name);
         const normObjId = normalizeStr(gradeObj.id);
 
         return (
           normL === normObjName ||
-          normL === normObjId ||
-          normL.replace(/[^0-9]/g, '') === normObjName.replace(/[^0-9]/g, '')
+          normL === normObjId
         );
       }).length;
       counts[gradeObj.id] = count;
