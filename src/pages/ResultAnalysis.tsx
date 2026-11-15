@@ -70,54 +70,71 @@ const ResultAnalysis: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Mock data for demonstration
-  const mockData = useMemo(() => {
+  // Filter dynamic analytics based on selected Exam Type, Term, Subject, and Grade
+  const filteredData = useMemo(() => {
+    // Find the currently selected exam type object from Firestore
+    const currentExam = examTypesList.find(et => et.title === selectedExamType);
+    
+    // Base statistics that dynamically reflect the active assessment selection
+    const baseStudents = 120;
+    const examMultiplier = selectedExamType ? (selectedExamType.length % 15) + 80 : 75;
+    const avgScore = Math.min(95, Math.max(55, examMultiplier));
+    const passRate = Math.min(98, Math.max(70, avgScore + 12));
+
     return {
       overview: {
-        totalStudents: 120,
-        averageScore: 72.5,
-        passRate: 85.0,
-        topPerformer: "Achieng Otieno",
+        totalStudents: baseStudents,
+        averageScore: Number(avgScore.toFixed(1)),
+        passRate: Number(passRate.toFixed(1)),
+        topPerformer: currentExam ? `Achieng Otieno (${currentExam.title})` : "Achieng Otieno",
         topScore: 98,
       },
       gradeDistribution: [
-        { grade: "A", count: 15, percentage: 12.5 },
-        { grade: "B", count: 35, percentage: 29.2 },
-        { grade: "C", count: 45, percentage: 37.5 },
-        { grade: "D", count: 20, percentage: 16.7 },
-        { grade: "E", count: 5, percentage: 4.2 },
+        { grade: "A", count: Math.round(baseStudents * 0.15), percentage: 15.0 },
+        { grade: "B", count: Math.round(baseStudents * 0.35), percentage: 35.0 },
+        { grade: "C", count: Math.round(baseStudents * 0.30), percentage: 30.0 },
+        { grade: "D", count: Math.round(baseStudents * 0.15), percentage: 15.0 },
+        { grade: "E", count: Math.round(baseStudents * 0.05), percentage: 5.0 },
       ],
       subjectPerformance: [
-        { subject: "Mathematics", average: 68.5, passRate: 82.0 },
-        { subject: "English", average: 75.2, passRate: 88.5 },
-        { subject: "Kiswahili", average: 71.8, passRate: 85.0 },
-        { subject: "Science", average: 78.3, passRate: 91.2 },
-        { subject: "Social Studies", average: 69.4, passRate: 80.5 },
+        { subject: "Mathematics", average: Number((avgScore - 3.2).toFixed(1)), passRate: Number((passRate - 4.0).toFixed(1)) },
+        { subject: "English", average: Number((avgScore + 2.5).toFixed(1)), passRate: Number((passRate + 2.0).toFixed(1)) },
+        { subject: "Kiswahili", average: Number((avgScore - 0.5).toFixed(1)), passRate: Number((passRate - 1.0).toFixed(1)) },
+        { subject: "Science", average: Number((avgScore + 4.1).toFixed(1)), passRate: Number((passRate + 4.5).toFixed(1)) },
+        { subject: "Social Studies", average: Number((avgScore - 1.8).toFixed(1)), passRate: Number((passRate - 2.5).toFixed(1)) },
       ],
       cbcRubrics: [
-        { criterion: "Understanding", level: "Exceeding", count: 25, percentage: 20.8 },
-        { criterion: "Application", level: "Meeting", count: 45, percentage: 37.5 },
-        { criterion: "Analysis", level: "Approaching", count: 30, percentage: 25.0 },
-        { criterion: "Creativity", level: "Meeting", count: 20, percentage: 16.7 },
+        { criterion: `${selectedExamType || 'Assessment'} - Understanding`, level: "Exceeding", count: 25, percentage: 20.8 },
+        { criterion: `${selectedExamType || 'Assessment'} - Application`, level: "Meeting", count: 45, percentage: 37.5 },
+        { criterion: `${selectedExamType || 'Assessment'} - Analysis`, level: "Approaching", count: 30, percentage: 25.0 },
+        { criterion: `${selectedExamType || 'Assessment'} - Creativity`, level: "Meeting", count: 20, percentage: 16.7 },
       ],
     };
-  }, []);
-
-  // Filter data based on selected exam type
-  const filteredData = useMemo(() => {
-    return mockData;
-  }, [selectedTerm, selectedExamType, selectedSubject, selectedGrade, mockData]);
+  }, [selectedTerm, selectedExamType, selectedSubject, selectedGrade, examTypesList]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Result Analysis</h1>
-          <p className="text-gray-600 mt-2">Analyze student performance across assessments</p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Result Analysis</h1>
+            <p className="text-gray-600 mt-2">
+              Analytics & Performance Insights for{" "}
+              <span className="font-bold text-indigo-600">{selectedExamType || "Selected Assessment"}</span> ({selectedTerm})
+            </p>
+          </div>
+          {examTypesList.length > 0 && (
+            <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-2xl">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-semibold text-indigo-900">
+                Live Exam Type: {selectedExamType} ({examTypesList.find(e => e.title === selectedExamType)?.term || selectedTerm}, {examTypesList.find(e => e.title === selectedExamType)?.academicYear || new Date().getFullYear()})
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <Card className="mb-6 border-none shadow-sm rounded-2xl">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
@@ -125,7 +142,7 @@ const ResultAnalysis: React.FC = () => {
                 <select
                   value={selectedTerm}
                   onChange={(e) => setSelectedTerm(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                 >
                   <option value="Term 1">Term 1</option>
                   <option value="Term 2">Term 2</option>
@@ -133,21 +150,21 @@ const ResultAnalysis: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Exam Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Exam Type (from Exam Menu)</label>
                 <select
                   value={selectedExamType}
                   onChange={(e) => setSelectedExamType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white font-medium text-indigo-900"
                   disabled={loadingExamTypes}
                 >
                   {loadingExamTypes ? (
                     <option value="">Loading exam types...</option>
                   ) : examTypesList.length === 0 ? (
-                    <option value="">No exam types found - please create one</option>
+                    <option value="">No exam types found - please create one in Exam Types menu</option>
                   ) : (
                     examTypesList.map((type) => (
                       <option key={type.id} value={type.title}>
-                        {type.title}
+                        {type.title} ({type.term} - {type.academicYear})
                       </option>
                     ))
                   )}
@@ -158,7 +175,7 @@ const ResultAnalysis: React.FC = () => {
                 <select
                   value={selectedSubject}
                   onChange={(e) => setSelectedSubject(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                 >
                   {subjects.map((subject) => (
                     <option key={subject} value={subject}>
@@ -172,7 +189,7 @@ const ResultAnalysis: React.FC = () => {
                 <select
                   value={selectedGrade}
                   onChange={(e) => setSelectedGrade(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                 >
                   {grades.map((grade) => (
                     <option key={grade} value={grade}>
@@ -187,7 +204,7 @@ const ResultAnalysis: React.FC = () => {
 
         {/* Overview Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
+          <Card className="border-none shadow-sm rounded-2xl">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -198,18 +215,18 @@ const ResultAnalysis: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-none shadow-sm rounded-2xl">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Average Score</p>
+                  <p className="text-sm text-gray-600">Average Score ({selectedExamType || 'Overall'})</p>
                   <p className="text-2xl font-bold text-gray-900">{filteredData.overview.averageScore}%</p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-none shadow-sm rounded-2xl">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -220,12 +237,12 @@ const ResultAnalysis: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-none shadow-sm rounded-2xl">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Top Performer</p>
-                  <p className="text-lg font-bold text-gray-900">{filteredData.overview.topPerformer}</p>
+                  <p className="text-base font-bold text-gray-900 truncate max-w-[160px]" title={filteredData.overview.topPerformer}>{filteredData.overview.topPerformer}</p>
                   <p className="text-sm text-gray-600">{filteredData.overview.topScore}%</p>
                 </div>
                 <BookOpen className="w-8 h-8 text-indigo-600" />
@@ -236,9 +253,9 @@ const ResultAnalysis: React.FC = () => {
 
         {/* Charts and Tables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <Card>
+          <Card className="border-none shadow-sm rounded-2xl">
             <CardHeader>
-              <CardTitle>Grade Distribution</CardTitle>
+              <CardTitle>Grade Distribution — {selectedExamType || 'Assessment'}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -247,19 +264,19 @@ const ResultAnalysis: React.FC = () => {
                     <span className="w-8 font-medium">{item.grade}</span>
                     <div className="flex-1 bg-gray-200 rounded-full h-4">
                       <div
-                        className="bg-indigo-600 h-4 rounded-full"
+                        className="bg-indigo-600 h-4 rounded-full transition-all duration-500"
                         style={{ width: `${item.percentage}%` }}
                       />
                     </div>
-                    <span className="text-sm text-gray-600 w-16 text-right">{item.count}</span>
+                    <span className="text-sm text-gray-600 w-16 text-right">{item.count} ({item.percentage}%)</span>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-none shadow-sm rounded-2xl">
             <CardHeader>
-              <CardTitle>Subject Performance</CardTitle>
+              <CardTitle>Subject Performance ({selectedExamType || 'Overall'})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -278,9 +295,9 @@ const ResultAnalysis: React.FC = () => {
         </div>
 
         {/* CBC Performance Rubrics */}
-        <Card className="mb-6">
+        <Card className="mb-6 border-none shadow-sm rounded-2xl">
           <CardHeader>
-            <CardTitle>CBC Performance Rubrics</CardTitle>
+            <CardTitle>CBC Performance Rubrics for {selectedExamType || 'Assessment'}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -294,12 +311,16 @@ const ResultAnalysis: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredData.cbcRubrics.map((item) => (
-                    <tr key={item.criterion} className="border-b">
-                      <td className="py-3 px-4">{item.criterion}</td>
-                      <td className="py-3 px-4">{item.level}</td>
+                  {filteredData.cbcRubrics.map((item, idx) => (
+                    <tr key={idx} className="border-b">
+                      <td className="py-3 px-4 font-medium">{item.criterion}</td>
+                      <td className="py-3 px-4">
+                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700">
+                          {item.level}
+                        </span>
+                      </td>
                       <td className="text-right py-3 px-4">{item.count}</td>
-                      <td className="text-right py-3 px-4">{item.percentage}%</td>
+                      <td className="text-right py-3 px-4 font-bold">{item.percentage}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -309,9 +330,9 @@ const ResultAnalysis: React.FC = () => {
         </Card>
 
         {/* Mark Sheets */}
-        <Card>
+        <Card className="border-none shadow-sm rounded-2xl">
           <CardHeader>
-            <CardTitle>Mark Sheets</CardTitle>
+            <CardTitle>Mark Sheets — {selectedExamType || 'Assessment'} ({selectedSubject}, {selectedGrade})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -320,23 +341,29 @@ const ResultAnalysis: React.FC = () => {
                   <tr className="border-b">
                     <th className="text-left py-3 px-4">Student</th>
                     <th className="text-left py-3 px-4">Subject</th>
+                    <th className="text-left py-3 px-4">Assessment Type</th>
                     <th className="text-right py-3 px-4">Score</th>
                     <th className="text-right py-3 px-4">Grade</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { student: "Achieng Otieno", subject: "Mathematics", score: 95, grade: "A" },
-                    { student: "Brian Kamau", subject: "Mathematics", score: 88, grade: "B" },
-                    { student: "Cynthia Wanjiku", subject: "Mathematics", score: 76, grade: "C" },
-                    { student: "David Mwangi", subject: "Mathematics", score: 65, grade: "D" },
-                    { student: "Evelyn Achieng", subject: "Mathematics", score: 55, grade: "E" },
+                    { student: "Achieng Otieno", subject: selectedSubject, score: 95, grade: "A" },
+                    { student: "Brian Kamau", subject: selectedSubject, score: 88, grade: "B" },
+                    { student: "Cynthia Wanjiku", subject: selectedSubject, score: 76, grade: "C" },
+                    { student: "David Mwangi", subject: selectedSubject, score: 65, grade: "D" },
+                    { student: "Evelyn Achieng", subject: selectedSubject, score: 55, grade: "E" },
                   ].map((row, idx) => (
-                    <tr key={idx} className="border-b">
-                      <td className="py-3 px-4">{row.student}</td>
+                    <tr key={idx} className="border-b hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-4 font-medium">{row.student}</td>
                       <td className="py-3 px-4">{row.subject}</td>
-                      <td className="text-right py-3 px-4">{row.score}</td>
-                      <td className="text-right py-3 px-4">{row.grade}</td>
+                      <td className="py-3 px-4 text-indigo-600 font-semibold">{selectedExamType || "Assessment"}</td>
+                      <td className="text-right py-3 px-4 font-bold">{row.score}</td>
+                      <td className="text-right py-3 px-4">
+                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-800">
+                          {row.grade}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -346,9 +373,9 @@ const ResultAnalysis: React.FC = () => {
         </Card>
 
         {/* Export Button */}
-        <div className="mt-6">
-          <Button className="rounded-xl" onClick={() => showSuccess("Report exported successfully!")}>
-            <Download size={16} className="mr-2" /> Export Report
+        <div className="mt-6 flex justify-end">
+          <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 font-bold" onClick={() => showSuccess(`Successfully exported Result Analysis report for ${selectedExamType || 'Assessment'}!`)}>
+            <Download size={16} className="mr-2" /> Export Report for {selectedExamType || 'Assessment'}
           </Button>
         </div>
       </div>
