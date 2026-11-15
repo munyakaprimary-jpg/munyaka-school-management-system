@@ -9,6 +9,7 @@ import Modal from '@/components/ui/Modal';
 import { CentralDataService } from '@/services/centralDataService';
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { getStudents } from '@/services/persistentStore';
+import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 import { showSuccess, showError } from '@/utils/toast';
 import { ArrowRight, CheckCircle2, Users, GraduationCap, RefreshCw, Filter } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
