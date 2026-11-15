@@ -18,6 +18,7 @@ import { MUNYAKA_HEADERS } from "@/utils/downloadHelper";
 import { saveTeacherInputResult } from "@/utils/assessmentResults";
 import { cn } from "@/lib/utils";
 import { useBackToAssessmentsMenu } from "@/hooks/useBackToAssessmentsMenu";
+import { mergeStoredLearners } from "@/utils/learnerStorageMerge";
 
 // Educational Tier Subject Mappings & Parsing Logic
 const TIER_SUBJECTS: Record<string, string[]> = {
@@ -93,6 +94,26 @@ interface Student {
   section?: string;
   name?: string;
 }
+
+// Map any stored learner record (from any storage key) into the Student shape
+// used by this page, tolerating the many field-name variants in the codebase.
+const mapToStudent = (l: any): Student => ({
+  id: l.id || l._id || l.learnerId || l.documentId || l.admissionNo || l.admissionNumber || l.admNo || '',
+  admissionNumber: l.admissionNumber || l.admissionNo || l.admNo || l.admission_number || '',
+  assessment: l.assessment || l.assessmentNo || l.assessmentNumber || l.upi || '',
+  grade: l.grade || l.gradeLevel || l.class || l.classLevel || '',
+  stream: l.stream || l.classStream || l.section || l.streamName || '',
+  name: l.name || l.fullName || l.studentName || l.learnerName || '',
+});
+
+const loadStudentsFromUnifiedStorage = (): Student[] => {
+  try {
+    return mergeStoredLearners().map(mapToStudent).filter((s: Student) => s.name || s.admissionNumber || s.id);
+  } catch (e) {
+    console.error("Error loading learners from unified storage:", e);
+    return [];
+  }
+};
 
 const Assessments = () => {
   // Control States bound to localStorage / defaults
@@ -331,62 +352,30 @@ const Assessments = () => {
   const tierKey = useMemo(() => getTierKey(currentGrade), [currentGrade]);
   const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
 
-  // 1. Retrieve Students Directory from localStorage with munyaka_learners_db and school_learners_data (unified Learner Management state) and fallbacks
+  // 1. Retrieve Students Directory dynamically from the unified learner storage
+  // merge utility (covers munyaka_learners_directory, munyaka_learners,
+  // munyaka_learners_v2, school_learners_data, munyaka_central_db, munyaka_students, etc.)
   // Cold start: returns [] when localStorage is empty — no mock data.
-  const [studentsList, setStudentsList] = useState<Student[]>(() => {
-    try {
-      const stored =
-        localStorage.getItem("munyaka_learners_db") ||
-        localStorage.getItem("school_learners_data") ||
-        localStorage.getItem("munyaka_students") ||
-        localStorage.getItem("students_directory") ||
-        localStorage.getItem("learners") ||
-        localStorage.getItem("munyaka_students_master");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((item): item is Student =>
-            item !== null && typeof item === "object"
-          );
-        }
-      }
-    } catch (e) {
-      console.error("Error loading munyaka_learners_db / school_learners_data:", e);
-    }
-    return [];
-  });
+  const [studentsList, setStudentsList] = useState<Student[]>(() => loadStudentsFromUnifiedStorage());
 
   // State listener for dynamic updates to student profiles / localStorage changes
   useEffect(() => {
     const loadLearners = () => {
-      try {
-        const stored =
-          localStorage.getItem("munyaka_learners_db") ||
-          localStorage.getItem("school_learners_data") ||
-          localStorage.getItem("munyaka_students") ||
-          localStorage.getItem("students_directory") ||
-          localStorage.getItem("learners") ||
-          localStorage.getItem("munyaka_students_master");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            setStudentsList(
-              parsed.filter((item): item is Student =>
-                item !== null && typeof item === "object"
-              )
-            );
-          }
-        }
-      } catch (e) {
-        console.error("Error reloading learners in event listener:", e);
+      const merged = loadStudentsFromUnifiedStorage();
+      if (merged.length > 0) {
+        setStudentsList(merged);
       }
     };
 
     window.addEventListener("storage", loadLearners);
     window.addEventListener("munyaka:data-changed" as any, loadLearners);
+    window.addEventListener("munyaka_learners_updated" as any, loadLearners);
+    window.addEventListener("online", loadLearners);
     return () => {
       window.removeEventListener("storage", loadLearners);
       window.removeEventListener("munyaka:data-changed" as any, loadLearners);
+      window.removeEventListener("munyaka_learners_updated" as any, loadLearners);
+      window.removeEventListener("online", loadLearners);
     };
   }, []);
 

@@ -1,17 +1,15 @@
 import { readStorage, writeStorage } from '@/services/persistentStore';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { generateLearnerId, formatLearnerDoc, deduplicateLearnersById as dedupeLearnersById } from '@/services/learnerService';
+import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 
 export { STORAGE_KEYS };
 
 export const CentralDataService = {
   getLearners: (): any[] => {
     try {
-      // Unify all legacy storage keys into primary munyaka_learners_v2 / school_learners_data
-      const primary = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
-      if (!primary) return [];
-      const parsed = JSON.parse(primary);
-      return Array.isArray(parsed) ? parsed : [];
+      // Unified merge across all learner storage keys (deduped + normalized)
+      return mergeStoredLearners();
     } catch {
       return [];
     }

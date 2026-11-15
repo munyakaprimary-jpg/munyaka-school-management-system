@@ -41,6 +41,7 @@ import { getAllAssessmentResults } from "@/utils/assessmentResults";
 import { CentralDataService } from "@/services/centralDataService";
 import { readGradesAndStreams, getStreamsForGrade } from "@/services/gradesStreamsConfig";
 import { saveMarkedSubmission } from "@/types/assessment";
+import { mergeStoredLearners } from "@/utils/learnerStorageMerge";
 import type { StudentSubmission as MarkedSubmission } from "@/types/assessment";
 import type {
   Assessment,
@@ -149,17 +150,11 @@ interface StudentGrade {
 }
 
 // ─── Dynamic Learners Directory Loader ─────────────────────────────────────────
+// Pulls learners from the unified merge utility so all storage keys are
+// aggregated, deduplicated, and normalized before filtering by grade/stream.
 function loadDirectoryLearnersFromStorage(): any[] {
   try {
-    for (const key of ['munyaka_learners', 'munyaka_learners_directory', 'munyaka_learners_v2', 'munyaka_learners_db', 'school_learners_data', 'learners']) {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    }
+    return mergeStoredLearners();
   } catch { /* ignore */ }
   return [];
 }
