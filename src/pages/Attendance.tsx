@@ -111,24 +111,6 @@ export default function Attendance() {
     return { isMorningOpen, isAfternoonOpen };
   };
 
-  const checkIsLocked = (session: 'morning' | 'afternoon') => {
-    const manualMorning = manualMorningLock ? 'Locked' : (bypassCutoff ? 'Unlocked' : undefined);
-    const manualAfternoon = manualAfternoonLock ? 'Locked' : (bypassCutoff ? 'Unlocked' : undefined);
-
-    const { isMorningOpen, isAfternoonOpen } = checkSessionLockStatus(
-      morningFromTime,
-      morningCutoffTime,
-      afternoonFromTime,
-      afternoonCutoffTime,
-      bypassCutoff,
-      manualMorning,
-      manualAfternoon
-    );
-
-    if (session === 'morning') return !isMorningOpen;
-    return !isAfternoonOpen;
-  };
-
   const { isMorningOpen, isAfternoonOpen } = checkSessionLockStatus(
     morningFromTime,
     morningCutoffTime,
@@ -168,23 +150,6 @@ export default function Attendance() {
 
   const toggleManualMorningLock = () => {
     const nextVal = !manualMorningLock;
-    setManualMorningLock(nextVal);
-    if (nextVal) {
-      toast.success('Morning session manually locked.');
-    } else {
-      toast.success('Morning session unlocked / returning to schedule.');
-    }
-  };
-
-  const toggleManualAfternoonLock = () => {
-    const nextVal = !manualAfternoonLock;
-    setManualAfternoonLock(nextVal);
-    if (nextVal) {
-      toast.success('Afternoon session manually locked.');
-    } else {
-      toast.success('Afternoon session unlocked / returning to schedule.');
-    }
-  };
     setManualMorningLock(nextVal);
     localStorage.setItem('manual_morning_lock', String(nextVal));
     toast.success(nextVal ? 'Manual Morning Attendance Lock enabled.' : 'Manual Morning Attendance Lock released.');
@@ -894,16 +859,8 @@ export default function Attendance() {
                 <button
                   type="button"
                   onClick={() => {
-                    const parseTimeToMinutes = (timeStr: string) => {
-                      const [hours, minutes] = (timeStr || '09:40').split(':').map(Number);
-                      return (isNaN(hours) ? 9 : hours) * 60 + (isNaN(minutes) ? 40 : minutes);
-                    };
-                    const now = new Date();
-                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-                    const morningCutoffMins = parseTimeToMinutes(morningCutoffTime);
-                    const isMorningLocked = currentMinutes >= morningCutoffMins && !bypassCutoff && !manualMorningLock;
-                    if (isMorningLocked && (!isAdmin || !bypassCutoff)) {
-                      toast.error(`Session is locked based on the configured cutoff time (${morningCutoffTime})`);
+                    if (morningLocked && (!isAdmin || !bypassCutoff)) {
+                      toast.error(`Morning session is locked based on the configured cutoff time (${morningCutoffTime})`);
                       return;
                     }
                     setActiveSession('morning');
@@ -922,16 +879,8 @@ export default function Attendance() {
                 <button
                   type="button"
                   onClick={() => {
-                    const parseTimeToMinutes = (timeStr: string) => {
-                      const [hours, minutes] = (timeStr || '15:00').split(':').map(Number);
-                      return (isNaN(hours) ? 15 : hours) * 60 + (isNaN(minutes) ? 0 : minutes);
-                    };
-                    const now = new Date();
-                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-                    const afternoonCutoffMins = parseTimeToMinutes(afternoonCutoffTime);
-                    const isAfternoonLocked = currentMinutes >= afternoonCutoffMins && !bypassCutoff && !manualAfternoonLock;
-                    if (isAfternoonLocked && (!isAdmin || !bypassCutoff)) {
-                      toast.error(`Session is locked based on the configured cutoff time (${afternoonCutoffTime})`);
+                    if (afternoonLocked && (!isAdmin || !bypassCutoff)) {
+                      toast.error(`Afternoon session is locked based on the configured cutoff time (${afternoonCutoffTime})`);
                       return;
                     }
                     setActiveSession('afternoon');
