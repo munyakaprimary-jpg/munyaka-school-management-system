@@ -211,15 +211,40 @@ export default function Attendance() {
 
       setLearners(list);
 
-      // Extract unique grades & streams with case-insensitivity & normalization
+      // Extract unique grades & streams from both master learners AND Grades & Streams settings
       const gradeSet = new Set<string>();
       const streamSet = new Set<string>();
 
-      list.forEach((l) => {
-        const g = l.grade || l.classLevel;
-        const s = l.stream;
+      // 1. Pull from Grades & Streams settings if available
+      try {
+        const savedGradesSetting = localStorage.getItem('munyaka_grades') || localStorage.getItem('configured_streams');
+        if (savedGradesSetting) {
+          const parsedGrades = JSON.parse(savedGradesSetting);
+          if (Array.isArray(parsedGrades)) {
+            parsedGrades.forEach((g: any) => {
+              if (g) {
+                const gName = g.name || g.id;
+                if (gName) {
+                  gradeSet.add(String(gName).trim().toUpperCase());
+                }
+                if (Array.isArray(g.streams)) {
+                  g.streams.forEach((s: any) => {
+                    const sName = s?.name || s?.id || s;
+                    if (sName) {
+                      streamSet.add(String(sName).trim());
+                    }
+                  });
+                }
+              }
+            });
+          }
+        }
+      } catch (err) {}
+
+      list.forEach((l: any) => {
+        const g = l.grade || l.classLevel || l.gradeId;
+        const s = l.stream || l.streamId;
         if (g && String(g).trim()) {
-          // Normalize: uppercase and trimmed
           const normG = String(g).trim().toUpperCase();
           gradeSet.add(normG);
         }
