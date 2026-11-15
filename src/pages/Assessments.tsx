@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FileDown, FileText, Save, Loader2, Search, CheckCircle2, ClipboardCheck, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
+import { db } from "@/config/firebase";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { MUNYAKA_HEADERS } from "@/utils/downloadHelper";
 import { saveTeacherInputResult } from "@/utils/assessmentResults";
@@ -103,12 +105,105 @@ const Assessments = () => {
   const [grade, setGrade] = useState<string>(() => "Grade 4");
   const [stream, setStream] = useState<string>("All Streams");
   const [examType, setExamType] = useState<string>("Formative Assessment");
+    const [maxMarks, setMaxMarks] = useState<number>(100);
+    const [examTypesList, setExamTypesList] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem("munyaka_exam_types");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((et: any) => ({
+            id: et.id || et.code || et.name,
+            code: et.code || et.id || et.name,
+            name: et.name || et.code || et.id,
+            term: et.term,
+            academicYear: et.academicYear || et.year,
+            maxMarks: et.maxMarks || et.totalMarks
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Error loading initial munyaka_exam_types:", e);
+    }
+    return DEFAULT_EXAM_TYPES;
+  });
+
   // Helper function to ensure consistent string formatting
-  const formatTerm = (val: any): string => {
-    if (!val) return 'Term 3'; // Safety fallback
-    const s = val.toString().trim();
-    return s.toLowerCase().includes('term') ? s : `Term ${s}`;
-  };
+    const formatTerm = (val: any): string => {
+      if (!val) return 'Term 3'; // Safety fallback
+      const s = val.toString().trim();
+      return s.toLowerCase().includes('term') ? s : `Term ${s}`;
+    };
+  
+    // Subscribe to exam_types Firestore collection using onSnapshot and sync active exam type selection from Exam Types menu
+    useEffect(() => {
+      let unsubscribe: (() => void) | undefined;
+      try {
+        const q = query(collection(db, "exam_types"), orderBy("createdAt", "desc"));
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const firestoreExamTypes: any[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            firestoreExamTypes.push({
+              id: docSnap.id,
+              code: data.code || data.title || docSnap.id,
+              name: data.title || data.name || data.code || docSnap.id,
+              term: data.term,
+              academicYear: data.academicYear,
+              maxMarks: data.maxMarks,
+              status: data.status || "Active"
+            });
+          });
+  
+          if (firestoreExamTypes.length > 0) {
+            // Filter for active or all
+            const activeList = firestoreExamTypes.filter(et => !et.status || et.status === "Active" || et.status === "Published");
+            const finalList = activeList.length > 0 ? activeList : firestoreExamTypes;
+            setExamTypesList(finalList);
+  
+            // Update localStorage cache as well
+            try {
+              localStorage.setItem("munyaka_exam_types", JSON.stringify(finalList));
+            } catch { /* ignore */ }
+          }
+        }, (err) => {
+          console.error("Error listening to exam_types collection:", err);
+        });
+      } catch (e) {
+        console.error("Failed to setup exam_types snapshot listener:", e);
+      }
+  
+      // Check if a teacher clicked "Select for Marks Entry" on an exam card in the Exam Types menu (stored in munyaka_active_exam_type)
+      try {
+        const activeExamRaw = localStorage.getItem("munyaka_active_exam_type");
+        if (activeExamRaw) {
+          const activeExam = JSON.parse(activeExamRaw);
+          if (activeExam && (activeExam.title || activeExam.name)) {
+            const examTitle = activeExam.title || activeExam.name;
+            setExamType(examTitle);
+            if (activeExam.term) {
+              setTerm(formatTerm(activeExam.term));
+            }
+            if (activeExam.academicYear) {
+              setAcademicYear(activeExam.academicYear.toString());
+            }
+            if (activeExam.maxMarks) {
+              setMaxMarks(Number(activeExam.maxMarks) || 100);
+            }
+            // Clear active exam type after consuming so it doesn't perpetually override subsequent selections unless clicked again
+            localStorage.removeItem("munyaka_active_exam_type");
+          }
+        }
+      } catch (e) {
+        console.error("Error reading munyaka_active_exam_type:", e);
+      }
+  
+      return () => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
+    }, []);
 
   const getActiveTermFromStorage = (): string => {
     try {
@@ -406,32 +501,23 @@ const Assessments = () => {
     return streams;
   }, [streamsByGrade, currentGrade]);
 
-  // 3. Exam Types from munyaka_exam_types with fallback
-  const examTypesList = useMemo(() => {
-    try {
-      const stored = localStorage.getItem("munyaka_exam_types");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((et: any) => ({
-            id: et.id || et.code || et.name,
-            code: et.code || et.id || et.name,
-            name: et.name || et.code || et.id
-          }));
-        }
-      }
-    } catch (e) {
-      console.error("Error loading munyaka_exam_types:", e);
-    }
-    return DEFAULT_EXAM_TYPES;
-  }, []);
+  // 3. Exam Types from state loaded via Firestore & localStorage
+  // examTypesList is now maintained via state with Firestore onSnapshot & local cache fallback.
 
   // Set initial exam type if available
-  useEffect(() => {
-    if (examTypesList.length > 0 && (!examType || !examTypesList.some((et: any) => (et.name || et.code) === examType))) {
-      setExamType(examTypesList[0]?.name || examTypesList[0]?.code || "Formative Assessment");
-    }
-  }, [examTypesList, examType]);
+    useEffect(() => {
+      if (examTypesList.length > 0 && (!examType || !examTypesList.some((et: any) => (et.name || et.code) === examType))) {
+        setExamType(examTypesList[0]?.name || examTypesList[0]?.code || "Formative Assessment");
+      }
+    }, [examTypesList, examType]);
+  
+    // Sync Max Marks when the selected exam type changes
+    useEffect(() => {
+      const match = examTypesList.find((et: any) => (et.name || et.code) === examType);
+      if (match && match.maxMarks) {
+        setMaxMarks(Number(match.maxMarks) || 100);
+      }
+    }, [examType, examTypesList]);
 
   // 4. Learning Areas / Subjects from munyaka_learning_areas with robust nested parsing logic
   const learningAreasFromStorage = useMemo(() => {
@@ -621,22 +707,22 @@ const Assessments = () => {
                 (s) => (s.id || s.admissionNumber) === studentId
               );
               if (student) {
-                saveTeacherInputResult(score, {
-                  studentId,
-                  studentName: student.name,
-                  classId: student.grade || student.gradeLevel || currentGrade,
-                  className: student.grade || student.gradeLevel || currentGrade,
-                  stream: student.stream || student.classStream,
-                }, {
-                  academicYear,
-                  term,
-                  examType,
-                  subjectId: subj,
-                  subjectName: subj,
-                  assessmentTitle: `${subj} – ${examType}`,
-                  maxScore: 100,
-                });
-              }
+                              saveTeacherInputResult(score, {
+                                studentId,
+                                studentName: student.name,
+                                classId: student.grade || student.gradeLevel || currentGrade,
+                                className: student.grade || student.gradeLevel || currentGrade,
+                                stream: student.stream || student.classStream,
+                              }, {
+                                academicYear,
+                                term,
+                                examType,
+                                subjectId: subj,
+                                subjectName: subj,
+                                assessmentTitle: `${subj} – ${examType}`,
+                                maxScore: maxMarks,
+                              });
+                            }
             }
           }
         } catch (e) {
@@ -771,32 +857,32 @@ const Assessments = () => {
   
         // Bulk write AssessmentResult records for every entered mark
         filteredStudents.forEach((student) => {
-          const studentId = student.id || student.admissionNumber;
-          const studentMarks = marksMatrix[studentId] || {};
-          Object.entries(studentMarks).forEach(([subj, rawScore]) => {
-            const scoreStr = String(rawScore || "").trim();
-            if (scoreStr !== "") {
-              const score = parseInt(scoreStr, 10);
-              if (!isNaN(score)) {
-                saveTeacherInputResult(score, {
-                  studentId,
-                  studentName: student.name,
-                  classId: student.grade || student.gradeLevel || currentGrade,
-                  className: student.grade || student.gradeLevel || currentGrade,
-                  stream: student.stream || student.classStream,
-                }, {
-                  academicYear,
-                  term,
-                  examType,
-                  subjectId: subj,
-                  subjectName: subj,
-                  assessmentTitle: `${subj} – ${examType}`,
-                  maxScore: 100,
+                  const studentId = student.id || student.admissionNumber;
+                  const studentMarks = marksMatrix[studentId] || {};
+                  Object.entries(studentMarks).forEach(([subj, rawScore]) => {
+                    const scoreStr = String(rawScore || "").trim();
+                    if (scoreStr !== "") {
+                      const score = parseInt(scoreStr, 10);
+                      if (!isNaN(score)) {
+                        saveTeacherInputResult(score, {
+                          studentId,
+                          studentName: student.name,
+                          classId: student.grade || student.gradeLevel || currentGrade,
+                          className: student.grade || student.gradeLevel || currentGrade,
+                          stream: student.stream || student.classStream,
+                        }, {
+                          academicYear,
+                          term,
+                          examType,
+                          subjectId: subj,
+                          subjectName: subj,
+                          assessmentTitle: `${subj} – ${examType}`,
+                          maxScore: maxMarks,
+                        });
+                      }
+                    }
+                  });
                 });
-              }
-            }
-          });
-        });
   
         setIsSaving(false);
         showSuccess("All marks successfully committed to localStorage!");
@@ -1086,24 +1172,38 @@ ${filteredStudents.length} learner(s) included.
           </div>
 
           {/* 4. Exam Type */}
-          <div className="flex flex-col">
-            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Exam Type</label>
-            <Select
-              value={historyMode ? historyExamType : examType}
-              onValueChange={historyMode ? setHistoryExamType : setExamType}
-            >
-              <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9">
-                <SelectValue placeholder="Exam Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {examTypesList.map((et: any) => (
-                  <SelectItem key={et.id || et.code} value={et.name || et.code}>
-                    {et.name || et.code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                    <div className="flex flex-col">
+                      <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Exam Type</label>
+                      <Select
+                        value={historyMode ? historyExamType : examType}
+                        onValueChange={historyMode ? setHistoryExamType : setExamType}
+                      >
+                        <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9">
+                          <SelectValue placeholder="Exam Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {examTypesList.map((et: any) => (
+                            <SelectItem key={et.id || et.code} value={et.name || et.code}>
+                              {et.name || et.code}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+          
+                    {/* 4b. Max Marks (synced from selected exam type) */}
+                    <div className="flex flex-col">
+                      <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Max Marks</label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={1000}
+                        value={maxMarks}
+                        onChange={(e) => setMaxMarks(parseInt(e.target.value) || 100)}
+                        disabled={historyMode}
+                        className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9"
+                      />
+                    </div>
 
           {/* 5. Term */}
           <div className="flex flex-col">
