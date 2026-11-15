@@ -169,6 +169,23 @@ export default function Attendance() {
   const toggleManualMorningLock = () => {
     const nextVal = !manualMorningLock;
     setManualMorningLock(nextVal);
+    if (nextVal) {
+      toast.success('Morning session manually locked.');
+    } else {
+      toast.success('Morning session unlocked / returning to schedule.');
+    }
+  };
+
+  const toggleManualAfternoonLock = () => {
+    const nextVal = !manualAfternoonLock;
+    setManualAfternoonLock(nextVal);
+    if (nextVal) {
+      toast.success('Afternoon session manually locked.');
+    } else {
+      toast.success('Afternoon session unlocked / returning to schedule.');
+    }
+  };
+    setManualMorningLock(nextVal);
     localStorage.setItem('manual_morning_lock', String(nextVal));
     toast.success(nextVal ? 'Manual Morning Attendance Lock enabled.' : 'Manual Morning Attendance Lock released.');
   };
@@ -580,31 +597,31 @@ export default function Attendance() {
 
               <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
-                  {manualMorningLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
+                  {morningLocked ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
                   <span>Manual Morning:</span>
                 </div>
                 <Button
                   size="sm"
-                  variant={manualMorningLock ? 'destructive' : 'outline'}
-                  className={`h-7 text-xs px-3 ${manualMorningLock ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white/10 text-white hover:bg-white/25 border-white/20'}`}
+                  variant={morningLocked ? 'destructive' : 'outline'}
+                  className={`h-7 text-xs px-3 ${morningLocked ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-emerald-500/80 text-white hover:bg-emerald-600 border-none'}`}
                   onClick={toggleManualMorningLock}
                 >
-                  {manualMorningLock ? 'Locked' : 'Unlocked'}
+                  {morningLocked ? 'Locked' : 'Unlocked'}
                 </Button>
               </div>
 
               <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
-                  {manualAfternoonLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
+                  {afternoonLocked ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
                   <span>Manual Afternoon:</span>
                 </div>
                 <Button
                   size="sm"
-                  variant={manualAfternoonLock ? 'destructive' : 'outline'}
-                  className={`h-7 text-xs px-3 ${manualAfternoonLock ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white/10 text-white hover:bg-white/25 border-white/20'}`}
+                  variant={afternoonLocked ? 'destructive' : 'outline'}
+                  className={`h-7 text-xs px-3 ${afternoonLocked ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-emerald-500/80 text-white hover:bg-emerald-600 border-none'}`}
                   onClick={toggleManualAfternoonLock}
                 >
-                  {manualAfternoonLock ? 'Locked' : 'Unlocked'}
+                  {afternoonLocked ? 'Locked' : 'Unlocked'}
                 </Button>
               </div>
             </>
