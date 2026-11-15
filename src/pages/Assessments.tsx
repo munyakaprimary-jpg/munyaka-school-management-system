@@ -18,7 +18,6 @@ import { MUNYAKA_HEADERS } from "@/utils/downloadHelper";
 import { saveTeacherInputResult } from "@/utils/assessmentResults";
 import { cn } from "@/lib/utils";
 import { useFirestoreLearners } from "@/hooks/useFirestoreLearners";
-import { useBackToAssessmentsMenu } from "@/hooks/useBackToAssessmentsMenu";
 
 // Educational Tier Subject Mappings & Parsing Logic
 const TIER_SUBJECTS: Record<string, string[]> = {
