@@ -127,7 +127,7 @@ export default function PromotePage() {
         const id = g.id || g.name;
         const name = g.name || g.id;
         if (id && name) {
-          gradeMap.set(String(id).trim(), { id: String(id).trim(), name: String(name).trim() });
+          gradeMap.set(String(id).trim().toLowerCase(), { id: String(id).trim(), name: String(name).trim() });
         }
       }
     });
@@ -227,20 +227,22 @@ export default function PromotePage() {
   // Filtered learners list with strict combined Grade AND Stream matching
   const filteredLearners = useMemo(() => {
     return learners.filter((learner) => {
-      const learnerGradeIdentifier = 
-        learner.gradeId || 
-        learner.grade || 
-        learner.gradeLevel || 
+      const learnerGradeIdentifier =
+        learner.gradeId ||
+        learner.grade ||
+        learner.gradeLevel ||
         learner.currentGrade ||
         learner.class;
+
+      if (!learnerGradeIdentifier) return sourceGrade === 'all';
 
       const normLGrade = normalizeStr(learnerGradeIdentifier);
       const normSourceGrade = normalizeStr(sourceGrade);
       const lNum = normLGrade.replace(/[^0-9]/g, '');
       const sourceNum = normSourceGrade.replace(/[^0-9]/g, '');
 
-      const matchesGrade = 
-        sourceGrade === 'all' || 
+      const matchesGrade =
+        sourceGrade === 'all' ||
         normLGrade === normSourceGrade ||
         (lNum && sourceNum && lNum === sourceNum) ||
         normLGrade.includes(normSourceGrade) ||
@@ -249,9 +251,12 @@ export default function PromotePage() {
       const learnerStream = String(learner.streamId || learner.stream || learner.currentStream || learner.classStream || '').trim().toUpperCase();
       const selectedStreamUpper = String(sourceStream || '').trim().toUpperCase();
       
-      const matchesStream = 
-        sourceStream === 'all' || 
-        learnerStream === selectedStreamUpper;
+      const matchesStream =
+        sourceStream === 'all' ||
+        !learnerStream ||
+        learnerStream === selectedStreamUpper ||
+        learnerStream.includes(selectedStreamUpper) ||
+        selectedStreamUpper.includes(learnerStream);
 
       return matchesGrade && matchesStream;
     });
