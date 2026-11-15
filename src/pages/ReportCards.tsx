@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getStudents } from '@/services/persistentStore';
+import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 import { Search, UserCheck, Eye, Download, MessageSquare, Calendar, Layers } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
@@ -68,24 +69,35 @@ export default function ReportCards() {
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingAll, setIsExportingAll] = useState(false);
 
-  // Load students on mount
+  // Load students on mount using unified mergeStoredLearners
   useEffect(() => {
-    try {
-      const loaded = getStudents();
-      if (loaded && loaded.length > 0) {
-        setAllStudents(loaded);
-        const firstMatch = loaded.find(s => {
-          const gMatch = !selectedGrade || String(s.grade || '').toLowerCase().includes(selectedGrade.toLowerCase().replace('grade ', ''));
-          return gMatch;
-        }) || loaded[0];
+    const loadStudents = () => {
+      try {
+        const loaded = mergeStoredLearners();
+        if (loaded && loaded.length > 0) {
+          setAllStudents(loaded);
+          const firstMatch = loaded.find(s => {
+            const gMatch = !selectedGrade || String(s.grade || s.gradeLevel || '').toLowerCase().includes(selectedGrade.toLowerCase().replace('grade ', ''));
+            return gMatch;
+          }) || loaded[0];
 
-        setSelectedLearner(firstMatch);
-        if (firstMatch.grade) setSelectedGrade(firstMatch.grade);
-        if (firstMatch.stream) setSelectedStream(firstMatch.stream);
+          setSelectedLearner(firstMatch);
+          if (firstMatch.grade || firstMatch.gradeLevel) setSelectedGrade(firstMatch.grade || firstMatch.gradeLevel);
+          if (firstMatch.stream) setSelectedStream(firstMatch.stream);
+        }
+      } catch (err) {
+        console.error("Failed to load students:", err);
       }
-    } catch (err) {
-      console.error("Failed to load students:", err);
-    }
+    };
+    loadStudents();
+    window.addEventListener('storage', loadStudents);
+    window.addEventListener('munyaka_learners_updated', loadStudents);
+    window.addEventListener('munyaka:data-changed', loadStudents);
+    return () => {
+      window.removeEventListener('storage', loadStudents);
+      window.removeEventListener('munyaka_learners_updated', loadStudents);
+      window.removeEventListener('munyaka:data-changed', loadStudents);
+    };
   }, []);
 
   // Close suggestions on outside click
