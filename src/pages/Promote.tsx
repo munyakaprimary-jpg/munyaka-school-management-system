@@ -51,12 +51,12 @@ export default function PromotePage() {
   const setStoreLearners = useSchoolStore((state) => state.setLearners);
   
   const [learners, setLearners] = useState<any[]>(() => {
-    const direct = getStudents();
+    const direct = mergeStoredLearners();
     return direct && direct.length > 0 ? direct : (storeLearners || []);
   });
 
   useEffect(() => {
-    const currentList = getStudents();
+    const currentList = mergeStoredLearners();
     if (currentList && currentList.length > 0) {
       setLearners(currentList);
     } else if (storeLearners && storeLearners.length > 0) {
@@ -95,7 +95,7 @@ export default function PromotePage() {
             setGradesList(parsed);
           }
         }
-        const directStudents = getStudents();
+        const directStudents = mergeStoredLearners();
         if (directStudents && directStudents.length > 0) {
           setLearners(directStudents);
         }
@@ -107,10 +107,14 @@ export default function PromotePage() {
     window.addEventListener('storage', loadGradesAndStreams);
     window.addEventListener('munyaka_grades_updated', loadGradesAndStreams);
     window.addEventListener('munyaka_students_updated', loadGradesAndStreams);
+    window.addEventListener('munyaka_learners_updated', loadGradesAndStreams);
+    window.addEventListener('munyaka:data-changed', loadGradesAndStreams);
     return () => {
       window.removeEventListener('storage', loadGradesAndStreams);
       window.removeEventListener('munyaka_grades_updated', loadGradesAndStreams);
       window.removeEventListener('munyaka_students_updated', loadGradesAndStreams);
+      window.removeEventListener('munyaka_learners_updated', loadGradesAndStreams);
+      window.removeEventListener('munyaka:data-changed', loadGradesAndStreams);
     };
   }, []);
 
