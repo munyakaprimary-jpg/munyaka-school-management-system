@@ -36,7 +36,6 @@ interface ExamType {
   title: string;
   term: string;
   academicYear: number;
-  maxMarks: number;
   status: "Active" | "Closed";
   createdAt?: any;
   updatedAt?: any;
@@ -69,7 +68,6 @@ const ExamTypes = () => {
   const [title, setTitle] = useState("");
   const [term, setTerm] = useState("Term 1");
   const [academicYear, setAcademicYear] = useState(CURRENT_YEAR);
-  const [maxMarks, setMaxMarks] = useState(100);
   const [status, setStatus] = useState<"Active" | "Closed">("Active");
 
   // Firestore live listener
@@ -89,7 +87,6 @@ const ExamTypes = () => {
             title: data.title || data.name || "",
             term: data.term || "Term 1",
             academicYear: data.academicYear || data.year || CURRENT_YEAR,
-            maxMarks: data.maxMarks || data.totalMarksBaseline || 100,
             status: data.status || "Active",
             createdAt: data.createdAt,
             updatedAt: data.updatedAt,
@@ -138,7 +135,6 @@ const ExamTypes = () => {
         title: title.trim(),
         term,
         academicYear,
-        maxMarks: parseInt(String(maxMarks)) || 100,
         status,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -147,7 +143,6 @@ const ExamTypes = () => {
       setTitle("");
       setTerm("Term 1");
       setAcademicYear(CURRENT_YEAR);
-      setMaxMarks(100);
       setStatus("Active");
       showSuccess(`Successfully created exam type "${title.trim()}"!`);
     } catch (err) {
@@ -186,7 +181,6 @@ const ExamTypes = () => {
         title: exam.title,
         term: exam.term,
         academicYear: exam.academicYear,
-        maxMarks: exam.maxMarks,
       })
     );
     // Also set the active term for the marks entry page
@@ -389,19 +383,9 @@ const ExamTypes = () => {
                       <span className="font-medium text-slate-700">Year:</span>
                       {exam.academicYear}
                     </span>
-                    <span className="flex items-center gap-1">
-                      <span className="font-medium text-slate-700">Max Marks:</span>
-                      {exam.maxMarks}
-                    </span>
                   </div>
                 </div>
                 <div className="pt-4 border-t border-slate-50 flex flex-col gap-2 mt-auto">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold text-slate-400 uppercase tracking-wider">Max Marks</span>
-                    <Badge variant="outline" className="rounded-lg font-black text-slate-700 border-slate-200 bg-slate-50 px-2.5 py-1">
-                      {exam.maxMarks}
-                    </Badge>
-                  </div>
                   {exam.status === "Active" && (
                     <Button
                       className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold shadow-sm gap-2"
@@ -457,7 +441,7 @@ const ExamTypes = () => {
               className="rounded-xl h-12"
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Term</Label>
               <Select value={term} onValueChange={setTerm}>
@@ -487,18 +471,6 @@ const ExamTypes = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Max Marks</Label>
-              <Input
-                type="number"
-                value={maxMarks}
-                onChange={(e) => setMaxMarks(parseInt(e.target.value) || 100)}
-                placeholder="100"
-                min="1"
-                max="1000"
-                className="rounded-xl h-12"
-              />
             </div>
           </div>
           <div className="space-y-2">
@@ -543,9 +515,9 @@ const ExamTypes = () => {
             Are you sure you want to delete <strong className="text-slate-800">"{examToDelete?.title}"</strong>? This action cannot be undone.
           </p>
         </div>
-              </Modal>
-            </div>
-          );
-        };
+      </Modal>
+    </div>
+  );
+};
 
 export default ExamTypes;
