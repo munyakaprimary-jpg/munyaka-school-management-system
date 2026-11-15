@@ -30,6 +30,7 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
+  setDoc,
 } from "firebase/firestore";
 
 interface ExamType {
@@ -68,6 +69,7 @@ const ExamTypes = () => {
   // Admin password gate state
   const [adminAuthOpen, setAdminAuthOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"add" | "edit" | "delete" | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -564,12 +566,13 @@ const ExamTypes = () => {
         isOpen={adminAuthOpen}
         onClose={handleAdminAuthClose}
         onSuccess={handleAdminAuthSuccess}
-        actionLabel={
+        title="Admin Authorization Required"
+        description={
           pendingAction === "add"
-            ? "Add Exam Type"
+            ? "Enter your admin password to add a new exam type."
             : pendingAction === "edit"
-            ? "Edit Exam Type"
-            : "Delete Exam Type"
+            ? "Enter your admin password to edit this exam type."
+            : "Enter your admin password to delete this exam type."
         }
       />
     </div>
