@@ -33,6 +33,7 @@ import {
   Briefcase,
   type LucideIcon,
 } from 'lucide-react';
+import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 
 // Helper function to safely read quote configuration from localStorage
 const getStoredQuoteConfig = () => {
@@ -296,36 +297,83 @@ const Login: React.FC = () => {
   const [studentPortalInput, setStudentPortalInput] = useState("");
   const [studentLoginError, setStudentLoginError] = useState<string | null>(null);
 
-  const handleStudentPortalLogin = (e?: React.FormEvent) => {
+  const handleStudentPortalLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const cleanInput = studentPortalInput.trim().toLowerCase();
+    const cleanInput = studentPortalInput.trim().toUpperCase();
     if (!cleanInput) {
       setStudentLoginError("Please enter an Admission Number or Assessment Number.");
       return;
     }
 
     try {
-      const registeredStudents = JSON.parse(localStorage.getItem('munyaka_students') || localStorage.getItem('school_learners_data') || '[]');
-      const matchedStudent = registeredStudents.find((student: any) => {
-        const adm = (student.admissionNumber || student.admissionNo || student.admNo || '').trim().toLowerCase();
-        const assess = (student.assessmentNumber || student.assessmentNo || student.assessNo || '').trim().toLowerCase();
-        const id = (student.id || '').trim().toLowerCase();
+      let matchedStudent: any = null;
 
-        return (adm && adm === cleanInput) ||
-               (assess && assess === cleanInput) ||
-               (id && id === cleanInput);
-      });
+      // 1. Check local merged store first for instant offline/online matching
+      const localLearners = mergeStoredLearners();
+      for (const l of localLearners) {
+        if (!l) continue;
+        const admNo = String(l.admissionNumber || l.admissionNo || l.admNo || '').trim().toUpperCase();
+        const assessNo = String(l.assessmentNumber || l.assessmentNo || l.upi || '').trim().toUpperCase();
+        const id = String(l.id || l._id || '').trim().toUpperCase();
+
+        if (
+          (admNo && (admNo === cleanInput || admNo.replace(/[-/\s]/g, '') === cleanInput.replace(/[-/\s]/g, ''))) ||
+          (assessNo && (assessNo === cleanInput || assessNo.replace(/[-/\s]/g, '') === cleanInput.replace(/[-/\s]/g, ''))) ||
+          (id && id === cleanInput)
+        ) {
+          matchedStudent = l;
+          break;
+        }
+      }
+
+      // 2. If not found locally, try querying Firestore if available
+      if (!matchedStudent && typeof window !== 'undefined' && (window as any).db) {
+        try {
+          const { collection, getDocs, query, limit } = await import('firebase/firestore');
+          const db = (window as any).db;
+          const q = query(collection(db, 'learners'), limit(200));
+          const snapshot = await getDocs(q);
+          for (const docSnap of snapshot.docs) {
+            const data = docSnap.data();
+            const admNo = String(data.admissionNumber || data.admissionNo || data.admNo || '').trim().toUpperCase();
+            const assessNo = String(data.assessmentNumber || data.assessmentNo || data.upi || '').trim().toUpperCase();
+            const id = docSnap.id.trim().toUpperCase();
+
+            if (
+              (admNo && (admNo === cleanInput || admNo.replace(/[-/\s]/g, '') === cleanInput.replace(/[-/\s]/g, ''))) ||
+              (assessNo && (assessNo === cleanInput || assessNo.replace(/[-/\s]/g, '') === cleanInput.replace(/[-/\s]/g, ''))) ||
+              (id === cleanInput)
+            ) {
+              matchedStudent = { id: docSnap.id, ...data };
+              break;
+            }
+          }
+        } catch (fbErr) {
+          console.warn('[StudentPortalLogin] Firestore query fallback error:', fbErr);
+        }
+      }
 
       if (matchedStudent) {
-        localStorage.setItem('active_learner', JSON.stringify(matchedStudent));
+        const normalizedStudent = {
+          ...matchedStudent,
+          id: matchedStudent.id || matchedStudent.admissionNo || matchedStudent.admissionNumber || 'student_' + Date.now(),
+          admissionNo: matchedStudent.admissionNo || matchedStudent.admissionNumber || matchedStudent.admNo || cleanInput,
+          fullName: matchedStudent.fullName || matchedStudent.name || matchedStudent.studentName || 'Student',
+        };
+        localStorage.setItem('munyaka_current_student_session', JSON.stringify(normalizedStudent));
+        localStorage.setItem('munyaka_student_logged_in', 'true');
+        localStorage.setItem('munyaka_portal_user', JSON.stringify(normalizedStudent));
+        localStorage.setItem('active_learner', JSON.stringify(normalizedStudent));
+        window.dispatchEvent(new Event('storage'));
+
         setUser({
-          id: matchedStudent.id || matchedStudent.admissionNumber || 'learner-1',
-          name: matchedStudent.name || matchedStudent.fullName || 'Student',
-          email: matchedStudent.email || `${matchedStudent.admissionNumber || 'student'}@munyaka.sc.ke`,
+          id: normalizedStudent.id,
+          name: normalizedStudent.fullName,
+          email: normalizedStudent.email || `${normalizedStudent.admissionNo || 'student'}@munyaka.sc.ke`,
           role: 'student'
         });
         setStudentLoginError(null);
-        navigate('/student/portal');
+        navigate('/student-dashboard');
       } else {
         setStudentLoginError("No matching record found. Please verify your Admission Number or Assessment Number.");
       }
@@ -807,13 +855,14 @@ const Login: React.FC = () => {
                                   Access your academic records, attendance, and fee statements using your Admission Number or Assessment Number
                                 </p>
                               </div>
-            \n                              {studentLoginError && (
+                              {studentLoginError && (
                                 <div className="p-4 bg-rose-900/20 border border-rose-800/50 rounded-2xl flex items-center gap-3 text-rose-400 text-xs font-bold animate-in slide-in-from-top-2">
                                   <ShieldAlert size={18} className="shrink-0" />
                                   <span>{studentLoginError}</span>
                                 </div>
                               )}
-            \n                              <form onSubmit={handleStudentPortalLogin} className="space-y-5">
+
+                              <form onSubmit={handleStudentPortalLogin} className="space-y-5">
                                 <div className="space-y-2">
                                   <Label htmlFor="student-input" className="text-xs font-black uppercase tracking-widest text-slate-500">
                                     Admission Number or Assessment Number
