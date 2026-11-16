@@ -41,23 +41,10 @@ export default function PaymentManagement() {
     const addCampus = useSchoolStore((state) => state.addCampus);
     const deleteCampus = useSchoolStore((state) => state.deleteCampus);
     const updateCampusSeats = useSchoolStore((state) => state.updateCampusSeats);
-  const activeLearnersCount = students?.length > 0 ? students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length : (() => {
-    try {
-      const l = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v1') || '[]');
-      return Array.isArray(l) ? l.length : 0;
-    } catch {
-      return 0;
-    }
-  })();
-
-  const activeStaffCount = staff?.length > 0 ? staff.length : (() => {
-    try {
-      const s = JSON.parse(localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || '[]');
-      return Array.isArray(s) ? s.length : 2;
-    } catch {
-      return 2;
-    }
-  })();
+  const realLearners = mergeStoredLearners();
+  const realStaff = getStoredStaff();
+  const activeLearnersCount = realLearners.length;
+  const activeStaffCount = realStaff.length;
 
   const totalSeats = activeLearnersCount + activeStaffCount;
   const feePerSeat = 100;
@@ -93,14 +80,14 @@ export default function PaymentManagement() {
         console.error('Error parsing stored invoices:', e);
       }
     }
-    const totalActiveSeats = ((INITIAL_SEED_DATA as any).learners?.length || 31) + ((INITIAL_SEED_DATA as any).staff?.length || 6);
-    const currentFeePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
-    const defaultInvoiceAmount = totalActiveSeats * currentFeePerSeat;
-    return [
-      {
-        id: 'INV-2026-001',
-        campusName: 'Munyaka Primary & Junior School',
-        date: '2026-10-24',
+    const totalActiveSeats = totalSeats;
+        const currentFeePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
+        const defaultInvoiceAmount = totalActiveSeats * currentFeePerSeat;
+        return [
+          {
+            id: 'INV-2026-001',
+            campusName: 'Munyaka Primary & Junior School',
+            date: '2026-10-24',
         amount: defaultInvoiceAmount,
         status: 'Paid',
       }
@@ -147,7 +134,7 @@ export default function PaymentManagement() {
 
   const handleDownloadPDF = (invoice: any) => {
     const feePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
-    const totalSeats = ((INITIAL_SEED_DATA as any).learners?.length || 31) + ((INITIAL_SEED_DATA as any).staff?.length || 6); // 37
+    const totalSeats = activeLearnersCount + activeStaffCount;
     const invoiceTotal = Number(invoice.amount) || (totalSeats * feePerSeat);
 
     const htmlContent = `
@@ -184,7 +171,7 @@ export default function PaymentManagement() {
           <div class="meta-grid">
             <div class="meta-item"><strong>Invoice Reference:</strong> ${invoice.id}</div>
             <div class="meta-item"><strong>Billing Date:</strong> ${invoice.date}</div>
-            <div class="meta-item"><strong>Total Active Seats:</strong> ${totalSeats} (31 Learners + 6 Staff)</div>
+            <div class="meta-item"><strong>Total Active Seats:</strong> ${totalSeats} (${activeLearnersCount} Learners + ${activeStaffCount} Staff)</div>
             <div class="meta-item"><strong>Per-Seat Rate:</strong> KES ${feePerSeat} / Seat</div>
           </div>
 
@@ -249,9 +236,9 @@ export default function PaymentManagement() {
   const [paymentPeriod, setPaymentPeriod] = useState('1 Month');
   
   // Dynamic active seats & base monthly total calculation
-  const activeSeats = ((INITIAL_SEED_DATA as any).learners?.length || 31) + ((INITIAL_SEED_DATA as any).staff?.length || 6);
-  const currentFeePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
-  const monthlyBaseCommitment = activeSeats * currentFeePerSeat; // e.g. 37 * 100 = 3,700
+    const activeSeats = totalSeats;
+    const currentFeePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
+    const monthlyBaseCommitment = activeSeats * currentFeePerSeat;
 
   const billingPeriodOptions = [
     { label: '1 Month', value: 1 },
@@ -330,23 +317,21 @@ export default function PaymentManagement() {
   });
 
   // Real Data from learner and staff storages
-    const realLearners = mergeStoredLearners();
-    const realStaff = getStoredStaff();
-    const realActiveLearners = realLearners.length;
-    const realActiveStaff = realStaff.length;
-    const realTotalAllocated = realActiveLearners + realActiveStaff;
-    const realCapacity = Math.max(realTotalAllocated + 120, 500);
-
-  // Seat allocation state (dynamically derived from live active students + staff)
-    const allocatedSeats = realTotalAllocated;
-    const [maxSeats, setMaxSeats] = useState(realCapacity);
+      const realActiveLearners = activeLearnersCount;
+      const realActiveStaff = activeStaffCount;
+      const realTotalAllocated = realActiveLearners + realActiveStaff;
+      const realCapacity = Math.max(realTotalAllocated + 120, 500);
   
-    // Keep maxSeats synchronized if capacity changes or store updates
-    useEffect(() => {
-      if (realCapacity > maxSeats) {
-        setMaxSeats(realCapacity);
-      }
-    }, [realCapacity, maxSeats]);
+    // Seat allocation state (dynamically derived from live active students + staff)
+      const allocatedSeats = realTotalAllocated;
+      const [maxSeats, setMaxSeats] = useState(realCapacity);
+  
+      // Keep maxSeats synchronized if capacity changes or store updates
+      useEffect(() => {
+        if (realCapacity > maxSeats) {
+          setMaxSeats(realCapacity);
+        }
+      }, [realCapacity, maxSeats]);
 
   // Monthly billing setting state with localStorage synchronization ('munyaka_fee_per_seat')
   const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState<number>(() => {
@@ -546,10 +531,10 @@ export default function PaymentManagement() {
           <div className="lg:col-span-2 space-y-5">
             {/* Top-Level Subscription Summary Banner */}
             {(() => {
-              const learnersCount = (INITIAL_SEED_DATA as any).learners?.length || 31;
-              const staffCount = (INITIAL_SEED_DATA as any).staff?.length || 6;
-              const totalSeats = learnersCount + staffCount;
-              const totalCommitment = totalSeats * summaryFeePerSeat;
+                          const learnersCount = activeLearnersCount;
+                          const staffCount = activeStaffCount;
+                          const totalSeats = learnersCount + staffCount;
+                          const totalCommitment = totalSeats * summaryFeePerSeat;
 
               return (
                 <div className="bg-gradient-to-r from-indigo-50 to-slate-50 border border-indigo-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
