@@ -20,7 +20,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useCentralData } from '@/hooks/useCentralData';
+import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
 import TeacherExportModule from '@/components/teacher/TeacherExportModule';
 import TeacherSyncQrGenerator from '@/components/teacher/TeacherSyncQrGenerator';
 import { getFormattedRoleLabel } from '@/utils/staffRoleUtils';
