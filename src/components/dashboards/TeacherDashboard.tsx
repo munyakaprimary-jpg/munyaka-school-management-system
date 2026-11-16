@@ -190,38 +190,64 @@ export default function TeacherDashboard() {
           list.push(...centralDb.learners);
         }
       } catch {}
-      try {
-        const l1 = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
-        if (Array.isArray(l1)) list.push(...l1);
-      } catch {}
-      try {
-        const l2 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-        if (Array.isArray(l2)) list.push(...l2);
-      } catch {}
+      for (const key of ['munyaka_learners', 'munyaka_learners_directory', 'munyaka_learners_v2', 'munyaka_students', 'students', 'learners', 'school_students']) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              list.push(...parsed);
+            }
+          }
+        } catch {}
+      }
       if (Array.isArray(students)) list.push(...students);
-  
+
       // Deduplicate by ID / admission number
       const seen = new Set();
       return list.filter(l => {
-        const id = String(l?.id || l?.admissionNumber || l?.admNo || l?.uuid || Math.random());
+        const id = String(l?.id || l?.admissionNumber || l?.admNo || l?.uuid || l?.admission_no || Math.random());
         if (seen.has(id)) return false;
         seen.add(id);
         return true;
       });
-    }, [students, activeAssignedClass]);
-  
-    // Parse grade and stream from activeAssignedClass (e.g. "Grade 8 Venus")
+    }, [students]);
+
+    // Parse grade and stream from activeAssignedClass (e.g. "Grade 4 Green")
     const [gradePart, streamPart] = React.useMemo(() => {
-      const parts = activeAssignedClass.trim().split(/\s+/);
+      const parts = assignedClassLabel.trim().split(/\s+/);
       if (parts.length >= 2) {
-        const stream = parts[parts.length - 1];
-        const grade = parts.slice(0, parts.length - 1).join(' ');
-        return [grade, stream];
+        return [parts.slice(0, parts.length - 1).join(' '), parts[parts.length - 1]];
       }
-      return [activeAssignedClass, ''];
-    }, [activeAssignedClass]);
-  
-    // Robust learner matching with uppercase normalization and combined string support
+      return [assignedClassLabel, ''];
+    }, [assignedClassLabel]);
+
+    // Exact & normalized matching learners across directory sources for ICT / Specialist view
+    const classStudents = React.useMemo(() => {
+      if (!assignedClassLabel || assignedClassLabel === 'No Class Assigned') return [];
+      const normTarget = normalizeGradeAndStream(gradePart, streamPart);
+
+      return allLearners.filter((s: any) => {
+        const lGradeRaw = String(s?.grade || s?.currentGrade || s?.gradeLevel || s?.class || '').trim();
+        const lStreamRaw = String(s?.stream || '').trim();
+        const lNorm = normalizeGradeAndStream(lGradeRaw, lStreamRaw);
+
+        const gradeMatches = lNorm.cleanGrade === normTarget.cleanGrade ||
+                             lNorm.cleanGrade.includes(normTarget.cleanGrade) ||
+                             normTarget.cleanGrade.includes(lNorm.cleanGrade);
+        
+        const streamMatches = !normTarget.cleanStream ||
+                              !lNorm.cleanStream ||
+                              lNorm.cleanStream === normTarget.cleanStream ||
+                              lNorm.cleanStream.includes(normTarget.cleanStream) ||
+                              normTarget.cleanStream.includes(lNorm.cleanStream);
+
+        const combinedMatches = lNorm.combined.includes(normTarget.combined) ||
+                                normTarget.combined.includes(lNorm.combined);
+
+        return (gradeMatches && streamMatches) || combinedMatches;
+      });
+    }, [allLearners, assignedClassLabel, gradePart, streamPart]);
     const classStudents = React.useMemo(() => {
       if (!activeAssignedClass || activeAssignedClass === 'No Class Assigned') return [];
       const targetFull = activeAssignedClass.trim().toUpperCase();
@@ -808,44 +834,98 @@ export default function TeacherDashboard() {
     }
   };
 
-  // Load learners from munyaka_central_db.learners or munyaka_learners
+  // Load learners from all possible unified sources (Firestore central DB and offline localStorage caches)
   const allLearners = React.useMemo(() => {
+    const list: any[] = [];
     try {
       const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-      if (Array.isArray(centralDb?.learners) && centralDb.learners.length > 0) {
-        return centralDb.learners;
+      if (Array.isArray(centralDb?.learners)) {
+        list.push(...centralDb.learners);
       }
     } catch {}
-    try {
-      const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || '[]';
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    } catch {}
-    return students;
-  }, [students]);
-
-  // Parse grade and stream from activeAssignedClass (e.g. "Grade 4 Blue")
-  const [gradePart, streamPart] = React.useMemo(() => {
-    const parts = fullClassTitle.split(' ');
-    if (parts.length >= 2) {
-      return [parts.slice(0, parts.length - 1).join(' '), parts[parts.length - 1]];
+    for (const key of ['munyaka_learners', 'munyaka_learners_directory', 'munyaka_learners_v2', 'munyaka_students', 'students', 'learners', 'school_students']) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            list.push(...parsed);
+          }
+        }
+      } catch {}
     }
-    return [fullClassTitle, ''];
+    if (Array.isArray(students)) list.push(...students);
+
+    // Deduplicate by ID / admission number
+    const seen = new Set();
+    return list.filter(l => {
+      const id = String(l?.id || l?.admissionNumber || l?.admNo || l?.uuid || l?.admission_no || Math.random());
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [students, activeAssignedClass]);
+
+  // Robust normalizer helper: strips "GRADE" case-insensitively, trims spaces, and standardizes streams
+  const normalizeGradeAndStream = (gradeStr: string, streamStr: string) => {
+    const cleanGrade = String(gradeStr || '')
+      .replace(/grade/gi, '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .trim()
+      .toUpperCase();
+    const cleanStream = String(streamStr || '')
+      .trim()
+      .toUpperCase();
+    return { cleanGrade, cleanStream, combined: `${cleanGrade} ${cleanStream}`.trim() };
+  };
+
+  // Parse active assigned class and normalize
+  const activeClassNorm = React.useMemo(() => {
+    const raw = String(fullClassTitle || '').trim();
+    if (!raw || raw === 'No Class Assigned') return { cleanGrade: '', cleanStream: '', combined: '' };
+    const parts = raw.split(/\s+/);
+    let g = '';
+    let s = '';
+    if (parts.length >= 2) {
+      s = parts[parts.length - 1];
+      g = parts.slice(0, parts.length - 1).join(' ');
+    } else {
+      g = raw;
+    }
+    return normalizeGradeAndStream(g, s);
   }, [fullClassTitle]);
 
-  // Exact matching learners in munyaka_central_db.learners
+  const gradePart = activeClassNorm.cleanGrade;
+  const streamPart = activeClassNorm.cleanStream;
+
+  // Exact & normalized matching learners across directory sources
   const classStudents = React.useMemo(() => {
-    if (!fullClassTitle || fullClassTitle === 'No Class Assigned') return [];
+    if (!fullClassTitle || fullClassTitle === 'No Class Assigned' || !activeClassNorm.cleanGrade) return [];
+    
     return allLearners.filter((s: any) => {
-      const sGrade = String(s?.grade || s?.currentGrade || s?.gradeLevel || s?.class || '').trim().toLowerCase();
-      const sStream = String(s?.stream || '').trim().toLowerCase();
-      const targetGrade = gradePart.toLowerCase();
-      const targetStream = streamPart.toLowerCase();
-      const gradeMatch = sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade);
-      const streamMatch = !targetStream || sStream === targetStream || sStream.includes(targetStream) || targetStream.includes(sStream);
-      return gradeMatch && streamMatch;
+      const lGradeRaw = String(s?.grade || s?.currentGrade || s?.gradeLevel || s?.class || '').trim();
+      const lStreamRaw = String(s?.stream || '').trim();
+      const lNorm = normalizeGradeAndStream(lGradeRaw, lStreamRaw);
+
+      // Check multiple matching vectors:
+      // 1. Clean grade match and (optional or matching) stream match
+      // 2. Combined string inclusion (e.g. "4 GREEN" matching "4 GREEN")
+      const gradeMatches = lNorm.cleanGrade === activeClassNorm.cleanGrade ||
+                           lNorm.cleanGrade.includes(activeClassNorm.cleanGrade) ||
+                           activeClassNorm.cleanGrade.includes(lNorm.cleanGrade);
+      
+      const streamMatches = !activeClassNorm.cleanStream ||
+                            !lNorm.cleanStream ||
+                            lNorm.cleanStream === activeClassNorm.cleanStream ||
+                            lNorm.cleanStream.includes(activeClassNorm.cleanStream) ||
+                            activeClassNorm.cleanStream.includes(lNorm.cleanStream);
+
+      const combinedMatches = lNorm.combined.includes(activeClassNorm.combined) ||
+                              activeClassNorm.combined.includes(lNorm.combined);
+
+      return (gradeMatches && streamMatches) || combinedMatches;
     });
-  }, [allLearners, fullClassTitle, gradePart, streamPart]);
+  }, [allLearners, fullClassTitle, activeClassNorm]);
 
   const totalLearners = classStudents.length;
 
@@ -963,27 +1043,6 @@ export default function TeacherDashboard() {
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
               <span>Primary Homeroom & Subject Stream</span>
             </p>
-            <div className="mt-3 pt-2 border-t border-slate-100">
-              <label className="text-[11px] font-semibold text-slate-600 block mb-1">Select Assigned Class:</label>
-              <select
-                value={activeAssignedClass}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedClassOverride(val);
-                  try {
-                    const updated = { ...currentUserObj, assignedClass: val };
-                    localStorage.setItem('munyaka_current_user', JSON.stringify(updated));
-                  } catch {}
-                  persistAssignedClassToFirestore(val);
-                }}
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="No Class Assigned">No Class Assigned</option>
-                {allDynamicClassOptions.map((clsName) => (
-                  <option key={clsName} value={clsName}>{clsName}</option>
-                ))}
-              </select>
-            </div>
           </CardContent>
         </Card>
 
