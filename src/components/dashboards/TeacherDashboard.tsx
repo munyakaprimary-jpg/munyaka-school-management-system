@@ -197,39 +197,79 @@ export default function TeacherDashboard() {
       return students;
     }, [students]);
 
-    // Parse grade and stream from activeAssignedClass (e.g. "Grade 4 Blue")
-    const [gradePart, streamPart] = React.useMemo(() => {
-      const parts = assignedClassLabel.split(' ');
-      if (parts.length >= 2) {
-        return [parts.slice(0, parts.length - 1).join(' '), parts[parts.length - 1]];
-      }
-      return [assignedClassLabel, ''];
-    }, [assignedClassLabel]);
-
-    // Exact matching learners in munyaka_central_db.learners
-    const classStudents = React.useMemo(() => {
-      if (!assignedClassLabel || assignedClassLabel === 'No Class Assigned') return [];
-      return allLearners.filter((s: any) => {
-        const sGrade = String(s?.grade || s?.currentGrade || s?.gradeLevel || s?.class || '').trim().toLowerCase();
-        const sStream = String(s?.stream || '').trim().toLowerCase();
-        const targetGrade = gradePart.toLowerCase();
-        const targetStream = streamPart.toLowerCase();
-        const gradeMatch = sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade);
-        const streamMatch = !targetStream || sStream === targetStream || sStream.includes(targetStream) || targetStream.includes(sStream);
-        return gradeMatch && streamMatch;
+    // Unified learners list (combining localStorage cache and central DB)
+    const allLearners = React.useMemo(() => {
+      const list: any[] = [];
+      try {
+        const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+        if (Array.isArray(centralDb?.learners)) {
+          list.push(...centralDb.learners);
+        }
+      } catch {}
+      try {
+        const l1 = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
+        if (Array.isArray(l1)) list.push(...l1);
+      } catch {}
+      try {
+        const l2 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
+        if (Array.isArray(l2)) list.push(...l2);
+      } catch {}
+      if (Array.isArray(students)) list.push(...students);
+  
+      // Deduplicate by ID / admission number
+      const seen = new Set();
+      return list.filter(l => {
+        const id = String(l?.id || l?.admissionNumber || l?.admNo || l?.uuid || Math.random());
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
       });
-    }, [allLearners, assignedClassLabel, gradePart, streamPart]);
-
+    }, [students, activeAssignedClass]);
+  
+    // Parse grade and stream from activeAssignedClass (e.g. "Grade 8 Venus")
+    const [gradePart, streamPart] = React.useMemo(() => {
+      const parts = activeAssignedClass.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        const stream = parts[parts.length - 1];
+        const grade = parts.slice(0, parts.length - 1).join(' ');
+        return [grade, stream];
+      }
+      return [activeAssignedClass, ''];
+    }, [activeAssignedClass]);
+  
+    // Robust learner matching with uppercase normalization and combined string support
+    const classStudents = React.useMemo(() => {
+      if (!activeAssignedClass || activeAssignedClass === 'No Class Assigned') return [];
+      const targetFull = activeAssignedClass.trim().toUpperCase();
+      const targetGrade = gradePart.trim().toUpperCase();
+      const targetStream = streamPart.trim().toUpperCase();
+  
+      return allLearners.filter((s: any) => {
+        const sGrade = String(s?.grade || s?.currentGrade || s?.gradeLevel || s?.class || '').trim().toUpperCase();
+        const sStream = String(s?.stream || '').trim().toUpperCase();
+        const sFullCombined = `${sGrade} ${sStream}`.trim();
+  
+        // Match conditions:
+        // 1. Exact or partial combined string match ("GRADE 8 VENUS")
+        // 2. Separate grade and stream match
+        // 3. Grade match if stream is empty or wildcard
+        const matchesCombined = sFullCombined.includes(targetFull) || targetFull.includes(sFullCombined);
+        const matchesGradeAndStream = (sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade)) &&
+                                      (!targetStream || sStream === targetStream || sStream.includes(targetStream) || targetStream.includes(sStream));
+        
+        return matchesCombined || matchesGradeAndStream;
+      });
+    }, [allLearners, activeAssignedClass, gradePart, streamPart]);
+  
     const totalLearners = classStudents.length;
-
-    // Live attendance calculation for today from munyaka_central_db.attendance or v2 session registers
+  
+    // Live attendance calculation for today
     const todayStr = new Date().toISOString().split('T')[0];
     const { attendanceToday, attendanceRate } = React.useMemo(() => {
       if (totalLearners === 0) return { attendanceToday: 0, attendanceRate: 0 };
       let present = 0;
       const enrolledIds = new Set(classStudents.map((l: any) => String(l.id || l.admissionNumber || l.admNo)));
-
-      // Try v2 session key
+  
       const v2Key = `munyaka_attendance_v2_${gradePart.replace(/\s+/g, '_')}_${streamPart}_${todayStr}`;
       const v2Data = localStorage.getItem(v2Key);
       if (v2Data) {
@@ -250,22 +290,22 @@ export default function TeacherDashboard() {
           }
         } catch {}
       }
-
+  
       if (present === 0) {
         try {
           const attRecords = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
           const todayRecs = attRecords.filter((rec: any) => {
             const recDate = String(rec.date || '').split('T')[0];
-            const recGrade = String(rec.grade || rec.class || '').trim().toLowerCase();
-            const recStream = String(rec.stream || '').trim().toLowerCase();
-            return recDate === todayStr && (recGrade.includes(gradePart.toLowerCase()) || gradePart.toLowerCase().includes(recGrade)) && (!streamPart || recStream.includes(streamPart.toLowerCase()));
+            const recGrade = String(rec.grade || rec.class || '').trim().toUpperCase();
+            const recStream = String(rec.stream || '').trim().toUpperCase();
+            return recDate === todayStr && (recGrade.includes(gradePart.toUpperCase()) || gradePart.toUpperCase().includes(recGrade)) && (!streamPart || recStream.includes(streamPart.toUpperCase()));
           });
           if (todayRecs.length > 0) {
             present = todayRecs.filter((rec: any) => rec.status === 'present' || rec.status === 'Present' || rec.present === true).length;
           }
         } catch {}
       }
-
+  
       const rate = totalLearners > 0 ? Math.round((present / totalLearners) * 100) : 0;
       return { attendanceToday: present, attendanceRate: rate };
     }, [classStudents, totalLearners, gradePart, streamPart, todayStr]);
@@ -976,7 +1016,7 @@ export default function TeacherDashboard() {
               {totalLearners} {totalLearners === 1 ? 'Learner' : 'Learners'}
             </div>
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <span className="text-emerald-600 font-semibold">{totalLearners > 0 ? 'Active roster' : '0 registered'}</span> in Central DB
+              <span className="text-emerald-600 font-semibold">{totalLearners > 0 ? `${totalLearners} registered` : '0 registered'}</span> in Central DB
             </p>
           </CardContent>
         </Card>
