@@ -497,23 +497,33 @@ const Login: React.FC = () => {
 
       const matched = verification.user;
 
-      const rawMatchedRole = String(matched.systemRole || matched.role || matched.category || matched.designation || 'staff').trim().toLowerCase();
+      const rawMatchedRole = String(matched.systemRole || matched.role || matched.category || matched.designation || 'staff').trim();
+      const normalizedRoleKey = rawMatchedRole.toUpperCase().replace(/\s+/g, '_');
       const matchedName = String(matched.name || '').toUpperCase();
-      const finalRbacRole = matchedName.includes('JANET GATHONI KUNGU') || rawMatchedRole.includes('library') ? 'library_teacher' : (matched.rbacRole || mapRoleLabelToRbacKey(rawMatchedRole));
-      const finalRole = finalRbacRole;
+      
+      let finalRbacRole = matched.rbacRole || mapRoleLabelToRbacKey(rawMatchedRole) || rawMatchedRole.toLowerCase();
+      if (normalizedRoleKey.includes('ICT') || normalizedRoleKey.includes('IT')) {
+        finalRbacRole = 'ict_teacher';
+      } else if (normalizedRoleKey.includes('CLASS_TEACHER') || normalizedRoleKey.includes('HOMEROOM')) {
+        finalRbacRole = 'class_teacher';
+      } else if (normalizedRoleKey.includes('ADMIN') || normalizedRoleKey.includes('HOI') || normalizedRoleKey.includes('HEAD')) {
+        finalRbacRole = 'admin';
+      }
 
       const userData: any = {
         id: matched.id || matched.staffId || `staff-${Date.now()}`,
         name: matched.name || 'Staff Member',
         email: matched.email || trimmedId,
         phone: matched.phone || '',
-        role: finalRole,
-        title: matchedName.includes('JANET GATHONI KUNGU') ? 'Library Teacher' : (matched.title || matched.category || matched.designation || 'Staff'),
-        category: matchedName.includes('JANET GATHONI KUNGU') ? 'Library Teacher' : (matched.category || matched.role || 'Staff'),
+        role: finalRbacRole,
+        title: matched.title || matched.category || matched.designation || 'Staff',
+        category: matched.category || matched.role || 'Staff',
         rbacRole: finalRbacRole,
         assignedClass: matched.assignedGrade || matched.assignedClass || '',
+        assignedStream: matched.assignedStream || '',
+        assignedSubjects: matched.assignedSubjects || [],
         staff_id: matched.staffId || '',
-        department: matched.department || (matchedName.includes('JANET GATHONI KUNGU') ? 'Library & Media Center' : 'General'),
+        department: matched.department || 'General',
         avatar: (matched.name || 'U')
           .split(' ')
           .map(n => n[0] || '')
@@ -527,20 +537,10 @@ const Login: React.FC = () => {
       localStorage.setItem('isAuthenticated', 'true');
       if (setUser) setUser(userData);
 
-      showSuccess(`Welcome back, ${userData.name}!`);
-      setIsStaffVerifying(false);
-      navigate('/dashboard', { replace: true });
-
       try {
-        localStorage.setItem('munyaka_session', JSON.stringify(userData));
-        localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
         localStorage.setItem('user_role', userData.role);
         setActiveStaffSession(matched);
-      } catch { /* ignore */ }
-
-      if (setUser) {
-        setUser({ ...userData, role: (userData.role as any) || 'staff' });
-      }
+      } catch {}
 
       showSuccess(`Welcome, ${userData.name}!`);
       
