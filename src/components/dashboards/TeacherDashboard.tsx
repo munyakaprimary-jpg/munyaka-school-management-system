@@ -1014,13 +1014,37 @@ export default function TeacherDashboard() {
               <BookOpen className="w-5 h-5" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-2">
             <div className="text-xl font-bold text-slate-900 tracking-tight">
               {fullClassTitle}
             </div>
-            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+            <p className="text-xs text-slate-500 flex items-center gap-1">
               <span>Primary Homeroom & Subject Stream</span>
             </p>
+            <div className="pt-1">
+              <Select
+                value={selectedClass}
+                onValueChange={(val) => {
+                  setSelectedClass(val);
+                  try {
+                    const existing = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+                    existing.assignedClass = val;
+                    localStorage.setItem('munyaka_current_user', JSON.stringify(existing));
+                  } catch {}
+                }}
+              >
+                <SelectTrigger className="w-full h-9 bg-slate-50 border-emerald-200 font-bold text-xs text-slate-800 rounded-xl">
+                  <SelectValue placeholder="Switch Class..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {allDynamicClassOptions.map((classNameOption) => (
+                    <SelectItem key={classNameOption} value={classNameOption} className="text-xs font-semibold">
+                      {classNameOption}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
 
