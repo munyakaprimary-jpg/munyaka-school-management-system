@@ -429,23 +429,24 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const isTeacherRole = userRoleLower === 'teacher' || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher';
 
   const menuItems = isTeacherRole ? [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: Users, label: 'My Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: ClipboardCheck, label: 'Roll Call / Attendance', path: '/attendance', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: FileSpreadsheet, label: 'Assessments & Marks', path: '/assessments', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'], subItems: [
-          { icon: ClipboardCheck, label: 'Grading Review', path: '/grading', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-          { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-          { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-          { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-          { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: Users, label: 'My Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: ClipboardCheck, label: 'Roll Call / Attendance', path: '/attendance', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: FileSpreadsheet, label: 'Assessments & Marks', path: '/assessments', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'], subItems: [
+          { icon: ClipboardCheck, label: 'Grading Review', path: '/grading', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+          { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+          { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+          { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+          { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
         ] },
-        { icon: FileText, label: 'Sync & Export Package', path: '/teacher-export', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-        { icon: ClipboardList, label: 'Exam Types', path: '/teacher/exam-types', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-        { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+        { icon: FileText, label: 'Sync & Export Package', path: '/teacher-export', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher', 'ict_teacher'] },
+        { icon: ClipboardList, label: 'Exam Types', path: '/teacher/exam-types', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher', 'ict_teacher'] },
+        { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
   ] : [
     // ── Dashboard — position #1 for ALL roles; the Dashboard component
     // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
