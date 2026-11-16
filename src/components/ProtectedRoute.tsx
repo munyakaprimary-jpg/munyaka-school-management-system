@@ -74,7 +74,6 @@ const ProtectedRoute = ({
       moduleKey: targetModuleKey,
       redirectingTo: landingPage
     });
-    showWarning("Access restricted by institutional RBAC policy.");
     return <Navigate to={landingPage} replace />;
   }
 
@@ -90,7 +89,6 @@ const ProtectedRoute = ({
 
     if (isBlocked) {
       const landingPage = getRoleLandingPage(user.role);
-      showWarning("Access restricted by institutional RBAC policy.");
       return <Navigate to={landingPage} replace />;
     }
   }
@@ -103,12 +101,12 @@ const ProtectedRoute = ({
       if (ar === 'owner' && isOwnerOrSuper) return true;
       if (ar === 'admin' && (isAdmin || isOwnerOrSuper)) return true;
       if (ar === 'teacher' && (rawRole.includes('teacher') || isAdmin || isOwnerOrSuper)) return true;
+      if (rawRole.includes('ict') && (ar.includes('ict') || ar.includes('teacher'))) return true;
       return false;
     });
 
     if (!isAllowed) {
       const landingPage = getRoleLandingPage(user.role);
-      showWarning("Access restricted by institutional RBAC policy.");
       return <Navigate to={landingPage} replace />;
     }
   }

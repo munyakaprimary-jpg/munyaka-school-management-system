@@ -5,7 +5,7 @@ export function roleHasModulePermission(role: string, moduleKey: string): boolea
   if (normRole === 'ADMIN' || normRole === 'SUPER_ADMIN' || normRole === 'OWNER' || normRole === 'HOI') return true;
   if (moduleKey === 'daily_checkin') return true;
   if (normRole.includes('ICT') || normRole.includes('TECH') || normRole === 'ICT_TEACHER' || normRole === 'ICT_TECHNICIAN' || normRole === 'SUBJECT_TEACHER' || normRole === 'TEACHER') {
-    if (['inventory', 'dashboard', 'digital_skills', 'practical_competencies', 'server', 'timetable', 'attendance', 'students', 'assessments', 'reports', 'library'].includes(moduleKey)) return true;
+    return true;
   }
 
   // Check custom live RBAC matrix stored in localStorage first
