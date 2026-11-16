@@ -225,16 +225,18 @@ const TeacherCommunication = () => {
             Create school announcements, homework briefs, direct teacher circulars, and fee notices. All items instantly sync to the parent and learner inbox.
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 relative z-30 pointer-events-auto">
           <Button
+            type="button"
             onClick={() => setActiveTab('compose')}
-            className={`rounded-2xl font-bold gap-2 ${activeTab === 'compose' ? 'bg-white text-indigo-900 hover:bg-indigo-50' : 'bg-indigo-700/60 text-white hover:bg-indigo-700'}`}
+            className={`rounded-2xl font-bold gap-2 cursor-pointer pointer-events-auto ${activeTab === 'compose' ? 'bg-white text-indigo-900 hover:bg-indigo-50 shadow-md' : 'bg-indigo-700/60 text-white hover:bg-indigo-700'}`}
           >
             <Send size={16} /> Compose Broadcast
           </Button>
           <Button
+            type="button"
             onClick={() => setActiveTab('history')}
-            className={`rounded-2xl font-bold gap-2 ${activeTab === 'history' ? 'bg-white text-indigo-900 hover:bg-indigo-50' : 'bg-indigo-700/60 text-white hover:bg-indigo-700'}`}
+            className={`rounded-2xl font-bold gap-2 cursor-pointer pointer-events-auto ${activeTab === 'history' ? 'bg-white text-indigo-900 hover:bg-indigo-50 shadow-md' : 'bg-indigo-700/60 text-white hover:bg-indigo-700'}`}
           >
             <History size={16} /> All Broadcasts ({communications.length})
           </Button>
