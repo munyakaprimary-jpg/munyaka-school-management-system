@@ -181,22 +181,6 @@ export default function TeacherDashboard() {
     const activeDevices = devices.filter(d => String(d.status || '').toLowerCase() === 'active' || String(d.status || '').toLowerCase() === 'operational').length;
     const underMaintenance = devices.filter(d => String(d.status || '').toLowerCase().includes('repair') || String(d.status || '').toLowerCase().includes('maintenance') || String(d.status || '').toLowerCase().includes('damaged')).length;
 
-    // Load learners from munyaka_central_db.learners or munyaka_learners for ICT dashboard if needed
-    const allLearners = React.useMemo(() => {
-      try {
-        const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-        if (Array.isArray(centralDb?.learners) && centralDb.learners.length > 0) {
-          return centralDb.learners;
-        }
-      } catch {}
-      try {
-        const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || '[]';
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch {}
-      return students;
-    }, [students]);
-
     // Unified learners list (combining localStorage cache and central DB)
     const allLearners = React.useMemo(() => {
       const list: any[] = [];
