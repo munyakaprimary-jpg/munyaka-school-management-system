@@ -338,7 +338,7 @@ export default function TeacherDashboard() {
           </div>
           <div className="flex flex-wrap gap-3 mt-6 relative z-10">
             <Button
-              onClick={() => navigate('/inventory')}
+              onClick={() => navigate('/ict-lab')}
               className="bg-white text-blue-900 hover:bg-blue-50 font-bold rounded-xl shadow-sm flex items-center gap-2"
             >
               Open ICT & Device Inventory <ArrowRight className="w-4 h-4" />
