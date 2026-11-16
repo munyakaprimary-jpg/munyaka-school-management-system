@@ -78,7 +78,7 @@ export default function TeacherDashboard() {
       const streamsForGrade = getStreamsForGrade(grade, gradesStreamsConfig);
       if (streamsForGrade.length > 0) {
         streamsForGrade.forEach(stream => {
-          list.add ? list.add(`${grade} ${stream}`) : list.push(`${grade} ${stream}`);
+          list.push(`${grade} ${stream}`);
         });
       } else {
         list.push(`${grade} Blue`);
