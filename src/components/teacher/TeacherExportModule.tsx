@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, ShieldCheck } from 'lucide-react';
+import { Download, ShieldCheck, Calendar as CalendarIcon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
 import { showSuccess, showError } from '@/utils/toast';
@@ -59,35 +60,130 @@ export const TeacherExportModule: React.FC = () => {
 
   const [selectedStream, setSelectedStream] = useState<string>(initialStreamPart);
 
-  // Fetch counts of teacher records in offline local state
-  const attendanceCount = (() => {
+  // Optional Date Picker for Missed Syncs (defaults to today YYYY-MM-DD)
+  const todayLocalString = useMemo(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const [exportDate, setExportDate] = useState<string>(todayLocalString);
+
+  // Helper to normalize grade & stream strings case-insensitively
+  const normalizeStr = (val: any) => String(val || '').trim().toLowerCase();
+
+  // Helper to check if an attendance record matches today's date & class AND is not unsubmitted/blank
+  const isValidAttendanceMatch = (record: any, targetDate: string, targetGrade: string, targetStream: string) => {
+    if (!record || typeof record !== 'object') return false;
+
+    // 1. Date filter (match record.date or parsed date)
+    const recDate = String(record.date || record.updatedAt || record.timestamp || '').split('T')[0];
+    if (targetDate && recDate && recDate !== targetDate) return false;
+
+    // 2. Class/Grade & Stream filter
+    const recGrade = normalizeStr(record.grade || record.classLevel || record.assignedGrade || '');
+    const recStream = normalizeStr(record.stream || record.departmentOrStream || record.assignedStream || '');
+    const normTargetGrade = normalizeStr(targetGrade);
+    const normTargetStream = normalizeStr(targetStream);
+
+    if (normTargetGrade && recGrade && recGrade !== normTargetGrade) return false;
+    if (normTargetStream && recStream && recStream !== normTargetStream) return false;
+
+    // 3. Exclude unsubmitted/blank attendance records where both morning and afternoon statuses are empty/null/blank
+    if (record.students && typeof record.students === 'object') {
+      const studentEntries = Object.values(record.students);
+      if (studentEntries.length > 0) {
+        // Check if at least one student has a non-empty morning or afternoon status
+        const hasValidStatus = studentEntries.some((s: any) => {
+          const m = String(s?.morning || s?.status || '').trim();
+          const a = String(s?.afternoon || '').trim();
+          return (m && m !== '' && m.toLowerCase() !== 'null' && m.toLowerCase() !== 'undefined') ||
+                 (a && a !== '' && a.toLowerCase() !== 'null' && a.toLowerCase() !== 'undefined');
+        });
+        if (!hasValidStatus) return false;
+      }
+    } else {
+      const m = String(record.morning || record.status || '').trim();
+      const a = String(record.afternoon || '').trim();
+      const isBlank = (!m || m.toLowerCase() === 'null') && (!a || a.toLowerCase() === 'null');
+      if (isBlank) return false;
+    }
+
+    return true;
+  };
+
+  // Helper to check if a marks record matches today's date & class
+  const isValidMarksMatch = (record: any, targetDate: string, targetGrade: string, targetStream: string) => {
+    if (!record || typeof record !== 'object') return false;
+    const recDate = String(record.date || record.updatedAt || record.timestamp || record.submittedAt || '').split('T')[0];
+    if (targetDate && recDate && recDate !== targetDate) return false;
+
+    const recGrade = normalizeStr(record.grade || record.classLevel || record.assignedGrade || '');
+    const recStream = normalizeStr(record.stream || record.assignedStream || '');
+    const normTargetGrade = normalizeStr(targetGrade);
+    const normTargetStream = normalizeStr(targetStream);
+
+    if (normTargetGrade && recGrade && recGrade !== normTargetGrade) return false;
+    if (normTargetStream && recStream && recStream !== normTargetStream) return false;
+
+    return true;
+  };
+
+  // Helper to check if a check-in record matches today's date & class/teacher
+  const isValidCheckInMatch = (record: any, targetDate: string, targetGrade: string, targetStream: string) => {
+    if (!record || typeof record !== 'object') return false;
+    const recDate = String(record.date || record.checkInDate || record.timestamp || record.updatedAt || '').split('T')[0];
+    if (targetDate && recDate && recDate !== targetDate) return false;
+
+    const recGrade = normalizeStr(record.grade || record.classLevel || record.assignedGrade || '');
+    const recStream = normalizeStr(record.stream || record.departmentOrStream || record.assignedStream || '');
+    const normTargetGrade = normalizeStr(targetGrade);
+    const normTargetStream = normalizeStr(targetStream);
+
+    if (normTargetGrade && recGrade && recGrade !== normTargetGrade) return false;
+    if (normTargetStream && recStream && recStream !== normTargetStream) return false;
+
+    return true;
+  };
+
+  // Filtered counts for the UI counters
+  const attendanceCount = useMemo(() => {
     try {
-      const records = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
-      return Array.isArray(records) ? records.length : 0;
+      const rawRollCalls = localStorage.getItem('roll_call_records') || localStorage.getItem('munyaka_attendance_records') || '[]';
+      const parsed = JSON.parse(rawRollCalls);
+      const list = Array.isArray(parsed) ? parsed : Object.values(parsed);
+      const filtered = list.filter((r: any) => isValidAttendanceMatch(r, exportDate, selectedGrade, selectedStream));
+      return filtered.length;
     } catch {
       return 0;
     }
-  })();
+  }, [exportDate, selectedGrade, selectedStream]);
 
-  const marksCount = (() => {
+  const marksCount = useMemo(() => {
     try {
-      const records = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
-      return Array.isArray(records) ? records.length : 0;
+      const records = JSON.parse(localStorage.getItem('marked_student_submissions') || localStorage.getItem('munyaka_marks_records') || '[]');
+      const list = Array.isArray(records) ? records : Object.values(records);
+      const filtered = list.filter((r: any) => isValidMarksMatch(r, exportDate, selectedGrade, selectedStream));
+      return filtered.length;
     } catch {
       return 0;
     }
-  })();
+  }, [exportDate, selectedGrade, selectedStream]);
 
-  const checkInsCount = (() => {
+  const checkInsCount = useMemo(() => {
     try {
-      const records = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || '[]');
-      return Array.isArray(records) ? records.length : 0;
+      const records = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || localStorage.getItem('munyaka_staff_checkins') || '[]');
+      const list = Array.isArray(records) ? records : Object.values(records);
+      const filtered = list.filter((r: any) => isValidCheckInMatch(r, exportDate, selectedGrade, selectedStream));
+      return filtered.length;
     } catch {
       return 0;
     }
-  })();
+  }, [exportDate, selectedGrade, selectedStream]);
 
-  // Auto-sync with teacher assigned class changes (e.g. from the Assigned Class selector card)
+  // Auto-sync with teacher assigned class changes
   useEffect(() => {
     const checkAssignedClass = () => {
       try {
@@ -128,10 +224,37 @@ export const TeacherExportModule: React.FC = () => {
     };
   }, [user, grades, config]);
 
-  const buildPayload = () => {
-    const attendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
-    const marks = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
-    const checkIns = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || localStorage.getItem('munyaka_staff_checkins') || '[]');
+  const buildFilteredPayload = () => {
+    let rawRollCalls: any = [];
+    try {
+      const stored = localStorage.getItem('roll_call_records') || localStorage.getItem('munyaka_attendance_records') || '[]';
+      const parsed = JSON.parse(stored);
+      rawRollCalls = Array.isArray(parsed) ? parsed : Object.values(parsed);
+    } catch {
+      rawRollCalls = [];
+    }
+    const filteredAttendance = rawRollCalls.filter((r: any) => isValidAttendanceMatch(r, exportDate, selectedGrade, selectedStream));
+
+    let rawMarks: any = [];
+    try {
+      const stored = localStorage.getItem('marked_student_submissions') || localStorage.getItem('munyaka_marks_records') || '[]';
+      const parsed = JSON.parse(stored);
+      rawMarks = Array.isArray(parsed) ? parsed : Object.values(parsed);
+    } catch {
+      rawMarks = [];
+    }
+    const filteredMarks = rawMarks.filter((r: any) => isValidMarksMatch(r, exportDate, selectedGrade, selectedStream));
+
+    let rawCheckIns: any = [];
+    try {
+      const stored = localStorage.getItem('munyaka_teacher_checkins') || localStorage.getItem('munyaka_staff_checkins') || '[]';
+      const parsed = JSON.parse(stored);
+      rawCheckIns = Array.isArray(parsed) ? parsed : Object.values(parsed);
+    } catch {
+      rawCheckIns = [];
+    }
+    const filteredCheckIns = rawCheckIns.filter((r: any) => isValidCheckInMatch(r, exportDate, selectedGrade, selectedStream));
+
     let centralDb: any = {};
     try {
       centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
@@ -148,13 +271,14 @@ export const TeacherExportModule: React.FC = () => {
         packageType: 'TEACHER_OFFLINE_BATCH',
         assignedClass: selectedGrade,
         assignedStream: selectedStream,
+        exportDateFilter: exportDate,
         exportedAt: new Date().toISOString(),
         appVersion: '2.0.0'
       },
       data: {
-        attendance,
-        marks,
-        checkIns,
+        attendance: filteredAttendance,
+        marks: filteredMarks,
+        checkIns: filteredCheckIns,
         munyaka_central_db: centralDb
       }
     };
@@ -162,11 +286,10 @@ export const TeacherExportModule: React.FC = () => {
 
   const handleDownloadJsonFallback = () => {
     try {
-      const payload = buildPayload();
+      const payload = buildFilteredPayload();
       const jsonString = JSON.stringify(payload, null, 2);
       const staffNameSlug = (user?.name || 'teacher').replace(/\s+/g, '_').toLowerCase();
-      const todayDate = new Date().toISOString().split('T')[0];
-      const filename = `munyaka_teacher_sync_${staffNameSlug}_${todayDate}.json`;
+      const filename = `munyaka_teacher_sync_${staffNameSlug}_${exportDate}.json`;
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -176,7 +299,7 @@ export const TeacherExportModule: React.FC = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showSuccess('Teacher sync package JSON downloaded successfully!');
+      showSuccess(`Teacher sync package JSON for ${exportDate} downloaded successfully!`);
     } catch (err: any) {
       showError(err?.message || 'Failed to download JSON fallback.');
     }
@@ -196,7 +319,7 @@ export const TeacherExportModule: React.FC = () => {
             Export My Class Package (.json)
           </CardTitle>
           <CardDescription className="text-xs text-slate-600">
-            Package your recorded attendance, check-ins, and CBC assessment marks to send to the administrator.
+            Package your recorded attendance, check-ins, and CBC assessment marks filtered by active class and export date.
           </CardDescription>
         </CardHeader>
 
@@ -217,7 +340,7 @@ export const TeacherExportModule: React.FC = () => {
             </div>
           </div>
 
-          {/* Interactive Grade & Stream Selectors */}
+          {/* Interactive Grade, Stream & Export Date Selectors */}
           <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-100 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-700">Teacher: {user?.name || 'Class Teacher'}</span>
@@ -226,7 +349,7 @@ export const TeacherExportModule: React.FC = () => {
               </Badge>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
               <div className="space-y-1">
                 <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   Grade / Class
@@ -262,6 +385,18 @@ export const TeacherExportModule: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                  <CalendarIcon className="w-3 h-3 text-indigo-600" /> Export Date
+                </Label>
+                <Input
+                  type="date"
+                  value={exportDate}
+                  onChange={(e) => setExportDate(e.target.value)}
+                  className="h-10 rounded-xl bg-white border-slate-200 font-bold text-xs text-slate-800 px-3"
+                />
+              </div>
             </div>
           </div>
 
@@ -270,6 +405,7 @@ export const TeacherExportModule: React.FC = () => {
             <TeacherSyncQrGenerator
               grade={selectedGrade}
               stream={selectedStream}
+              exportDate={exportDate}
               className="flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-black rounded-xl shadow-md transition-all active:scale-95"
             />
             <Button

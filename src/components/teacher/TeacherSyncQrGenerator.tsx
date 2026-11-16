@@ -14,16 +14,77 @@ interface TeacherSyncQrGeneratorProps {
   className?: string;
   grade?: string;
   stream?: string;
+  exportDate?: string;
   disabled?: boolean;
 }
 
-const readJsonArray = (key: string): any[] => {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(key) || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+const normalizeStr = (val: any) => String(val || '').trim().toLowerCase();
+
+const isValidAttendanceMatch = (record: any, targetDate: string, targetGrade: string, targetStream: string) => {
+  if (!record || typeof record !== 'object') return false;
+
+  const recDate = String(record.date || record.updatedAt || record.timestamp || '').split('T')[0];
+  if (targetDate && recDate && recDate !== targetDate) return false;
+
+  const recGrade = normalizeStr(record.grade || record.classLevel || record.assignedGrade || '');
+  const recStream = normalizeStr(record.stream || record.departmentOrStream || record.assignedStream || '');
+  const normTargetGrade = normalizeStr(targetGrade);
+  const normTargetStream = normalizeStr(targetStream);
+
+  if (normTargetGrade && recGrade && recGrade !== normTargetGrade) return false;
+  if (normTargetStream && recStream && recStream !== normTargetStream) return false;
+
+  if (record.students && typeof record.students === 'object') {
+    const studentEntries = Object.values(record.students);
+    if (studentEntries.length > 0) {
+      const hasValidStatus = studentEntries.some((s: any) => {
+        const m = String(s?.morning || s?.status || '').trim();
+        const a = String(s?.afternoon || '').trim();
+        return (m && m !== '' && m.toLowerCase() !== 'null' && m.toLowerCase() !== 'undefined') ||
+               (a && a !== '' && a.toLowerCase() !== 'null' && a.toLowerCase() !== 'undefined');
+      });
+      if (!hasValidStatus) return false;
+    }
+  } else {
+    const m = String(record.morning || record.status || '').trim();
+    const a = String(record.afternoon || '').trim();
+    const isBlank = (!m || m.toLowerCase() === 'null') && (!a || a.toLowerCase() === 'null');
+    if (isBlank) return false;
   }
+
+  return true;
+};
+
+const isValidMarksMatch = (record: any, targetDate: string, targetGrade: string, targetStream: string) => {
+  if (!record || typeof record !== 'object') return false;
+  const recDate = String(record.date || record.updatedAt || record.timestamp || record.submittedAt || '').split('T')[0];
+  if (targetDate && recDate && recDate !== targetDate) return false;
+
+  const recGrade = normalizeStr(record.grade || record.classLevel || record.assignedGrade || '');
+  const recStream = normalizeStr(record.stream || record.assignedStream || '');
+  const normTargetGrade = normalizeStr(targetGrade);
+  const normTargetStream = normalizeStr(targetStream);
+
+  if (normTargetGrade && recGrade && recGrade !== normTargetGrade) return false;
+  if (normTargetStream && recStream && recStream !== normTargetStream) return false;
+
+  return true;
+};
+
+const isValidCheckInMatch = (record: any, targetDate: string, targetGrade: string, targetStream: string) => {
+  if (!record || typeof record !== 'object') return false;
+  const recDate = String(record.date || record.checkInDate || record.timestamp || record.updatedAt || '').split('T')[0];
+  if (targetDate && recDate && recDate !== targetDate) return false;
+
+  const recGrade = normalizeStr(record.grade || record.classLevel || record.assignedGrade || '');
+  const recStream = normalizeStr(record.stream || record.departmentOrStream || record.assignedStream || '');
+  const normTargetGrade = normalizeStr(targetGrade);
+  const normTargetStream = normalizeStr(targetStream);
+
+  if (normTargetGrade && recGrade && recGrade !== normTargetGrade) return false;
+  if (normTargetStream && recStream && recStream !== normTargetStream) return false;
+
+  return true;
 };
 
 export const TeacherSyncQrGenerator: React.FC<TeacherSyncQrGeneratorProps> = ({
@@ -31,6 +92,7 @@ export const TeacherSyncQrGenerator: React.FC<TeacherSyncQrGeneratorProps> = ({
   className,
   grade,
   stream,
+  exportDate,
   disabled = false,
 }) => {
   const { user } = useAuth();
@@ -39,20 +101,71 @@ export const TeacherSyncQrGenerator: React.FC<TeacherSyncQrGeneratorProps> = ({
 
   const selectedGrade = grade || (user as any)?.assignedGrade || (user as any)?.assignedClass || 'Grade 4';
   const selectedStream = stream || (user as any)?.assignedStream || (user as any)?.stream || 'Green';
+  const todayLocalString = exportDate || new Date().toISOString().split('T')[0];
 
-  const attendanceCount = readJsonArray('munyaka_attendance_records').length;
-  const marksCount = readJsonArray('marked_student_submissions').length;
-  const checkInsCount =
-    readJsonArray('munyaka_teacher_checkins').length + readJsonArray('munyaka_staff_checkins').length;
+  const attendanceCount = (() => {
+    try {
+      const stored = localStorage.getItem('roll_call_records') || localStorage.getItem('munyaka_attendance_records') || '[]';
+      const parsed = JSON.parse(stored);
+      const list = Array.isArray(parsed) ? parsed : Object.values(parsed);
+      return list.filter((r: any) => isValidAttendanceMatch(r, todayLocalString, selectedGrade, selectedStream)).length;
+    } catch {
+      return 0;
+    }
+  })();
+
+  const marksCount = (() => {
+    try {
+      const records = JSON.parse(localStorage.getItem('marked_student_submissions') || localStorage.getItem('munyaka_marks_records') || '[]');
+      const list = Array.isArray(records) ? records : Object.values(records);
+      return list.filter((r: any) => isValidMarksMatch(r, todayLocalString, selectedGrade, selectedStream)).length;
+    } catch {
+      return 0;
+    }
+  })();
+
+  const checkInsCount = (() => {
+    try {
+      const records = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || localStorage.getItem('munyaka_staff_checkins') || '[]');
+      const list = Array.isArray(records) ? records : Object.values(records);
+      return list.filter((r: any) => isValidCheckInMatch(r, todayLocalString, selectedGrade, selectedStream)).length;
+    } catch {
+      return 0;
+    }
+  })();
 
   // Exact JSON schema consumed by the Admin Dashboard "Scan Teacher Sync QR" scanner
   const buildPayload = () => {
-    const attendance = readJsonArray('munyaka_attendance_records');
-    const marks = readJsonArray('marked_student_submissions');
-    const checkIns = [
-      ...readJsonArray('munyaka_teacher_checkins'),
-      ...readJsonArray('munyaka_staff_checkins'),
-    ];
+    let rawRollCalls: any = [];
+    try {
+      const stored = localStorage.getItem('roll_call_records') || localStorage.getItem('munyaka_attendance_records') || '[]';
+      const parsed = JSON.parse(stored);
+      rawRollCalls = Array.isArray(parsed) ? parsed : Object.values(parsed);
+    } catch {
+      rawRollCalls = [];
+    }
+    const attendance = rawRollCalls.filter((r: any) => isValidAttendanceMatch(r, todayLocalString, selectedGrade, selectedStream));
+
+    let rawMarks: any = [];
+    try {
+      const stored = localStorage.getItem('marked_student_submissions') || localStorage.getItem('munyaka_marks_records') || '[]';
+      const parsed = JSON.parse(stored);
+      rawMarks = Array.isArray(parsed) ? parsed : Object.values(parsed);
+    } catch {
+      rawMarks = [];
+    }
+    const marks = rawMarks.filter((r: any) => isValidMarksMatch(r, todayLocalString, selectedGrade, selectedStream));
+
+    let rawCheckIns: any = [];
+    try {
+      const stored = localStorage.getItem('munyaka_teacher_checkins') || localStorage.getItem('munyaka_staff_checkins') || '[]';
+      const parsed = JSON.parse(stored);
+      rawCheckIns = Array.isArray(parsed) ? parsed : Object.values(parsed);
+    } catch {
+      rawCheckIns = [];
+    }
+    const checkIns = rawCheckIns.filter((r: any) => isValidCheckInMatch(r, todayLocalString, selectedGrade, selectedStream));
+
     let centralDb: any = {};
     try {
       centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
@@ -69,6 +182,7 @@ export const TeacherSyncQrGenerator: React.FC<TeacherSyncQrGeneratorProps> = ({
         packageType: 'TEACHER_OFFLINE_BATCH',
         assignedClass: selectedGrade,
         assignedStream: selectedStream,
+        exportDateFilter: todayLocalString,
         exportedAt: new Date().toISOString(),
         appVersion: '2.0.0',
       },
@@ -96,8 +210,7 @@ export const TeacherSyncQrGenerator: React.FC<TeacherSyncQrGeneratorProps> = ({
     try {
       const jsonString = JSON.stringify(buildPayload(), null, 2);
       const staffNameSlug = (user?.name || 'teacher').replace(/\s+/g, '_').toLowerCase();
-      const todayDate = new Date().toISOString().split('T')[0];
-      const filename = `munyaka_teacher_sync_${staffNameSlug}_${todayDate}.json`;
+      const filename = `munyaka_teacher_sync_${staffNameSlug}_${todayLocalString}.json`;
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -107,7 +220,7 @@ export const TeacherSyncQrGenerator: React.FC<TeacherSyncQrGeneratorProps> = ({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showSuccess('Teacher sync package JSON downloaded successfully!');
+      showSuccess(`Teacher sync package JSON for ${todayLocalString} downloaded successfully!`);
     } catch (err: any) {
       showError(err?.message || 'Failed to download JSON fallback.');
     }
@@ -128,7 +241,7 @@ export const TeacherSyncQrGenerator: React.FC<TeacherSyncQrGeneratorProps> = ({
             <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
               <div>
                 <Badge className="bg-emerald-100 text-emerald-800 font-bold uppercase tracking-wider text-[10px]">
-                  Centre Code: {SCHOOL_CENTRE_CODE}
+                  Centre Code: {SCHOOL_CENTRE_CODE} (Date: {todayLocalString})
                 </Badge>
                 <h3 className="text-lg font-black text-slate-900 mt-1">Teacher Sync QR Code</h3>
               </div>
@@ -171,7 +284,7 @@ export const TeacherSyncQrGenerator: React.FC<TeacherSyncQrGeneratorProps> = ({
               {/* Compact summary of included records */}
               <div className="w-full bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2">
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Dataset Summary
+                  Dataset Summary ({todayLocalString})
                 </h4>
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
                   <div className="bg-white p-2 rounded-xl border border-slate-100">
