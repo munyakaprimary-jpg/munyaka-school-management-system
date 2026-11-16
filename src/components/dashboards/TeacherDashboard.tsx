@@ -248,28 +248,6 @@ export default function TeacherDashboard() {
         return (gradeMatches && streamMatches) || combinedMatches;
       });
     }, [allLearners, assignedClassLabel, gradePart, streamPart]);
-    const classStudents = React.useMemo(() => {
-      if (!activeAssignedClass || activeAssignedClass === 'No Class Assigned') return [];
-      const targetFull = activeAssignedClass.trim().toUpperCase();
-      const targetGrade = gradePart.trim().toUpperCase();
-      const targetStream = streamPart.trim().toUpperCase();
-  
-      return allLearners.filter((s: any) => {
-        const sGrade = String(s?.grade || s?.currentGrade || s?.gradeLevel || s?.class || '').trim().toUpperCase();
-        const sStream = String(s?.stream || '').trim().toUpperCase();
-        const sFullCombined = `${sGrade} ${sStream}`.trim();
-  
-        // Match conditions:
-        // 1. Exact or partial combined string match ("GRADE 8 VENUS")
-        // 2. Separate grade and stream match
-        // 3. Grade match if stream is empty or wildcard
-        const matchesCombined = sFullCombined.includes(targetFull) || targetFull.includes(sFullCombined);
-        const matchesGradeAndStream = (sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade)) &&
-                                      (!targetStream || sStream === targetStream || sStream.includes(targetStream) || targetStream.includes(sStream));
-        
-        return matchesCombined || matchesGradeAndStream;
-      });
-    }, [allLearners, activeAssignedClass, gradePart, streamPart]);
   
     const totalLearners = classStudents.length;
   
