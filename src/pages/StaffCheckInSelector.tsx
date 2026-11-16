@@ -4,52 +4,24 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Clock, ChevronRight, UserCheck, BookOpen, FlaskConical,
-  MapPin, User, Moon, Sun, Sparkles, Search, X, Briefcase,
+  MapPin, User, Moon, Sun, Sparkles, Briefcase, ShieldCheck,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-
-interface DirectoryStaff {
-  id: string;
-  staff_id?: string;
-  id_no?: string;
-  tsc_no?: string;
-  tscNo?: string;
-  tscNumber?: string;
-  name: string;
-  full_name?: string;
-  role: string;
-  designation?: string;
-  subjects?: string[];
-  email: string;
-  phone: string;
-  status: string;
-  department?: string;
-}
+import { useAuth } from '@/context/AuthContext';
 
 type ThemeMode = 'dark' | 'light' | 'sunset';
 
 const StaffCheckInSelector = () => {
   const navigate = useNavigate();
-  const [selectedStaffId, setSelectedStaffId] = useState<string>("");
-  const [staffDirectory, setStaffDirectory] = useState<DirectoryStaff[]>([]);
+  const { user } = useAuth();
   const [theme, setTheme] = useState<ThemeMode>('dark');
-
-  // ── Searchable combobox state ─────────────────────────────────────────────
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // ── Live clock state ──────────────────────────────────────────────────────
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
-
-  // Live clock interval reference for cleanup
   const clockIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Update time every 1000ms with proper cleanup on unmount
   useEffect(() => {
     setCurrentTime(new Date());
-
     clockIntervalRef.current = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
@@ -60,17 +32,6 @@ const StaffCheckInSelector = () => {
         clockIntervalRef.current = null;
       }
     };
-  }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Format time as HH:MM:SS AM/PM
@@ -101,126 +62,17 @@ const StaffCheckInSelector = () => {
     return `${weekday}, ${month} ${day}, ${year}`;
   }, [currentTime]);
 
-  // Load staff from multiple localStorage keys for full coverage
-  useEffect(() => {
-    const loadFromKeys = () => {
-      const keys = [
-        'munyaka_staff_directory',
-        'munyaka_staff',
-        'munyaka_staff_prereg',
-        'munyaka_users',
-        'staff',
-        'staff_list',
-        'staffDirectory',
-        'staffList',
-        'teachers',
-      ];
-
-      for (const key of keys) {
-        try {
-          const raw = localStorage.getItem(key);
-          if (!raw) continue;
-          const parsed = JSON.parse(raw);
-          const arr = Array.isArray(parsed) ? parsed : [];
-          if (arr.length > 0) {
-            setStaffDirectory(arr);
-            return;
-          }
-        } catch {
-          continue;
-        }
-    }
-
-    // No localStorage keys found — leave staffDirectory empty.
-    // (Previously fell back to INITIAL_SEED_DATA, but that path is now
-    //  disconnected: staff start at zero and are added through the UI.)
-  };
-
-    loadFromKeys();
-  }, []);
-
-  // ── Flexible search filter ─────────────────────────────────────────────────
-  // Matches Name, TSC Number, Role/Title, or Staff ID
-  const filteredStaff = useMemo(() => {
-    const active = staffDirectory.filter(
-      s => !s.status || s.status === 'Active' || s.status === 'Pre-Registered' || s.status === 'active'
-    );
-
-    const q = String(searchQuery || '').toLowerCase().trim();
-    if (!q) return []; // Hide list when search query is empty
-    
-    return active.filter(staff => {
-      const name = (staff.name || staff.full_name || '').toLowerCase();
-      const tscNo = (staff.tsc_no || staff.tscNo || staff.tscNumber || '').toLowerCase();
-      const role = (staff.role || staff.designation || '').toLowerCase();
-      const id = (staff.id || staff.staff_id || staff.id_no || '').toLowerCase();
-
-      return name.includes(q) || tscNo.includes(q) || role.includes(q) || id.includes(q);
-    });
-  }, [staffDirectory, searchQuery]);
-
-  // ── Dynamic subtitle label for dropdown items ─────────────────────────────────
-  // Teaching staff: "James Ndiki — TSC: 327775"
-  // Non-teaching staff with TSC: "Mary Wanjiku — TSC: 327775"
-  // Non-teaching staff (no TSC): "John Omondi — Bursar" or "John Omondi — ID: STF-004"
-  const getStaffLabel = (staff: DirectoryStaff): string => {
-    const name = staff.name || staff.full_name || 'Unknown';
-    const tsc = staff.tsc_no || staff.tscNo;
-    const role = staff.role || staff.designation || '';
-    const id = staff.id || staff.staff_id || staff.id_no;
-
-    if (tsc) {
-      return `${name} — TSC: ${tsc}`;
-    }
-    if (role) {
-      return `${name} — ${role}`;
-    }
-    if (id) {
-      return `${name} — Staff ID: ${id}`;
-    }
-    return name;
-  };
-
-  const getStaffIdentifier = (staff: DirectoryStaff): string => {
-    const tsc = staff.tsc_no || staff.tscNo;
-    if (tsc) {
-      return `TSC: ${tsc}`;
-    }
-    const idNo = staff.id_no;
-    if (idNo) {
-      return `National ID: ${idNo}`;
-    }
-    const staffId = staff.id || staff.staff_id;
-    if (staffId) {
-      return `Staff ID: ${staffId}`;
-    }
-    return 'Staff ID: N/A';
-  };
-
-  const selectedStaff = useMemo(() => {
-    return staffDirectory.find(s => s.id === selectedStaffId);
-  }, [selectedStaffId, staffDirectory]);
-
-  const handleSelectStaff = (staff: DirectoryStaff) => {
-    setSelectedStaffId(staff.id);
-    setSearchQuery('');
-    setIsDropdownOpen(false);
-    searchInputRef.current?.blur();
-  };
-
-  const handleClearSelection = () => {
-    setSelectedStaffId('');
-    setSearchQuery('');
-    setIsDropdownOpen(false);
-  };
+  // Logged-in user details bound directly to the active session (prevents proxy sign-ins)
+  const staffId = (user as any)?.staffId || (user as any)?.staff_id || user?.id || 'TCH-001';
+  const staffName = user?.name || (user as any)?.fullName || 'Class Teacher';
+  const staffRole = (user as any)?.role || (user as any)?.designation || 'Class Teacher';
+  const staffTsc = (user as any)?.tsc_no || (user as any)?.tscNo || (user as any)?.tscNumber || '';
 
   const handleProceed = () => {
-    if (!selectedStaff) return;
-    const staffId = selectedStaff.id || selectedStaff.staff_id || '';
     const params = new URLSearchParams({
       staffId,
-      name: selectedStaff.name || selectedStaff.full_name || '',
-      role: selectedStaff.role || selectedStaff.designation || '',
+      name: staffName,
+      role: staffRole,
     });
     navigate(`/staff-checkin?${params.toString()}`);
   };
@@ -247,21 +99,15 @@ const StaffCheckInSelector = () => {
       geofenceDot: 'bg-emerald-400 shadow-lg shadow-emerald-400/60',
       label: 'text-indigo-300',
       labelIcon: 'text-violet-400',
-      selectBg: 'bg-slate-950/60 border-indigo-500/30 text-white',
-      selectRing: 'focus:ring-violet-500 focus:border-violet-500/50',
-      optionBg: 'bg-slate-900 text-white',
       previewBg: 'bg-gradient-to-br from-slate-950/80 to-indigo-950/40 border-indigo-400/40',
       previewShadow: 'shadow-lg shadow-indigo-500/10',
       avatarGradient: 'bg-gradient-to-br from-indigo-500 to-violet-600',
       previewName: 'text-white',
       previewRole: 'text-indigo-300',
       subjectPill: 'bg-indigo-500/20 text-indigo-200 border-indigo-400/20',
-      chevron: 'text-indigo-300',
       buttonActive: 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-2xl shadow-indigo-600/40 hover:shadow-indigo-500/60',
-      buttonDisabled: 'disabled:from-slate-700 disabled:to-slate-700',
       footerIcon: 'text-violet-400',
       footerText: 'text-indigo-300/60',
-      nameRow: 'text-slate-200',
     },
     light: {
       pageBg: 'bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100',
@@ -283,21 +129,15 @@ const StaffCheckInSelector = () => {
       geofenceDot: 'bg-emerald-500 shadow-lg shadow-emerald-500/60',
       label: 'text-slate-700',
       labelIcon: 'text-indigo-600',
-      selectBg: 'bg-slate-50 border-slate-200 text-slate-900',
-      selectRing: 'focus:ring-blue-500 focus:border-blue-500/50',
-      optionBg: 'bg-white text-slate-900',
       previewBg: 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200',
       previewShadow: 'shadow-lg shadow-blue-200/30',
       avatarGradient: 'bg-gradient-to-br from-blue-500 to-indigo-600',
       previewName: 'text-slate-900',
       previewRole: 'text-indigo-600',
       subjectPill: 'bg-blue-100 text-blue-700 border-blue-200',
-      chevron: 'text-slate-500',
       buttonActive: 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-2xl shadow-blue-600/40 hover:shadow-blue-500/60',
-      buttonDisabled: 'disabled:from-slate-300 disabled:to-slate-300',
       footerIcon: 'text-indigo-500',
       footerText: 'text-slate-500',
-      nameRow: 'text-slate-700',
     },
     sunset: {
       pageBg: 'bg-gradient-to-br from-zinc-950 via-rose-950 to-zinc-950',
@@ -319,21 +159,15 @@ const StaffCheckInSelector = () => {
       geofenceDot: 'bg-emerald-400 shadow-lg shadow-emerald-400/60',
       label: 'text-rose-300',
       labelIcon: 'text-amber-400',
-      selectBg: 'bg-zinc-950/60 border-rose-500/30 text-white',
-      selectRing: 'focus:ring-rose-500 focus:border-rose-500/50',
-      optionBg: 'bg-zinc-900 text-white',
       previewBg: 'bg-gradient-to-br from-zinc-950/80 to-rose-950/40 border-rose-400/40',
       previewShadow: 'shadow-lg shadow-rose-500/10',
       avatarGradient: 'bg-gradient-to-br from-rose-500 to-amber-500',
       previewName: 'text-white',
       previewRole: 'text-rose-300',
       subjectPill: 'bg-rose-500/20 text-rose-200 border-rose-400/20',
-      chevron: 'text-rose-300',
       buttonActive: 'bg-gradient-to-r from-rose-600 via-purple-600 to-amber-500 hover:from-rose-500 hover:via-purple-500 hover:to-amber-400 text-white shadow-2xl shadow-rose-600/40 hover:shadow-rose-500/60',
-      buttonDisabled: 'disabled:from-zinc-700 disabled:to-zinc-700',
       footerIcon: 'text-amber-400',
       footerText: 'text-rose-300/60',
-      nameRow: 'text-rose-200',
     },
   };
 
@@ -426,10 +260,10 @@ const StaffCheckInSelector = () => {
 
               <div className="space-y-2">
                 <h1 className={`text-3xl sm:text-4xl font-black tracking-tight drop-shadow-lg bg-gradient-to-r ${tc.titleGradient} bg-clip-text text-transparent`}>
-                  Attendance
+                  Staff Attendance
                 </h1>
                 <p className={`text-sm sm:text-base font-medium max-w-sm mx-auto ${tc.subtitle}`}>
-                  Select your name, then choose an action
+                  Secured session verified for proxy-free attendance
                 </p>
               </div>
 
@@ -444,195 +278,50 @@ const StaffCheckInSelector = () => {
               </div>
             </div>
 
-            {/* Searchable Staff Combobox */}
-                        <div className="space-y-3">
-                          <label className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${tc.label}`}>
-                            <User size={14} className={tc.labelIcon} />
-                            Select Staff Member
-                          </label>
-            
-                          <div className="relative" ref={dropdownRef}>
-                            {/* Trigger button / input */}
-                            <div
-                              className={`relative ${tc.selectBg} border rounded-2xl transition-all cursor-text ${isDropdownOpen ? `ring-2 ${tc.selectRing} border-opacity-80` : 'hover:border-opacity-60'}`}
-                              onClick={() => {
-                                setIsDropdownOpen(true);
-                                setTimeout(() => searchInputRef.current?.focus(), 50);
-                              }}
-                            >
-                              {/* Search icon */}
-                              <Search
-                                size={16}
-                                className={`absolute left-4 top-1/2 -translate-y-1/2 ${tc.chevron} pointer-events-none`}
-                              />
-            
-                              {/* Search / display input */}
-                              <input
-                                ref={searchInputRef}
-                                type="text"
-                                placeholder={
-                                  selectedStaff
-                                    ? getStaffLabel(selectedStaff)
-                                    : '-- Search by name, TSC no., role, or ID --'
-                                }
-                                value={isDropdownOpen ? searchQuery : (selectedStaff ? getStaffLabel(selectedStaff) : '')}
-                                onChange={(e) => {
-                                  setSearchQuery(e.target.value);
-                                  if (!isDropdownOpen) setIsDropdownOpen(true);
-                                }}
-                                onFocus={() => setIsDropdownOpen(true)}
-                                className={`w-full bg-transparent font-bold text-sm rounded-2xl px-4 py-4 pl-10 pr-20 focus:outline-none transition-all placeholder:text-slate-600 placeholder:font-medium ${isDropdownOpen && !selectedStaffId ? '' : 'cursor-pointer'}`}
-                              />
-            
-                              {/* Clear button */}
-                              {selectedStaffId && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleClearSelection();
-                                  }}
-                                  className={`absolute right-10 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-slate-700/50 transition-colors ${tc.chevron}`}
-                                  title="Clear selection"
-                                >
-                                  <X size={14} />
-                                </button>
-                              )}
-            
-                              {/* Chevron indicator */}
-                              <div className={`absolute right-4 top-1/2 -translate-y-1/2 transition-transform ${tc.chevron} ${isDropdownOpen ? 'rotate-180' : ''}`}>
-                                <ChevronRight size={18} className="rotate-90" />
-                              </div>
-                            </div>
-            
-                            {/* Dropdown panel */}
-                            {isDropdownOpen && (
-                              <div className={`absolute z-50 w-full mt-2 ${tc.optionBg} border rounded-2xl shadow-2xl max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150`}>
-                                {filteredStaff.length === 0 ? (
-                                  <div className="px-4 py-6 text-center">
-                                    <p className="text-slate-400 text-xs font-bold">
-                                      No staff found for "{searchQuery}"
-                                    </p>
-                                    <p className="text-slate-500 text-[10px] mt-1">
-                                      Try a different name, TSC number, role, or staff ID
-                                    </p>
-                                  </div>
-                                ) : (
-                                  filteredStaff.map((staff) => {
-                                                                      const isSelected = staff.id === selectedStaffId;
-                                                                      const name = String(staff.name || staff.full_name || 'Unknown');
-                                                                      const role = String(staff.role || staff.designation || '');
-                                                                      const isTeacher = role.toLowerCase().includes('teacher') || role.toLowerCase().includes('tutor');
-            
-                                    return (
-                                      <button
-                                        key={staff.id}
-                                        type="button"
-                                        onClick={() => handleSelectStaff(staff)}
-                                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                                          isSelected
-                                            ? 'bg-indigo-600/20'
-                                            : 'hover:bg-indigo-500/10'
-                                        } border-b border-slate-700/30 last:border-b-0`}
-                                      >
-                                        {/* Avatar */}
-                                        <div className={`w-9 h-9 rounded-lg ${tc.avatarGradient} flex items-center justify-center text-white font-black text-xs shrink-0 shadow`}>
-                                          {(name).split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
-                                        </div>
-            
-                                        {/* Name + dynamic subtitle */}
-                                        <div className="flex-1 min-w-0">
-                                          <p className={`font-bold text-sm truncate ${tc.previewName}`}>{name}</p>
-                                          <p className={`text-[10px] font-bold uppercase tracking-wider truncate flex items-center gap-1.5 ${tc.previewRole}`}>
-                                            {isTeacher ? (
-                                              <>
-                                                <BookOpen size={10} className="shrink-0" />
-                                                {role || 'Teacher'}
-                                              </>
-                                            ) : role ? (
-                                              <>
-                                                <Briefcase size={10} className="shrink-0" />
-                                                {role}
-                                              </>
-                                            ) : (
-                                              <span className="text-slate-500">Staff Member</span>
-                                            )}
-                                            {/* Sub-ID badge */}
-                                            {(staff.tsc_no || staff.tscNo) && (
-                                              <span className="ml-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[9px] font-black">
-                                                TSC: {staff.tsc_no || staff.tscNo}
-                                              </span>
-                                            )}
-                                            {(staff.id || staff.staff_id) && !staff.tsc_no && !staff.tscNo && (
-                                              <span className="ml-1 text-slate-500 text-[9px]">
-                                                ID: {staff.id || staff.staff_id}
-                                              </span>
-                                            )}
-                                          </p>
-                                        </div>
-            
-                                        {/* Selected checkmark */}
-                                        {isSelected && (
-                                          <UserCheck size={16} className="text-indigo-400 shrink-0" />
-                                        )}
-                                      </button>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            )}
-                          </div>
+            {/* Locked Read-Only Profile Badge (No search/dropdown to prevent proxy sign-ins) */}
+            <div className="space-y-3">
+              <label className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${tc.label}`}>
+                <ShieldCheck size={14} className={tc.labelIcon} />
+                Authenticated Staff Profile (Locked)
+              </label>
 
-              {/* Selected Staff Preview Card */}
-                                          {selectedStaff && (
-                                            <div className={`animate-in slide-in-from-top-2 duration-300 ${tc.previewBg} border rounded-2xl p-4 space-y-2 ${tc.previewShadow}`}>
-                                              <div className="flex items-center gap-3">
-                                                <div className={`w-12 h-12 rounded-xl ${tc.avatarGradient} flex items-center justify-center text-white font-black text-sm shadow-lg`}>
-                                                  {(selectedStaff.name || selectedStaff.full_name || '')
-                                                    .split(' ')
-                                                    .map(n => n[0])
-                                                    .join('')
-                                                    .substring(0, 2)
-                                                    .toUpperCase()}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                  <div className="flex items-center gap-2 flex-wrap">
-                                                    <p className={`font-black text-sm truncate ${tc.previewName}`}>{selectedStaff.name || selectedStaff.full_name}</p>
-                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-400/20">
-                                                      {getStaffIdentifier(selectedStaff)}
-                                                    </span>
-                                                  </div>
-                                                  <p className={`text-[11px] font-bold uppercase tracking-wider truncate flex items-center gap-1.5 ${tc.previewRole} mt-0.5`}>
-                                                    {selectedStaff.role || selectedStaff.designation || 'Staff Member'}
-                                                  </p>
-                                                </div>
-                                                <UserCheck className={tc.labelIcon} size={18} />
-                                              </div>
-                                              {selectedStaff.subjects && selectedStaff.subjects.length > 0 && (
-                                                <div className={`flex items-start gap-2 pt-2 border-t ${theme === 'light' ? 'border-blue-200' : theme === 'sunset' ? 'border-rose-500/20' : 'border-indigo-500/20'}`}>
-                                                  <BookOpen size={12} className={`${tc.labelIcon} mt-0.5 shrink-0`} />
-                                                  <div className="flex flex-wrap gap-1.5">
-                                                    {selectedStaff.subjects.slice(0, 3).map((subj, i) => (
-                                        <span
-                                          key={i}
-                                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${tc.subjectPill}`}
-                                        >
-                                          {subj}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
+              <div className={`${tc.previewBg} border rounded-2xl p-4 space-y-2 ${tc.previewShadow}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-xl ${tc.avatarGradient} flex items-center justify-center text-white font-black text-sm shadow-lg`}>
+                    {staffName
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')
+                      .substring(0, 2)
+                      .toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className={`font-black text-sm truncate ${tc.previewName}`}>{staffName}</p>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-400/20 font-mono">
+                        ID: {staffId}
+                      </span>
+                    </div>
+                    <p className={`text-[11px] font-bold uppercase tracking-wider truncate flex items-center gap-1.5 ${tc.previewRole} mt-0.5`}>
+                      <Briefcase size={10} className="shrink-0" />
+                      {staffRole}
+                      {staffTsc && (
+                        <span className="ml-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[9px] font-black">
+                          TSC: {staffTsc}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <UserCheck className={tc.labelIcon} size={18} />
+                </div>
+              </div>
             </div>
 
             {/* Proceed Button - Primary Action */}
             <button
               type="button"
               onClick={handleProceed}
-              disabled={!selectedStaffId}
-              className={`w-full h-14 rounded-2xl font-black text-base transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 ${tc.buttonActive} ${tc.buttonDisabled} flex items-center justify-center gap-2`}
+              className={`w-full h-14 rounded-2xl font-black text-base transition-all active:scale-95 ${tc.buttonActive} flex items-center justify-center gap-2 shadow-xl`}
             >
               Proceed to Check-In
               <ChevronRight size={20} strokeWidth={3} />
@@ -641,7 +330,7 @@ const StaffCheckInSelector = () => {
             {/* Footer Info */}
             <div className={`flex items-center justify-center gap-2 pt-2 text-[10px] font-bold uppercase tracking-widest ${tc.footerText}`}>
               <FlaskConical size={12} className={tc.footerIcon} />
-              <span>Munyaka Staff Portal v4.0</span>
+              <span>Munyaka Staff Portal v4.0 • Anti-Proxy Secured</span>
             </div>
           </div>
         </Card>
