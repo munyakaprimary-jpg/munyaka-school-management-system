@@ -59,6 +59,34 @@ export const TeacherExportModule: React.FC = () => {
 
   const [selectedStream, setSelectedStream] = useState<string>(initialStreamPart);
 
+  // Fetch counts of teacher records in offline local state
+  const attendanceCount = (() => {
+    try {
+      const records = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
+      return Array.isArray(records) ? records.length : 0;
+    } catch {
+      return 0;
+    }
+  })();
+
+  const marksCount = (() => {
+    try {
+      const records = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
+      return Array.isArray(records) ? records.length : 0;
+    } catch {
+      return 0;
+    }
+  })();
+
+  const checkInsCount = (() => {
+    try {
+      const records = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || '[]');
+      return Array.isArray(records) ? records.length : 0;
+    } catch {
+      return 0;
+    }
+  })();
+
   // Auto-sync with teacher assigned class changes (e.g. from the Assigned Class selector card)
   useEffect(() => {
     const checkAssignedClass = () => {
