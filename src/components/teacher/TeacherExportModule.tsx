@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, ShieldCheck, Calendar as CalendarIcon } from 'lucide-react';
+import { Download, ShieldCheck, Calendar as CalendarIcon, BookOpen } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
 import { showSuccess, showError } from '@/utils/toast';
@@ -53,11 +52,6 @@ export const TeacherExportModule: React.FC = () => {
   }, [initialClassStr, initialGradePart, config, streams]);
 
   const [selectedGrade, setSelectedGrade] = useState<string>(initialGradePart);
-  const availableStreams = useMemo(() => {
-    const s = getStreamsForGrade(selectedGrade, config);
-    return s.length > 0 ? s : config.streams;
-  }, [selectedGrade, config]);
-
   const [selectedStream, setSelectedStream] = useState<string>(initialStreamPart);
 
   // Optional Date Picker for Missed Syncs (defaults to today YYYY-MM-DD)
@@ -183,7 +177,7 @@ export const TeacherExportModule: React.FC = () => {
     }
   }, [exportDate, selectedGrade, selectedStream]);
 
-  // Auto-sync with teacher assigned class changes
+  // Auto-sync with teacher assigned class changes (e.g. from Dashboard Assigned Class selector)
   useEffect(() => {
     const checkAssignedClass = () => {
       try {
@@ -208,7 +202,7 @@ export const TeacherExportModule: React.FC = () => {
 
     const interval = setInterval(checkAssignedClass, 1000);
     const handleStorage = (e: StorageEvent) => {
-      if (!e.key || e.key === 'munyaka_current_user') {
+      if (!e.key || e.key === 'munyaka_current_user' || e.key === 'munyaka_attendance_records' || e.key === 'roll_call_records') {
         checkAssignedClass();
       }
       const cleared = localStorage.getItem('munyaka_sync_queue_cleared');
@@ -319,7 +313,7 @@ export const TeacherExportModule: React.FC = () => {
             Export My Class Package (.json)
           </CardTitle>
           <CardDescription className="text-xs text-slate-600">
-            Package your recorded attendance, check-ins, and CBC assessment marks filtered by active class and export date.
+            Package your recorded attendance, check-ins, and CBC assessment marks for your assigned class and export date.
           </CardDescription>
         </CardHeader>
 
@@ -340,7 +334,7 @@ export const TeacherExportModule: React.FC = () => {
             </div>
           </div>
 
-          {/* Interactive Grade, Stream & Export Date Selectors */}
+          {/* Locked Assigned Class & Export Date Display Box */}
           <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-100 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-700">Teacher: {user?.name || 'Class Teacher'}</span>
@@ -350,42 +344,27 @@ export const TeacherExportModule: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              {/* Read-Only Grade / Class */}
               <div className="space-y-1">
-                <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Grade / Class
+                <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                  <BookOpen className="w-3 h-3 text-indigo-600" /> Grade / Class
                 </Label>
-                <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-                  <SelectTrigger className="h-10 rounded-xl bg-white border-slate-200 font-bold text-xs text-slate-800">
-                    <SelectValue placeholder="Select Grade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {grades.map((g) => (
-                      <SelectItem key={g} value={g} className="text-xs font-semibold">
-                        {g}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="h-10 px-3 rounded-xl bg-white border border-slate-200 font-bold text-xs text-slate-800 flex items-center shadow-sm">
+                  {selectedGrade}
+                </div>
               </div>
 
+              {/* Read-Only Stream */}
               <div className="space-y-1">
                 <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   Stream
                 </Label>
-                <Select value={selectedStream} onValueChange={setSelectedStream}>
-                  <SelectTrigger className="h-10 rounded-xl bg-white border-slate-200 font-bold text-xs text-slate-800">
-                    <SelectValue placeholder="Select Stream" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableStreams.map((s) => (
-                      <SelectItem key={s} value={s} className="text-xs font-semibold">
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="h-10 px-3 rounded-xl bg-white border border-slate-200 font-bold text-xs text-slate-800 flex items-center shadow-sm">
+                  {selectedStream}
+                </div>
               </div>
 
+              {/* Export Date Selector */}
               <div className="space-y-1">
                 <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                   <CalendarIcon className="w-3 h-3 text-indigo-600" /> Export Date
@@ -394,7 +373,7 @@ export const TeacherExportModule: React.FC = () => {
                   type="date"
                   value={exportDate}
                   onChange={(e) => setExportDate(e.target.value)}
-                  className="h-10 rounded-xl bg-white border-slate-200 font-bold text-xs text-slate-800 px-3"
+                  className="h-10 rounded-xl bg-white border-slate-200 font-bold text-xs text-slate-800 px-3 shadow-sm"
                 />
               </div>
             </div>
