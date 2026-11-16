@@ -10,7 +10,7 @@ export function getRoleLandingPage(role: string, customPermissions?: Record<stri
     return '/fees';
   }
   if (lowerRole.includes('ict') || lowerRole.includes('lab') || title.includes('ict') || title.includes('computer') || title.includes('lab')) {
-    return '/server';
+    return '/ict/portal';
   }
   if (lowerRole.includes('store') || title.includes('store')) {
     return '/payments';
