@@ -144,6 +144,19 @@ export default function TeacherDashboard() {
     ? `You are signed in as ${teacherName} (Staff). Your dashboard is strictly restricted to assigned class (${assignedClassLabel}) data (Mathematics, Science & Technology, and Integrated Science).`
     : `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Specialist Educator & Subject Management (Mathematics, Science & Technology, and Integrated Science).`;
 
+  // Robust normalizer helper: strips "GRADE" case-insensitively, trims spaces, and standardizes streams
+  const normalizeGradeAndStream = (gradeStr: string, streamStr: string) => {
+    const cleanGrade = String(gradeStr || '')
+      .replace(/grade/gi, '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .trim()
+      .toUpperCase();
+    const cleanStream = String(streamStr || '')
+      .trim()
+      .toUpperCase();
+    return { cleanGrade, cleanStream, combined: `${cleanGrade} ${cleanStream}`.trim() };
+  };
+
   // ICT Teacher / ICT Technician Analytics Dashboard View
   if (isIctStaff) {
     const [devices, setDevices] = React.useState<any[]>([]);
