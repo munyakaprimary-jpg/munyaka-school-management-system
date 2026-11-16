@@ -54,7 +54,45 @@ export default function TeacherDashboard() {
     }
   })();
 
-  // Class and stream state with persistent/dynamic selector capability if unassigned
+  // Available dynamic grades and streams configuration with live sync listener
+  const [gradesStreamsConfig, setGradesStreamsConfig] = React.useState(() => readGradesAndStreams());
+
+  React.useEffect(() => {
+    const handleStorageChange = () => {
+      setGradesStreamsConfig(readGradesAndStreams());
+    };
+    window.addEventListener('storage', handleStorageChange);
+    const interval = setInterval(() => {
+      setGradesStreamsConfig(readGradesAndStreams());
+    }, 1500);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
+  const allDynamicClassOptions = React.useMemo(() => {
+    const list: string[] = [];
+    gradesStreamsConfig.grades.forEach(grade => {
+      const streamsForGrade = getStreamsForGrade(grade, gradesStreamsConfig);
+      if (streamsForGrade.length > 0) {
+        streamsForGrade.forEach(stream => {
+          list.add ? list.add(`${grade} ${stream}`) : list.push(`${grade} ${stream}`);
+        });
+      } else {
+        list.push(`${grade} Blue`);
+        list.push(`${grade} Green`);
+      }
+    });
+    return list.length > 0 ? list : [
+      'Grade 1 Blue', 'Grade 1 Green',
+      'Grade 2 Blue', 'Grade 2 Green',
+      'Grade 3 Blue', 'Grade 3 Green',
+      'Grade 4 Blue', 'Grade 4 Green',
+      'Grade 5 Blue', 'Grade 5 Green',
+      'Grade 6 Blue', 'Grade 6 Green',
+      'Grade 7 Blue', 'Grade 8 Blue', 'Grade 9 Blue'
+    ];
+  }, [gradesStreamsConfig]);
   const [selectedClass, setSelectedClass] = React.useState<string>(() => {
     return currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || 'Grade 4 Blue';
   });
@@ -916,21 +954,9 @@ export default function TeacherDashboard() {
                 className="w-full text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="No Class Assigned">No Class Assigned</option>
-                <option value="Grade 1 Blue">Grade 1 Blue</option>
-                <option value="Grade 1 Green">Grade 1 Green</option>
-                <option value="Grade 2 Blue">Grade 2 Blue</option>
-                <option value="Grade 2 Green">Grade 2 Green</option>
-                <option value="Grade 3 Blue">Grade 3 Blue</option>
-                <option value="Grade 3 Green">Grade 3 Green</option>
-                <option value="Grade 4 Blue">Grade 4 Blue</option>
-                <option value="Grade 4 Green">Grade 4 Green</option>
-                <option value="Grade 5 Blue">Grade 5 Blue</option>
-                <option value="Grade 5 Green">Grade 5 Green</option>
-                <option value="Grade 6 Blue">Grade 6 Blue</option>
-                <option value="Grade 6 Green">Grade 6 Green</option>
-                <option value="Grade 7 Blue">Grade 7 Blue</option>
-                <option value="Grade 8 Blue">Grade 8 Blue</option>
-                <option value="Grade 9 Blue">Grade 9 Blue</option>
+                {allDynamicClassOptions.map((clsName) => (
+                  <option key={clsName} value={clsName}>{clsName}</option>
+                ))}
               </select>
             </div>
           </CardContent>
