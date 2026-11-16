@@ -900,39 +900,6 @@ export default function TeacherDashboard() {
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
               <span>Primary Homeroom & Subject Stream</span>
             </p>
-            <div className="mt-3 pt-2 border-t border-slate-100">
-              <label className="text-[11px] font-semibold text-slate-600 block mb-1">Select Assigned Class:</label>
-              <select
-                value={activeAssignedClass}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedClassOverride(val);
-                  try {
-                    const updated = { ...currentUserObj, assignedClass: val };
-                    localStorage.setItem('munyaka_current_user', JSON.stringify(updated));
-                  } catch {}
-                  persistAssignedClassToFirestore(val);
-                }}
-                className="w-full text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="No Class Assigned">No Class Assigned</option>
-                <option value="Grade 1 Blue">Grade 1 Blue</option>
-                <option value="Grade 1 Green">Grade 1 Green</option>
-                <option value="Grade 2 Blue">Grade 2 Blue</option>
-                <option value="Grade 2 Green">Grade 2 Green</option>
-                <option value="Grade 3 Blue">Grade 3 Blue</option>
-                <option value="Grade 3 Green">Grade 3 Green</option>
-                <option value="Grade 4 Blue">Grade 4 Blue</option>
-                <option value="Grade 4 Green">Grade 4 Green</option>
-                <option value="Grade 5 Blue">Grade 5 Blue</option>
-                <option value="Grade 5 Green">Grade 5 Green</option>
-                <option value="Grade 6 Blue">Grade 6 Blue</option>
-                <option value="Grade 6 Green">Grade 6 Green</option>
-                <option value="Grade 7 Blue">Grade 7 Blue</option>
-                <option value="Grade 8 Blue">Grade 8 Blue</option>
-                <option value="Grade 9 Blue">Grade 9 Blue</option>
-              </select>
-            </div>
           </CardContent>
         </Card>
 
