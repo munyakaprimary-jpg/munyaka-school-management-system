@@ -19,45 +19,74 @@ export const TeacherExportModule: React.FC = () => {
   const grades = config.grades;
   const streams = useMemo(() => config.streams, [config]);
 
-  const [selectedGrade, setSelectedGrade] = useState<string>(() => grades[0] || 'Grade 1');
+  // Read current teacher assigned class from localStorage or user context
+  const getInitialAssignedClass = () => {
+    try {
+      const curr = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+      return curr.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || '';
+    } catch {
+      return (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || '';
+    }
+  };
+
+  const initialClassStr = getInitialAssignedClass();
+  const initialGradePart = useMemo(() => {
+    if (!initialClassStr || initialClassStr === 'No Class Assigned') return grades[0] || 'Grade 1';
+    const parts = initialClassStr.trim().split(' ');
+    if (parts.length >= 2) {
+      const possibleGrade = parts.slice(0, parts.length - 1).join(' ');
+      if (grades.includes(possibleGrade)) return possibleGrade;
+    }
+    return grades[0] || 'Grade 1';
+  }, [initialClassStr, grades]);
+
+  const initialStreamPart = useMemo(() => {
+    if (!initialClassStr || initialClassStr === 'No Class Assigned') return streams[0] || 'Green';
+    const parts = initialClassStr.trim().split(' ');
+    if (parts.length >= 2) {
+      const possibleStream = parts[parts.length - 1];
+      const available = getStreamsForGrade(initialGradePart, config);
+      if (available.includes(possibleStream)) return possibleStream;
+    }
+    return streams[0] || 'Green';
+  }, [initialClassStr, initialGradePart, config, streams]);
+
+  const [selectedGrade, setSelectedGrade] = useState<string>(initialGradePart);
   const availableStreams = useMemo(() => {
     const s = getStreamsForGrade(selectedGrade, config);
     return s.length > 0 ? s : config.streams;
   }, [selectedGrade, config]);
 
-  const [selectedStream, setSelectedStream] = useState<string>(() => availableStreams[0] || 'Green');
+  const [selectedStream, setSelectedStream] = useState<string>(initialStreamPart);
 
-  // Fetch counts of teacher records in offline local state
-  const attendanceCount = (() => {
-    try {
-      const records = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
-      return Array.isArray(records) ? records.length : 0;
-    } catch {
-      return 0;
-    }
-  })();
-
-  const marksCount = (() => {
-    try {
-      const records = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
-      return Array.isArray(records) ? records.length : 0;
-    } catch {
-      return 0;
-    }
-  })();
-
-  const checkInsCount = (() => {
-    try {
-      const records = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || '[]');
-      return Array.isArray(records) ? records.length : 0;
-    } catch {
-      return 0;
-    }
-  })();
-
-  // Listen for sync_queue cleared signal from Admin
+  // Auto-sync with teacher assigned class changes (e.g. from the Assigned Class selector card)
   useEffect(() => {
-    const handleStorage = () => {
+    const checkAssignedClass = () => {
+      try {
+        const curr = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+        const assigned = curr.assignedClass || (user as any)?.assignedClass || '';
+        if (assigned && assigned !== 'No Class Assigned') {
+          const parts = assigned.trim().split(' ');
+          if (parts.length >= 2) {
+            const g = parts.slice(0, parts.length - 1).join(' ');
+            const s = parts[parts.length - 1];
+            if (grades.includes(g)) {
+              setSelectedGrade(g);
+              const streamsForG = getStreamsForGrade(g, config);
+              if (streamsForG.includes(s)) {
+                setSelectedStream(s);
+              }
+            }
+          }
+        }
+      } catch {}
+    };
+
+    const interval = setInterval(checkAssignedClass, 1000);
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.key || e.key === 'munyaka_current_user') {
+        checkAssignedClass();
+      }
       const cleared = localStorage.getItem('munyaka_sync_queue_cleared');
       if (cleared) {
         showSuccess('Admin has successfully scanned and synced your records! Local sync queue marked as clean.');
@@ -65,8 +94,11 @@ export const TeacherExportModule: React.FC = () => {
       }
     };
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [user, grades, config]);
 
   const buildPayload = () => {
     const attendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
