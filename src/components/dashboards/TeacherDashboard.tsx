@@ -382,7 +382,7 @@ export default function TeacherDashboard() {
             </div>
             <div className="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
               <span>Hardware Inventory</span>
-              <Button onClick={() => navigate('/inventory')} variant="link" className="p-0 h-auto text-xs font-bold text-blue-600 hover:text-blue-700">
+              <Button onClick={() => navigate('/ict-lab')} variant="link" className="p-0 h-auto text-xs font-bold text-blue-600 hover:text-blue-700">
                 Manage Devices &rarr;
               </Button>
             </div>
