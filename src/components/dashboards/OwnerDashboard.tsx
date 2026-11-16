@@ -916,7 +916,16 @@ const OwnerDashboard: React.FC = () => {
   const GLOBAL_LOCK_KEY = 'munyaka_global_app_lock';
   const [isGloballyLocked, setIsGloballyLocked] = useState<boolean>(() => {
     try {
-      return localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
+      // Check if billing is overdue before defaulting to locked
+      const dueDateStr = localStorage.getItem('munyaka_next_billing_date') || localStorage.getItem('munyaka_payment_due_date') || '2026-10-30';
+      const isOverdue = new Date().getTime() > new Date(dueDateStr).getTime();
+      const saved = localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
+      // If not overdue, force unlocked unless explicitly required
+      if (!isOverdue && saved) {
+        localStorage.setItem(GLOBAL_LOCK_KEY, 'false');
+        return false;
+      }
+      return saved;
     } catch {
       return false;
     }
