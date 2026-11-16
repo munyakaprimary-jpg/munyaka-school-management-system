@@ -870,20 +870,7 @@ export default function TeacherDashboard() {
     });
   }, [students, activeAssignedClass]);
 
-  // Robust normalizer helper: strips "GRADE" case-insensitively, trims spaces, and standardizes streams
-  const normalizeGradeAndStream = (gradeStr: string, streamStr: string) => {
-    const cleanGrade = String(gradeStr || '')
-      .replace(/grade/gi, '')
-      .replace(/[^a-zA-Z0-9]/g, '')
-      .trim()
-      .toUpperCase();
-    const cleanStream = String(streamStr || '')
-      .trim()
-      .toUpperCase();
-    return { cleanGrade, cleanStream, combined: `${cleanGrade} ${cleanStream}`.trim() };
-  };
-
-  // Parse active assigned class and normalize
+// Parse active assigned class and normalize
   const activeClassNorm = React.useMemo(() => {
     const raw = String(fullClassTitle || '').trim();
     if (!raw || raw === 'No Class Assigned') return { cleanGrade: '', cleanStream: '', combined: '' };
