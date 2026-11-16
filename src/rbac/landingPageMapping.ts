@@ -9,7 +9,7 @@ export function getRoleLandingPage(role: string, customPermissions?: Record<stri
   if (lowerRole.includes('bursar') || title.includes('bursar') || title.includes('accountant')) {
     return '/fees';
   }
-  if (lowerRole.includes('ict') || lowerRole.includes('lab') || title.includes('ict') || title.includes('computer') || title.includes('lab')) {
+  if (lowerRole.includes('ict') || lowerRole.includes('lab') || title.includes('ict') || title.includes('computer') || title.includes('lab') || normRole === 'ICT_TEACHER') {
     return '/ict/portal';
   }
   if (lowerRole.includes('store') || title.includes('store')) {
