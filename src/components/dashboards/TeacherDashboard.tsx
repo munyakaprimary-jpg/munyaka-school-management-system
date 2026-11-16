@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
+import { getStaffMaster } from '@/services/staffMasterService';
 import { useCentralData } from '@/hooks/useCentralData';
 import TeacherExportModule from '@/components/teacher/TeacherExportModule';
 import TeacherSyncQrGenerator from '@/components/teacher/TeacherSyncQrGenerator';
@@ -99,25 +100,36 @@ export default function TeacherDashboard() {
     return currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || 'Grade 4 Blue';
   });
 
-  const rawRole = currUserObj.rbacRole || currUserObj.role || currUserObj.department || (user as any)?.rbacRole || user?.role || '';
-  const normalizedRole = String(rawRole).toLowerCase().trim();
-  const userName = String(currUserObj.name || currUserObj.fullName || user?.name || '').toUpperCase();
-  const assignedDept = String(currUserObj.assignedDepartment || currUserObj.department || (user as any)?.assignedDepartment || '').toLowerCase();
+  // Live-sync against Staff Directory to ensure true role is always respected
+  const activeEmail = String(currUserObj.email || user?.email || '').trim().toLowerCase();
+  const activeStaffId = String(currUserObj.staff_id || currUserObj.staffId || user?.staff_id || '').trim();
+  let trueStaffRecord: any = null;
+  try {
+    const staffMaster = getStaffMaster();
+    trueStaffRecord = staffMaster.find(s =>
+      (activeEmail && String(s.email || '').trim().toLowerCase() === activeEmail) ||
+      (activeStaffId && String(s.staffId || '').trim() === activeStaffId) ||
+      (currUserObj.name && String(s.name || '').trim().toUpperCase() === String(currUserObj.name).trim().toUpperCase())
+    );
+  } catch {}
+
+  const resolvedSysRole = String(trueStaffRecord?.systemRole || trueStaffRecord?.role || currUserObj.rbacRole || currUserObj.role || '').trim();
+  const normalizedRole = resolvedSysRole.toUpperCase().replace(/\s+/g, '_');
+  const normalizedRoleLower = normalizedRole.toLowerCase();
+
+  const userName = String(currUserObj.name || currUserObj.fullName || trueStaffRecord?.name || user?.name || '').toUpperCase();
+  const assignedDept = String(trueStaffRecord?.department || currUserObj.assignedDepartment || currUserObj.department || '').toLowerCase();
   
   const isLibraryStaff =
-    normalizedRole === 'library_teacher' ||
-    normalizedRole === 'librarian' ||
+    normalizedRoleLower.includes('library') ||
     assignedDept.includes('library') ||
-    title.includes('library') ||
-    normalizedRole.includes('library') ||
-    userName.includes('JANET GATHONI KUNGU');
+    userName.includes('JANET GATHONI');
 
   const isIctStaff =
-    normalizedRole === 'ict_teacher' ||
-    normalizedRole === 'ict_technician' ||
+    normalizedRoleLower.includes('ict') ||
+    normalizedRoleLower.includes('it') ||
     assignedDept.includes('ict') ||
-    title.includes('ict') ||
-    normalizedRole.includes('ict');
+    userName.includes('JAMES NDIKI');
 
   const hasAssignedClass = Boolean(selectedClass && selectedClass !== 'No Class Assigned');
 
