@@ -812,7 +812,28 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   <Link to="/profile" onClick={() => setIsOpen(false)}>
                     <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{user?.name || 'Admin'}</p>
                   </Link>
-                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Administrator'}</p>
+                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">
+                    {(() => {
+                      try {
+                        const staffRaw = localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff') || '[]';
+                        const staffList = JSON.parse(staffRaw);
+                        if (Array.isArray(staffList)) {
+                          const found = staffList.find((s: any) =>
+                            (s.email && user?.email && s.email.toLowerCase() === user.email.toLowerCase()) ||
+                            (s.name && user?.name && s.name.toLowerCase() === user.name.toLowerCase()) ||
+                            (s.staffId && (user as any)?.staffId && s.staffId === (user as any).staffId)
+                          );
+                          if (found) {
+                            const roleTitle = found.role || found.title || found.category || found.assignedRole;
+                            if (roleTitle) {
+                              return String(roleTitle).replace(/_/g, ' ').toUpperCase();
+                            }
+                          }
+                        }
+                      } catch {}
+                      return (user?.role || 'Administrator').replace(/_/g, ' ');
+                    })()}
+                  </p>
                 </div>
               )}
             </div>
