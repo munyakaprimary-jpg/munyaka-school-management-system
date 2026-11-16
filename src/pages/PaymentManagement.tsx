@@ -872,7 +872,7 @@ export default function PaymentManagement() {
               <div className="p-4 bg-white rounded-xl border border-gray-200/80 shadow-sm">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">ACTIVE LEARNERS</span>
                 <div className="text-3xl font-extrabold text-gray-900 mt-2">
-                  {(INITIAL_SEED_DATA as any).learners?.length || 31}
+                  {realActiveLearners}
                 </div>
                 <p className="text-xs text-gray-400 mt-1">Billed monthly</p>
               </div>
@@ -881,7 +881,7 @@ export default function PaymentManagement() {
               <div className="p-4 bg-white rounded-xl border border-gray-200/80 shadow-sm">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">ACTIVE STAFF</span>
                 <div className="text-3xl font-extrabold text-gray-900 mt-2">
-                  {(INITIAL_SEED_DATA as any).staff?.length || 6}
+                  {realActiveStaff}
                 </div>
                 <p className="text-xs text-gray-400 mt-1">System user access</p>
               </div>
