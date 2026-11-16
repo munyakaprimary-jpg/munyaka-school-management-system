@@ -25,6 +25,8 @@ import { showSuccess, showError } from '@/utils/toast';
 import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
+import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
+import { getStoredStaff } from '@/utils/storage';
 
 export default function PaymentManagement() {
   const [ownerBypass, setOwnerBypass] = useState(() => {
@@ -327,42 +329,24 @@ export default function PaymentManagement() {
     }
   });
 
-  // Real Data from munyaka_central_db and school store
-  const { totalActiveStudents, totalActiveStaff, totalCapacity, availableSlots } = useMemo(() => {
-    try {
-      const sCount = Array.isArray(INITIAL_SEED_DATA) ? 31 : ((INITIAL_SEED_DATA as any).learners?.length || 31);
-      const staffCount = Array.isArray(INITIAL_SEED_DATA) ? 6 : ((INITIAL_SEED_DATA as any).staff?.length || 6);
-      const totalAllocated = sCount + staffCount;
-      const capacity = Math.max(totalAllocated + 120, 500);
-
-      return {
-        totalActiveStudents: sCount,
-        totalActiveStaff: staffCount,
-        totalCapacity: capacity,
-        availableSlots: Math.max(0, capacity - totalAllocated),
-      };
-    } catch {}
-    const sCount = 31;
-    const staffCount = 6;
-    const totalAllocated = sCount + staffCount;
-    return {
-      totalActiveStudents: sCount,
-      totalActiveStaff: staffCount,
-      totalCapacity: 500,
-      availableSlots: Math.max(0, 500 - totalAllocated),
-    };
-  }, [students, staff, activeLearners]);
+  // Real Data from learner and staff storages
+    const realLearners = mergeStoredLearners();
+    const realStaff = getStoredStaff();
+    const realActiveLearners = realLearners.length;
+    const realActiveStaff = realStaff.length;
+    const realTotalAllocated = realActiveLearners + realActiveStaff;
+    const realCapacity = Math.max(realTotalAllocated + 120, 500);
 
   // Seat allocation state (dynamically derived from live active students + staff)
-  const allocatedSeats = totalActiveStudents + totalActiveStaff;
-  const [maxSeats, setMaxSeats] = useState(totalCapacity);
-
-  // Keep maxSeats synchronized if capacity changes or store updates
-  useEffect(() => {
-    if (totalCapacity > maxSeats) {
-      setMaxSeats(totalCapacity);
-    }
-  }, [totalCapacity, maxSeats]);
+    const allocatedSeats = realTotalAllocated;
+    const [maxSeats, setMaxSeats] = useState(realCapacity);
+  
+    // Keep maxSeats synchronized if capacity changes or store updates
+    useEffect(() => {
+      if (realCapacity > maxSeats) {
+        setMaxSeats(realCapacity);
+      }
+    }, [realCapacity, maxSeats]);
 
   // Monthly billing setting state with localStorage synchronization ('munyaka_fee_per_seat')
   const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState<number>(() => {
@@ -705,7 +689,7 @@ export default function PaymentManagement() {
             <CardTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
               <Users className="text-indigo-600" size={24} /> Learner & Staff Seats Allocation
             </CardTitle>
-            <p className="text-xs text-slate-500 font-medium mt-1">Live active learner slots synchronized directly from master store (<code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded font-mono text-xs">munyaka_learners_v2</code> &amp; <code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded font-mono text-xs">munyaka_users_v1</code>).</p>
+            <p className="text-xs text-slate-500 font-medium mt-1">Live active learner slots synchronized directly from master store (<code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded font-mono text-xs">munyaka_learners</code>, <code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded font-mono text-xs">munyaka_learners_v2</code>, <code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded font-mono text-xs">school_learners_data</code>, etc.) &amp; <code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded font-mono text-xs">munyaka_staff</code>.</p>
           </CardHeader>
 
           <CardContent className="p-0 space-y-6 pt-2">
@@ -713,7 +697,7 @@ export default function PaymentManagement() {
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 <p className="text-xs font-black uppercase text-slate-400">Currently Allocated Seats</p>
                 <p className="text-4xl font-black text-indigo-600 mt-2">{allocatedSeats}</p>
-                <p className="text-xs text-slate-600 font-bold mt-1">Active learners ({totalActiveStudents}) & staff ({totalActiveStaff})</p>
+                <p className="text-xs text-slate-600 font-bold mt-1">Active learners ({realActiveLearners}) & staff ({realActiveStaff})</p>
               </div>
 
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
@@ -761,16 +745,12 @@ export default function PaymentManagement() {
                   <Calendar className="text-indigo-600" size={24} /> Monthly Payment & Billing Setting
                 </CardTitle>
                 <p className="text-xs text-slate-500 font-medium mt-1">
-                  Calculated automatically from {(() => {
-                    try {
-                      const l = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v1') || '[]');
-                      const s = JSON.parse(localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || '[]');
-                      return `${Array.isArray(l) ? l.length : 0} active learners and ${Array.isArray(s) ? s.length : 0} active staff synchronized`;
-                    } catch {
-                      return '0 active learners and 2 active staff synchronized';
-                    }
-                  })()} from Munyaka institutional storage.
-                </p>
+                                  Calculated automatically from {(() => {
+                                    const l = mergeStoredLearners();
+                                    const s = getStoredStaff();
+                                    return `${l.length} active learners and ${s.length} active staff synchronized`;
+                                  })()} from Munyaka institutional storage.
+                                </p>
               </div>
 
               {/* Global App Lock Toggle Control */}
@@ -1019,7 +999,7 @@ export default function PaymentManagement() {
               <DollarSign className="shrink-0 text-amber-600 mt-0.5" size={20} />
               <div>
                 <p className="font-bold text-xs uppercase tracking-wider">Dynamic Monthly Billing Preview</p>
-                <p className="text-xs mt-1">Based on {totalActiveStudents} active learners & {totalActiveStaff} staff members × KES {monthlyFeePerStudent.toLocaleString()}, your next scheduled automatic invoice is <strong>KES {(allocatedSeats * monthlyFeePerStudent).toLocaleString()}</strong>.</p>
+                <p className="text-xs mt-1">Based on {realActiveLearners} active learners & {realActiveStaff} staff members × KES {monthlyFeePerStudent.toLocaleString()}, your next scheduled automatic invoice is <strong>KES {(allocatedSeats * monthlyFeePerStudent).toLocaleString()}</strong>.</p>
               </div>
             </div>
 
