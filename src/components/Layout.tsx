@@ -426,7 +426,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   }, [location.pathname]);
 
   const userRoleLower = String(user?.role || '').toLowerCase();
-  const isTeacherRole = userRoleLower === 'teacher' || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher';
+  const isIctTeacherRole = userRoleLower === 'ict_teacher' || userRoleLower === 'ict';
+  const isTeacherRole = (userRoleLower === 'teacher' || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher') && !isIctTeacherRole;
 
   const menuItems = isTeacherRole ? [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
@@ -452,7 +453,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
     // based on the user's session role.  Only one Dashboard entry exists.
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'owner'] },
-    { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
+    { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin', 'hoi', 'dhoi', 'owner'] },
     { icon: Users, label: 'Learners', path: '/learners', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar'] },
         { icon: UserCheck, label: 'Staff Registry', path: '/staff-registry', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar'] },
     { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
