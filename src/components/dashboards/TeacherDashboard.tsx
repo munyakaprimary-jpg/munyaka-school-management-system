@@ -770,7 +770,7 @@ export default function TeacherDashboard() {
             {title.includes('library') ? (
               <Button onClick={() => navigate('/library')} className="bg-white text-emerald-800 font-bold rounded-xl">Open Library Management</Button>
             ) : title.includes('ict') ? (
-              <Button onClick={() => navigate('/inventory')} className="bg-white text-emerald-800 font-bold rounded-xl">Open ICT Lab Inventory</Button>
+              <Button onClick={() => navigate('/ict-lab')} className="bg-white text-emerald-800 font-bold rounded-xl">Open ICT Lab Inventory</Button>
             ) : title.includes('bursar') || title.includes('accountant') ? (
               <Button onClick={() => navigate('/fees')} className="bg-white text-emerald-800 font-bold rounded-xl">Open Fee Collections & Ledger</Button>
             ) : (
