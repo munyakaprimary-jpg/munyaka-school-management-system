@@ -213,12 +213,10 @@ export const verifyStaffLogin = async (identifier: string, accessCode: string): 
   const storedPassword = String(matched.password || matched.temp_password || '').trim();
   const storedCode = String(matched.accessCode || matched.code || matched.pin || matched.tempAccessCode || matched.access_key || matched.ref || '').trim();
 
-  // Compare password case-sensitively, or access code case-insensitively, plus demo codes
+  // Compare password case-sensitively, or access code case-insensitively
   const isPasswordValid =
     (storedPassword && storedPassword === pass) ||
     (storedCode && storedCode.toLowerCase() === pass.toLowerCase()) ||
-    pass.toUpperCase() === 'MUN-9632' ||
-    pass.toUpperCase() === 'MUN-1234' ||
     pass.toUpperCase() === String(matched.staffId || matched.staff_id || '').trim().toUpperCase();
 
   if (!isPasswordValid) {

@@ -961,11 +961,8 @@ const Login: React.FC = () => {
                                       {showStaffPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                   </div>
-                                  <p className="text-[10px] text-slate-500 font-medium flex items-center justify-between">
-                                    <span>Enter your staff portal password (e.g., Munyaka4125!)</span>
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-950/70 text-amber-400 font-mono text-[10px] font-bold border border-amber-500/40">
-                                      Demo: MUN-9632 or MUN-1234
-                                    </span>
+                                  <p className="text-[10px] text-slate-500 font-medium">
+                                    Enter your staff portal password (e.g., Munyaka4125!)
                                   </p>
                                 </div>
 
