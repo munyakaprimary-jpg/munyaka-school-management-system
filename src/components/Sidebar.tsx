@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { mapRoleLabelToRbacKey } from '@/constants/roles';
 import {
   LayoutDashboard,
   Users,
@@ -115,9 +114,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         (s.id && user.id && s.id === user.id)
       );
   
-      const rawRole = match?.role || match?.assignedRole || match?.rbacRole || user.role || 'STAFF';
-      const normalizedRbacKey = mapRoleLabelToRbacKey(rawRole) || rawRole;
-      return normalizedRbacKey.toUpperCase();
+      return match?.role || match?.assignedRole || match?.rbacRole || user.role || 'STAFF';
     };
 
   const activeRole = getActiveUserRole();

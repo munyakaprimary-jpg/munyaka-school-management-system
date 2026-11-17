@@ -53,7 +53,7 @@ const ProtectedRoute = ({
     else if (path.startsWith('/fees')) targetModuleKey = 'fees';
     else if (path.startsWith('/assessments') || path.startsWith('/learning-areas') || path.startsWith('/exam-types')) targetModuleKey = 'assessments';
     else if (path.startsWith('/students')) targetModuleKey = 'students';
-    else if (path.startsWith('/inventory') || path.startsWith('/ict-lab') || path.startsWith('/digital-skills') || path.startsWith('/practical-competencies')) targetModuleKey = 'inventory';
+    else if (path.startsWith('/inventory') || path.startsWith('/ict-lab')) targetModuleKey = 'inventory';
     else if (path.startsWith('/library')) targetModuleKey = 'library';
     else if (path.startsWith('/attendance')) targetModuleKey = 'attendance';
     else if (path.startsWith('/timetable') || path.startsWith('/grades')) targetModuleKey = 'timetable';
@@ -74,6 +74,7 @@ const ProtectedRoute = ({
       moduleKey: targetModuleKey,
       redirectingTo: landingPage
     });
+    showWarning("Access restricted by institutional RBAC policy.");
     return <Navigate to={landingPage} replace />;
   }
 
@@ -89,6 +90,7 @@ const ProtectedRoute = ({
 
     if (isBlocked) {
       const landingPage = getRoleLandingPage(user.role);
+      showWarning("Access restricted by institutional RBAC policy.");
       return <Navigate to={landingPage} replace />;
     }
   }
@@ -101,12 +103,12 @@ const ProtectedRoute = ({
       if (ar === 'owner' && isOwnerOrSuper) return true;
       if (ar === 'admin' && (isAdmin || isOwnerOrSuper)) return true;
       if (ar === 'teacher' && (rawRole.includes('teacher') || isAdmin || isOwnerOrSuper)) return true;
-      if (rawRole.includes('ict') && (ar.includes('ict') || ar.includes('teacher'))) return true;
       return false;
     });
 
     if (!isAllowed) {
       const landingPage = getRoleLandingPage(user.role);
+      showWarning("Access restricted by institutional RBAC policy.");
       return <Navigate to={landingPage} replace />;
     }
   }

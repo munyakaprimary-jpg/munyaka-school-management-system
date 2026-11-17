@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import OwnerDashboard from "@/components/dashboards/OwnerDashboard";
 import AdminDashboard from "@/components/dashboards/AdminDashboard";
 import TeacherDashboard from "@/components/dashboards/TeacherDashboard";
-import ICTLabManagement from "@/pages/ICTLabManagement";
 import ICTDashboard from "@/pages/ICTDashboard";
 import LibrarianPortalView from "@/pages/LibrarianPortalView";
 import { useAuth } from "@/context/AuthContext";
@@ -39,7 +38,7 @@ const Dashboard: React.FC = () => {
 
   const isIctTechnician = roleLower === 'ict_technician' || roleLower === 'ict_teacher' || roleLower.includes('ict') || resolvedR === 'ict_technician' || resolvedR === 'ict_teacher';
   if (isIctTechnician && !roleLower.includes('admin')) {
-    return <ICTLabManagement />;
+    return <ICTDashboard />;
   }
 
   const isTeacher = isTeacherRole(userRole, (user as any)?.staffCategory, (user as any)?.specialties) ||
