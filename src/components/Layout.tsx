@@ -425,38 +425,21 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     setShowBottomNav(true);
   }, [location.pathname]);
 
-  const normalizedRole = String((user as any)?.systemRole || user?.role || (user as any)?.category || '').trim().toLowerCase().replace(/\s+/g, '_');
-  const isLeadership = ['hoi', 'dhoi', 'admin', 'owner', 'head_teacher'].includes(normalizedRole);
-  const isIctTeacher = normalizedRole === 'ict_teacher' || normalizedRole === 'ict' || normalizedRole === 'ict_technician';
-  const isLibraryTeacher = normalizedRole === 'library_teacher' || normalizedRole === 'librarian';
-  const isLabTeacher = normalizedRole === 'lab_teacher' || normalizedRole === 'science_teacher';
-  const isBursar = normalizedRole === 'bursar' || normalizedRole === 'accountant';
-  const isStoreMaster = normalizedRole === 'store_manager' || normalizedRole === 'store_master' || normalizedRole === 'support_staff';
-
+  const normalizedRole = String((user as any)?.systemRole || user?.role || (user as any)?.category || '').trim().toLowerCase();
+  const isIctTeacher = normalizedRole === 'ict_teacher' || normalizedRole === 'ict teacher' || normalizedRole === 'ict';
   const userRoleLower = normalizedRole;
   const isIctTeacherRole = isIctTeacher;
-  const isTeacherRole = userRoleLower.includes('teacher') || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher' || isIctTeacher || isLibraryTeacher || isLabTeacher || isBursar || isStoreMaster;
+  const isTeacherRole = userRoleLower === 'teacher' || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher' || isIctTeacherRole;
 
-  // Redirect non-leadership roles away from admin-only routes
+  // If ICT Teacher is on settings or any admin-only route, redirect immediately to /ict
   useEffect(() => {
-    if (!isLeadership) {
+    if (isIctTeacher) {
       const path = location.pathname;
-      if (
-        path.startsWith('/settings') ||
-        path.startsWith('/admin') ||
-        path.startsWith('/staff-registry') ||
-        path.startsWith('/fees') ||
-        path.startsWith('/dev/tenants') ||
-        path.startsWith('/grades') ||
-        path.startsWith('/learning-areas') ||
-        path.startsWith('/exam-types')
-      ) {
-        if (isIctTeacher) navigate('/ict', { replace: true });
-        else if (isLibraryTeacher) navigate('/library', { replace: true });
-        else navigate('/dashboard', { replace: true });
+      if (path.startsWith('/settings') || path.startsWith('/admin') || path.startsWith('/staff-registry') || path.startsWith('/fees')) {
+        navigate('/ict', { replace: true });
       }
     }
-  }, [isLeadership, isIctTeacher, isLibraryTeacher, location.pathname, navigate]);
+  }, [isIctTeacher, location.pathname, navigate]);
 
   const menuItems = isTeacherRole ? [
     { icon: LayoutDashboard, label: 'Dashboard', path: isIctTeacherRole ? '/ict' : '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
