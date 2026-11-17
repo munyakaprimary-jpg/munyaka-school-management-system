@@ -34,6 +34,8 @@ export interface MasterStaffRecord {
   joinedDate?: string;
 }
 
+export const STAFF_MASTER_KEY = 'munyaka_staff_master_v2';
+
 export const TEACHING_SYSTEM_ROLES: MasterSystemRole[] = [
   'class_teacher',
   'subject_teacher',
