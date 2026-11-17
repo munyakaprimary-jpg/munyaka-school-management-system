@@ -442,7 +442,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   }, [isIctTeacher, location.pathname, navigate]);
 
   const menuItems = isTeacherRole ? [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: LayoutDashboard, label: 'Dashboard', path: isIctTeacherRole ? '/ict' : '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
     ...(!isIctTeacherRole ? [
       { icon: Users, label: 'My Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
       { icon: ClipboardCheck, label: 'Roll Call / Attendance', path: '/attendance', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
