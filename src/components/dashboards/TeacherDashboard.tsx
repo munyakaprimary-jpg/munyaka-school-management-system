@@ -340,11 +340,10 @@ export default function TeacherDashboard() {
             <Button
               onClick={() => {
                 navigate('/ict-lab');
-                window.location.href = '/ict-lab';
               }}
               className="bg-white text-blue-950 hover:bg-blue-50 font-black px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 cursor-pointer"
             >
-              Open ICT & Device Inventory <ArrowRight className="w-4 h-4" />
+              Open ICT Lab & Devices <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -386,7 +385,7 @@ export default function TeacherDashboard() {
             <div className="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
               <span>Hardware Inventory</span>
               <Button onClick={() => navigate('/ict-lab')} variant="link" className="p-0 h-auto text-xs font-bold text-blue-600 hover:text-blue-700">
-                Manage Devices &rarr;
+                Open ICT Lab & Devices &rarr;
               </Button>
             </div>
           </Card>
@@ -468,8 +467,8 @@ export default function TeacherDashboard() {
               Manage Chromebook allocations, report maintenance needs, and monitor computer lab schedules for learners.
             </p>
             <div className="space-y-2 pt-2">
-              <Button onClick={() => navigate('/inventory')} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl justify-start">
-                <BookOpen className="w-4 h-4 mr-2" /> Open Device Inventory
+              <Button onClick={() => navigate('/ict-lab')} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl justify-start">
+                <BookOpen className="w-4 h-4 mr-2" /> Open ICT Lab & Devices
               </Button>
               <Button onClick={() => navigate('/timetable')} variant="outline" className="w-full bg-white/10 hover:bg-white/20 text-white border-white/20 font-bold text-xs rounded-xl justify-start">
                 <Calendar className="w-4 h-4 mr-2" /> Lab Timetable & Schedules
