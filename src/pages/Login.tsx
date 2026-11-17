@@ -937,10 +937,10 @@ const Login: React.FC = () => {
                                   </div>
                                 </div>
 
-                                {/* Access Code */}
+                                {/* Password / Access Code */}
                                 <div className="space-y-2">
                                   <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-500">
-                                    Access Code
+                                    Password / Access Code
                                   </Label>
                                   <div className="relative">
                                     <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
@@ -949,9 +949,9 @@ const Login: React.FC = () => {
                                       type="password"
                                       value={staffPassword}
                                       onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                                      placeholder="e.g. MUN-3MDC"
-                                      autoComplete="one-time-code"
-                                      className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-mono font-bold text-base focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 tracking-wider placeholder-slate-500"
+                                      placeholder="e.g. Munyaka4125!"
+                                      autoComplete="current-password"
+                                      className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-mono font-bold text-base focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder-slate-500"
                                     />
                                     <button
                                       type="button"
@@ -962,9 +962,9 @@ const Login: React.FC = () => {
                                     </button>
                                   </div>
                                   <p className="text-[10px] text-slate-500 font-medium flex items-center justify-between">
-                                    <span>Your access code was shared via SMS/email.</span>
+                                    <span>Enter your staff portal password (e.g., Munyaka4125!)</span>
                                     <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-950/70 text-amber-400 font-mono text-[10px] font-bold border border-amber-500/40">
-                                      Demo Code: MUN-9632 or MUN-1234
+                                      Demo: MUN-9632 or MUN-1234
                                     </span>
                                   </p>
                                 </div>

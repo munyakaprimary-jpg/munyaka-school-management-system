@@ -132,10 +132,10 @@ export const fetchStaffFromFirestore = async (): Promise<any[]> => {
 
 export const verifyStaffLogin = async (identifier: string, accessCode: string): Promise<{ success: boolean; user?: any; error?: string }> => {
   const id = String(identifier || '').trim().toLowerCase();
-  const pass = String(accessCode || '').trim();
+  const pass = String(accessCode || '').trim(); // Case-sensitive password as entered
 
   if (!id) return { success: false, error: 'Please enter your staff ID, phone, or email.' };
-  if (!pass) return { success: false, error: 'Please enter your access code.' };
+  if (!pass) return { success: false, error: 'Please enter your password or access code.' };
 
   // Read from the live Firestore `staff` collection first, then fall back to the
   // offline localStorage staff registry so login works immediately even before
@@ -155,21 +155,25 @@ export const verifyStaffLogin = async (identifier: string, accessCode: string): 
     return { success: false, error: 'Staff member not found. Please check your ID, phone, or email.' };
   }
 
-  const storedCode = String(
-    matched.accessCode || matched.code || matched.password || matched.pin || matched.tempAccessCode || matched.access_key || matched.ref || matched.staffId || matched.staff_id || ''
-  ).trim().toUpperCase();
+  // Check if login is enabled (if loginEnabled property is explicitly defined as false)
+  if (matched.loginEnabled === false || matched.login_enabled === false) {
+    return { success: false, error: 'Login is disabled for this staff account. Contact Admin.' };
+  }
 
-  const enteredCode = pass.trim().toUpperCase();
+  const storedPassword = String(matched.password || '').trim();
+  const storedCode = String(matched.accessCode || matched.code || matched.pin || matched.tempAccessCode || matched.access_key || matched.ref || '').trim();
 
-  const isCodeValid =
-    (storedCode && storedCode === enteredCode) ||
-    enteredCode === 'MUN-9632' ||
-    enteredCode === 'MUN-1234' ||
-    enteredCode === String(matched.staffId || matched.staff_id || '').trim().toUpperCase();
+  // Compare password case-sensitively or access code case-insensitively, plus demo codes
+  const isPasswordValid =
+    (storedPassword && storedPassword === pass) ||
+    (storedCode && storedCode.toLowerCase() === pass.toLowerCase()) ||
+    pass.toUpperCase() === 'MUN-9632' ||
+    pass.toUpperCase() === 'MUN-1234' ||
+    pass.toUpperCase() === String(matched.staffId || matched.staff_id || '').trim().toUpperCase();
 
-  if (!isCodeValid) {
-    console.warn(`[StaffLogin] Access code mismatch for ${matched.email || matched.name}. Entered: "${enteredCode}", Stored: "${storedCode}"`);
-    return { success: false, error: `Invalid access code for ${matched.name || identifier}. Expected code format: MUN-XXXX` };
+  if (!isPasswordValid) {
+    console.warn(`[StaffLogin] Password mismatch for ${matched.email || matched.name}.`);
+    return { success: false, error: `Invalid password or access code for ${matched.name || identifier}. Please check your credentials.` };
   }
 
   return { success: true, user: matched };
