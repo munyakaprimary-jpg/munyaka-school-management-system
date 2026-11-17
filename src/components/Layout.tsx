@@ -477,11 +477,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: GraduationCap, label: 'Promote Learners', path: '/promote', roles: ['admin', 'head_teacher', 'owner'] },
   ] : isLibraryTeacher ? [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/library', roles: ['library_teacher', 'librarian'] },
-    { icon: BookOpen, label: 'Book Catalog & Inventory', path: '/library', roles: ['library_teacher', 'librarian'] },
-    { icon: ClipboardCheck, label: 'Issue & Return Loans', path: '/library', roles: ['library_teacher', 'librarian'] },
+    { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['library_teacher', 'librarian'] },
     { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['library_teacher', 'librarian'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['library_teacher', 'librarian'] },
-    { icon: BookOpen, label: 'Digital Study Corner', path: '/study-corner', roles: ['library_teacher', 'librarian'] },
+    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['library_teacher', 'librarian'] },
   ] : isLabTeacher ? [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/science-lab', roles: ['lab_teacher', 'science_teacher'] },
     { icon: FlaskConical, label: 'Apparatus & Chemicals', path: '/science-lab', roles: ['lab_teacher', 'science_teacher'] },
