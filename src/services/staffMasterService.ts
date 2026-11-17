@@ -137,12 +137,19 @@ export const verifyStaffLogin = async (identifier: string, accessCode: string): 
   if (!id) return { success: false, error: 'Please enter your staff ID, phone, or email.' };
   if (!pass) return { success: false, error: 'Please enter your password or access code.' };
 
-  // Read from the live Firestore `staff` collection first, then fall back to the
-  // offline localStorage staff registry so login works immediately even before
-  // Firestore finishes hydrating.
+  // Read from all unified staff storage sources and live Firestore collection
   const firestoreStaff = await fetchStaffFromFirestore();
   const localStaff = getStaffMaster();
-  const staff = firestoreStaff.length > 0 ? firestoreStaff : localStaff;
+  const additionalAccounts = (() => {
+    try {
+      const raw = localStorage.getItem('munyaka_user_accounts');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const staff = [...firestoreStaff, ...localStaff, ...additionalAccounts];
 
   const matched = staff.find((s: any) => {
     const staffId = String(s.staffId || s.staff_id || s.id || '').trim().toLowerCase();
@@ -155,12 +162,12 @@ export const verifyStaffLogin = async (identifier: string, accessCode: string): 
     return { success: false, error: 'Staff member not found. Please check your ID, phone, or email.' };
   }
 
-  // Check if login is enabled (if loginEnabled property is explicitly defined as false)
+  // Check if login is enabled (loginEnabled defaults to true unless explicitly false)
   if (matched.loginEnabled === false || matched.login_enabled === false) {
     return { success: false, error: 'Login is disabled for this staff account. Contact Admin.' };
   }
 
-  const storedPassword = String(matched.password || '').trim();
+  const storedPassword = String(matched.password || matched.temp_password || '').trim();
   const storedCode = String(matched.accessCode || matched.code || matched.pin || matched.tempAccessCode || matched.access_key || matched.ref || '').trim();
 
   // Compare password case-sensitively or access code case-insensitively, plus demo codes
