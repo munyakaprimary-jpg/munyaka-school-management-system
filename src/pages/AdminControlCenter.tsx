@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { syncUnifiedAuthRecord, hydrateUnifiedAuthFromFirestore } from '@/services/unifiedAuthSync';
-import { syncUnifiedAuthRecord, hydrateUnifiedAuthFromFirestore } from '@/services/unifiedAuthSync';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
