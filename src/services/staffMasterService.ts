@@ -105,6 +105,35 @@ export const setActiveStaffSession = (staff: any): void => {
   } catch (e) {}
 };
 
+export const verifyStaffLogin = (identifier: string, accessCode: string): { success: boolean; user?: any; error?: string } => {
+  const id = String(identifier || '').trim();
+  const pass = String(accessCode || '').trim();
+
+  if (!id) return { success: false, error: 'Please enter your staff ID, phone, or email.' };
+  if (!pass) return { success: false, error: 'Please enter your access code.' };
+
+  const staff = getStaffMaster();
+  const normalizedId = id.toLowerCase();
+
+  const matched = staff.find((s: any) => {
+    const staffId = String(s.staffId || s.id || '').trim().toLowerCase();
+    const email = String(s.email || '').trim().toLowerCase();
+    const phone = String(s.phone || '').trim().toLowerCase();
+    return (staffId && staffId === normalizedId) || (email && email === normalizedId) || (phone && phone === normalizedId);
+  });
+
+  if (!matched) {
+    return { success: false, error: 'Staff member not found. Please check your ID, phone, or email.' };
+  }
+
+  const storedCode = String(matched.tempAccessCode || matched.access_key || matched.ref || '').trim();
+  if (!storedCode || storedCode.toLowerCase() !== pass.toLowerCase()) {
+    return { success: false, error: 'Invalid access code. Please check your credentials.' };
+  }
+
+  return { success: true, user: matched };
+};
+
 export const initializeStaffMaster = (): void => {};
 
 export const getStaffMaster = (): MasterStaffRecord[] => {
