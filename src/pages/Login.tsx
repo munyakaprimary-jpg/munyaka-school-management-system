@@ -929,7 +929,7 @@ const Login: React.FC = () => {
                                       autoCapitalize="none"
                                       value={staffId}
                                       onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                                      placeholder="e.g. jndiki@munyaka.sc.ke"
+                                      placeholder="Enter your school email"
                                       autoComplete="username"
                                       className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-bold text-base focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder-slate-500"
                                       autoFocus
@@ -949,7 +949,7 @@ const Login: React.FC = () => {
                                       type="password"
                                       value={staffPassword}
                                       onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                                      placeholder="e.g. Munyaka1256!"
+                                      placeholder="Enter your password or access code"
                                       autoComplete="new-password"
                                       className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-mono font-bold text-base focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder-slate-500"
                                     />
@@ -962,7 +962,7 @@ const Login: React.FC = () => {
                                     </button>
                                   </div>
                                   <p className="text-[10px] text-slate-500 font-medium">
-                                    Enter your staff portal password (e.g., Munyaka4125!)
+                                    Enter your assigned staff portal password.
                                   </p>
                                 </div>
 
