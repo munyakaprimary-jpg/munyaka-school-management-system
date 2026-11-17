@@ -929,7 +929,7 @@ const Login: React.FC = () => {
                                       autoCapitalize="none"
                                       value={staffId}
                                       onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                                      placeholder="e.g. jndiki@munyaka.sc.ke"
+                                      placeholder="Enter your school email"
                                       autoComplete="username"
                                       className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-bold text-base focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder-slate-500"
                                       autoFocus
