@@ -487,7 +487,7 @@ const Login: React.FC = () => {
       setIsStaffVerifying(true);
       setStaffAuthError('');
 
-      const verification = verifyStaffLogin(trimmedId, trimmedPass);
+      const verification = await verifyStaffLogin(trimmedId, trimmedPass);
 
       if (!verification.success || !verification.user) {
         setStaffAuthError(verification.error || 'Authentication failed. Please check your credentials.');
@@ -883,7 +883,7 @@ const Login: React.FC = () => {
                                     Enter your school-issued Admission Number or Assessment Number
                                   </p>
                                 </div>
-            \n                                <Button
+                                <Button
                                   type="submit"
                                   disabled={isStaffVerifying || !String(studentPortalInput || '').trim()}
                                   className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-indigo-600 hover:bg-indigo-500"
@@ -891,7 +891,8 @@ const Login: React.FC = () => {
                                   <><GraduationCap size={20} /> Access Student Portal</>
                                 </Button>
                               </form>
-            \n                              {/* Help note */}
+
+                              {/* Help note */}
                               <div className="p-4 bg-slate-900/60 rounded-2xl flex items-start gap-3 border border-slate-800">
                                 <Send size={16} className="text-slate-500 mt-0.5 shrink-0" />
                                 <p className="text-xs text-slate-400 font-medium">
@@ -901,7 +902,8 @@ const Login: React.FC = () => {
                             </CardContent>
                           </Card>
                         </TabsContent>
-            \n                        {/* ── STAFF / TEACHER / BURSAR TAB ── */}
+
+                        {/* ── STAFF / TEACHER / BURSAR TAB ── */}
                         <TabsContent value="staff" className="mt-4">
                           <Card className="border-none rounded-3xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-xl shadow-slate-500/20">
                             <CardContent className="p-6 md:p-8 space-y-6">
@@ -911,7 +913,8 @@ const Login: React.FC = () => {
                                   <span>{staffAuthError}</span>
                                 </div>
                               )}
-            \n                              <form onSubmit={handleStaffLogin} className="space-y-5">
+
+                              <form onSubmit={handleStaffLogin} className="space-y-5">
                                 {/* Email Address */}
                                 <div className="space-y-2">
                                   <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-500">
@@ -933,7 +936,8 @@ const Login: React.FC = () => {
                                     />
                                   </div>
                                 </div>
-            \n                                {/* Access Code */}
+
+                                {/* Access Code */}
                                 <div className="space-y-2">
                                   <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-500">
                                     Access Code
@@ -964,7 +968,8 @@ const Login: React.FC = () => {
                                     </span>
                                   </p>
                                 </div>
-            \n                                <Button
+
+                                <Button
                                   type="submit"
                                   disabled={isStaffVerifying || !String(staffId || '').trim() || !String(staffPassword || '').trim()}
                                   className="w-full h-12 md:h-14 rounded-xl text-slate-950 font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-500"
@@ -976,7 +981,8 @@ const Login: React.FC = () => {
                                   )}
                                 </Button>
                               </form>
-            \n                              {/* Help note */}
+
+                              {/* Help note */}
                               <div className="p-4 bg-slate-900/60 rounded-2xl flex items-start gap-3 border border-slate-800">
                                 <Send size={16} className="text-slate-500 mt-0.5 shrink-0" />
                                 <p className="text-xs text-slate-400 font-medium">
