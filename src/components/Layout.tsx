@@ -425,11 +425,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     setShowBottomNav(true);
   }, [location.pathname]);
 
-  const normalizedRole = String((user as any)?.systemRole || user?.role || (user as any)?.category || '').trim().toLowerCase();
-  const isIctTeacher = normalizedRole === 'ict_teacher' || normalizedRole === 'ict teacher' || normalizedRole === 'ict';
+  const normalizedRole = String((user as any)?.systemRole || user?.role || (user as any)?.category || '').trim().toLowerCase().replace(/\s+/g, '_');
+  const isLeadership = ['hoi', 'dhoi', 'admin', 'owner'].includes(normalizedRole);
+  const isIctTeacher = normalizedRole === 'ict_teacher' || normalizedRole === 'ict';
+  const isLibraryTeacher = normalizedRole === 'library_teacher' || normalizedRole === 'librarian';
+  const isLabTeacher = normalizedRole === 'lab_teacher' || normalizedRole === 'science_teacher';
+  const isBursarRole = normalizedRole === 'bursar' || normalizedRole === 'accountant';
+  const isStoreMaster = normalizedRole === 'store_manager' || normalizedRole === 'store_keeper' || normalizedRole === 'tools_inventory_teacher';
+
   const userRoleLower = normalizedRole;
   const isIctTeacherRole = isIctTeacher;
-  const isTeacherRole = userRoleLower === 'teacher' || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher' || isIctTeacherRole;
+  const isTeacherRole = userRoleLower === 'teacher' || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher' || isIctTeacherRole || isLibraryTeacher || isLabTeacher || isBursarRole || isStoreMaster;
 
   // If ICT Teacher is on settings or any admin-only route, redirect immediately to /ict
   useEffect(() => {
@@ -441,7 +447,60 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     }
   }, [isIctTeacher, location.pathname, navigate]);
 
-  const menuItems = isTeacherRole ? [
+  const menuItems = isLeadership ? [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin', 'hoi', 'dhoi', 'owner'] },
+    { icon: Users, label: 'Learners', path: '/learners', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: UserCheck, label: 'Staff Registry', path: '/staff-registry', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
+    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin', 'owner'] },
+    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants', roles: ['owner', 'admin'] },
+    { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner'] },
+    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
+    { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin', 'owner'] },
+    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'owner'] },
+    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'owner'] },
+    { icon: ClipboardCheck, label: 'Learner Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: GraduationCap, label: 'Promote Learners', path: '/promote', roles: ['admin', 'head_teacher', 'owner'] },
+  ] : isLibraryTeacher ? [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/library', roles: ['library_teacher', 'librarian'] },
+    { icon: BookOpen, label: 'Book Catalog & Inventory', path: '/library', roles: ['library_teacher', 'librarian'] },
+    { icon: ClipboardCheck, label: 'Issue & Return Loans', path: '/library', roles: ['library_teacher', 'librarian'] },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['library_teacher', 'librarian'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['library_teacher', 'librarian'] },
+    { icon: BookOpen, label: 'Digital Study Corner', path: '/study-corner', roles: ['library_teacher', 'librarian'] },
+  ] : isLabTeacher ? [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/science-lab', roles: ['lab_teacher', 'science_teacher'] },
+    { icon: FlaskConical, label: 'Apparatus & Chemicals', path: '/science-lab', roles: ['lab_teacher', 'science_teacher'] },
+    { icon: Target, label: 'Practical Sessions', path: '/science-lab', roles: ['lab_teacher', 'science_teacher'] },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['lab_teacher', 'science_teacher'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['lab_teacher', 'science_teacher'] },
+  ] : isBursarRole ? [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['bursar', 'accountant'] },
+    { icon: Wallet, label: 'Fee Ledgers & Finance', path: '/fees', roles: ['bursar', 'accountant'] },
+    { icon: CreditCard, label: 'Receipts & Payments', path: '/fees', roles: ['bursar', 'accountant'] },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['bursar', 'accountant'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['bursar', 'accountant'] },
+  ] : isStoreMaster ? [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/inventory', roles: ['store_manager', 'store_keeper', 'tools_inventory_teacher'] },
+    { icon: Box, label: 'Stock Inventory', path: '/inventory', roles: ['store_manager', 'store_keeper', 'tools_inventory_teacher'] },
+    { icon: ClipboardList, label: 'Issue & Requisitions', path: '/inventory', roles: ['store_manager', 'store_keeper', 'tools_inventory_teacher'] },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['store_manager', 'store_keeper', 'tools_inventory_teacher'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['store_manager', 'store_keeper', 'tools_inventory_teacher'] },
+  ] : isTeacherRole ? [
     { icon: LayoutDashboard, label: 'Dashboard', path: isIctTeacherRole ? '/ict' : '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
     ...(!isIctTeacherRole ? [
       { icon: Users, label: 'My Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
