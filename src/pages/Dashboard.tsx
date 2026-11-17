@@ -4,7 +4,7 @@ import AdminDashboard from "@/components/dashboards/AdminDashboard";
 import TeacherDashboard from "@/components/dashboards/TeacherDashboard";
 import ICTLabManagement from "@/pages/ICTLabManagement";
 import ICTPortalDashboard from "@/pages/ICTPortalDashboard";
-import LibrarianPortalView from "@/pages/LibrarianPortalView";
+import LibraryDashboard from "@/pages/LibraryDashboard";
 import { useAuth } from "@/context/AuthContext";
 import { resolveRole, roleHas } from "@/rbac/permissionMatrix";
 import { isTeacherRole } from "@/utils/roleHelper";
