@@ -98,6 +98,13 @@ export const mapDesignationToSystemRole = (role: string): MasterSystemRole => {
   return 'unmapped';
 };
 
+export const setActiveStaffSession = (staff: any): void => {
+  try {
+    localStorage.setItem('munyaka_current_staff', JSON.stringify(staff));
+    window.dispatchEvent(new Event('staff_session_updated'));
+  } catch (e) {}
+};
+
 export const initializeStaffMaster = (): void => {};
 
 export const getStaffMaster = (): MasterStaffRecord[] => {
