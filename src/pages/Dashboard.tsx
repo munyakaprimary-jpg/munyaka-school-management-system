@@ -3,7 +3,7 @@ import OwnerDashboard from "@/components/dashboards/OwnerDashboard";
 import AdminDashboard from "@/components/dashboards/AdminDashboard";
 import TeacherDashboard from "@/components/dashboards/TeacherDashboard";
 import ICTLabManagement from "@/pages/ICTLabManagement";
-import ICTDashboard from "@/pages/ICTDashboard";
+import ICTPortalDashboard from "@/pages/ICTPortalDashboard";
 import LibrarianPortalView from "@/pages/LibrarianPortalView";
 import { useAuth } from "@/context/AuthContext";
 import { resolveRole, roleHas } from "@/rbac/permissionMatrix";
