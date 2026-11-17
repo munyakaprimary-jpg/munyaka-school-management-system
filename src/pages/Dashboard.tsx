@@ -4,6 +4,7 @@ import AdminDashboard from "@/components/dashboards/AdminDashboard";
 import TeacherDashboard from "@/components/dashboards/TeacherDashboard";
 import ICTLabManagement from "@/pages/ICTLabManagement";
 import ICTPortalDashboard from "@/pages/ICTPortalDashboard";
+import LibraryDashboard from "@/components/dashboards/LibraryDashboard";
 import LibrarianPortalView from "@/pages/LibrarianPortalView";
 import { useAuth } from "@/context/AuthContext";
 import { resolveRole, roleHas } from "@/rbac/permissionMatrix";
@@ -34,7 +35,7 @@ const Dashboard: React.FC = () => {
     userName.includes('JANET GATHONI KUNGU');
 
   if (isLibrarian && !roleLower.includes('admin') && !userName.includes('ADMIN')) {
-    return <LibrarianPortalView />;
+    return <LibraryDashboard />;
   }
 
   const isIctTechnician = roleLower === 'ict_technician' || roleLower === 'ict_teacher' || roleLower.includes('ict') || resolvedR === 'ict_technician' || resolvedR === 'ict_teacher';

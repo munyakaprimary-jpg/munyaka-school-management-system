@@ -16,7 +16,7 @@ export function getRoleLandingPage(role: string, customPermissions?: Record<stri
     return '/payments';
   }
   if (lowerRole.includes('library') || title.includes('library') || title.includes('librarian')) {
-    return '/library';
+    return '/dashboard';
   }
   if (lowerRole.includes('hoi') || lowerRole.includes('dhoi') || title.includes('hoi') || title.includes('head')) {
     return '/dashboard';
