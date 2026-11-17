@@ -99,12 +99,11 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   // Dynamically fetch active registered user profile from unified staff table
-    const getActiveUserRole = () => {
-      if (!user) return 'Guest';
-      const rawRole = user.role || user.title || 'Staff';
-      return getExactStaffRoleTitle(rawRole);
-    };
-    };
+  const getActiveUserRole = () => {
+    if (!user) return 'Guest';
+    const rawRole = user.role || user.title || 'Staff';
+    return getExactStaffRoleTitle(rawRole);
+  };
 
   const activeRole = getActiveUserRole();
   const isStaffOnly = String(activeRole).toUpperCase() === 'STAFF' || String(activeRole).toLowerCase() === 'teacher' || String(activeRole).toLowerCase() === 'class_teacher' || String(activeRole).toLowerCase() === 'subject_teacher';

@@ -42,30 +42,32 @@ export async function authenticateStaff(identifier: string, credentials: string)
     }
 
     // Verify access key or password if present
-    const validKey = String(matchedStaff.accessKey || '').trim();
+    const sRec = matchedStaff as any;
+    const validKey = String(sRec.accessKey || sRec.password || '').trim();
     if (validKey && validKey !== cleanCred && cleanCred !== 'munyaka2026' && cleanCred !== 'admin123') {
       // Also check alternative passwords or staff password if stored
       return { success: false, error: 'Invalid access key or password for this staff member.' };
     }
 
-    const role = matchedStaff.role || 'teacher';
-    const title = matchedStaff.title || matchedStaff.department || 'Staff Member';
-    const staffIdentifier = matchedStaff.tscNumber || matchedStaff.nationalId || matchedStaff.id;
+    const role = sRec.role || sRec.systemRole || 'teacher';
+    const title = sRec.title || sRec.systemRole || sRec.department || 'Staff Member';
+    const staffIdentifier = sRec.tscNumber || sRec.nationalId || sRec.id;
 
     // Retrieve matrix permissions for this role
     const matrix = getPermissionsMatrix();
     const resolved = resolveRole(role);
     const rolePerms = matrix[resolved] || matrix[role] || {};
 
+    const fullName = sRec.fullName || sRec.name || 'Staff Member';
     const sessionUser: SessionUser = {
-      id: matchedStaff.id,
-      name: matchedStaff.fullName || matchedStaff.name,
-      email: matchedStaff.email || `${matchedStaff.id}@munyaka.sc.ke`,
+      id: sRec.id,
+      name: fullName,
+      email: sRec.email || `${sRec.id}@munyaka.sc.ke`,
       role: role,
       title: title,
       identifier: staffIdentifier,
-      department: matchedStaff.department,
-      avatar: (matchedStaff.fullName || matchedStaff.name) ? (matchedStaff.fullName || matchedStaff.name).split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'ST',
+      department: sRec.department,
+      avatar: fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
       permissions: rolePerms
     };
 

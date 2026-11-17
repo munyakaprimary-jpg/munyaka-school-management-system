@@ -1,4 +1,4 @@
-import { CentralDataService } from './CentralDataService';
+import { CentralDataService } from './centralDataService';
 import { db } from '@/config/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 
