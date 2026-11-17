@@ -137,7 +137,7 @@ export const verifyStaffLogin = async (identifier: string, accessCode: string): 
   if (!id) return { success: false, error: 'Please enter your staff ID, phone, or email.' };
   if (!pass) return { success: false, error: 'Please enter your password or access code.' };
 
-  // Read from all unified staff storage sources and live Firestore collection
+  // Read from all unified staff storage sources, prioritizing additional accounts (Unified Auth store) first
   const firestoreStaff = await fetchStaffFromFirestore();
   const localStaff = getStaffMaster();
   const additionalAccounts = (() => {
@@ -149,7 +149,30 @@ export const verifyStaffLogin = async (identifier: string, accessCode: string): 
     }
   })();
 
-  const staff = [...firestoreStaff, ...localStaff, ...additionalAccounts];
+  // Merge and prioritize additionalAccounts so user account credentials (password & loginEnabled) take precedence
+  const map = new Map<string, any>();
+  [...additionalAccounts, ...firestoreStaff, ...localStaff].forEach((s: any) => {
+    if (s && (s.email || s.id || s.staffId)) {
+      const emailKey = String(s.email || '').trim().toLowerCase();
+      const idKey = String(s.id || s.staffId || '').trim().toLowerCase();
+      const lookupKey = emailKey || idKey;
+      if (lookupKey && !map.has(lookupKey)) {
+        map.set(lookupKey, s);
+      } else if (lookupKey && map.has(lookupKey)) {
+        // Merge fields, letting additionalAccounts take precedence for password/loginEnabled
+        const existing = map.get(lookupKey);
+        map.set(lookupKey, {
+          ...existing,
+          ...s,
+          password: s.password || existing.password,
+          loginEnabled: s.loginEnabled !== undefined ? s.loginEnabled : existing.loginEnabled,
+          role: s.role || existing.role,
+        });
+      }
+    }
+  });
+
+  const staff = Array.from(map.values());
 
   const matched = staff.find((s: any) => {
     const staffId = String(s.staffId || s.staff_id || s.id || '').trim().toLowerCase();
@@ -170,7 +193,7 @@ export const verifyStaffLogin = async (identifier: string, accessCode: string): 
   const storedPassword = String(matched.password || matched.temp_password || '').trim();
   const storedCode = String(matched.accessCode || matched.code || matched.pin || matched.tempAccessCode || matched.access_key || matched.ref || '').trim();
 
-  // Compare password case-sensitively or access code case-insensitively, plus demo codes
+  // Compare password case-sensitively, or access code case-insensitively, plus demo codes
   const isPasswordValid =
     (storedPassword && storedPassword === pass) ||
     (storedCode && storedCode.toLowerCase() === pass.toLowerCase()) ||
