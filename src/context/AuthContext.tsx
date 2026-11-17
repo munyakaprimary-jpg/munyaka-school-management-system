@@ -212,10 +212,10 @@ const initializeUsersStorage = () => {
         assignedStream: r.assignedStream,
         assignedSubjects: r.assignedSubjects ?? [],
         tempAccessCode: r.tempAccessCode,
-        status: r.status,
-        datePreRegistered: r.datePreRegistered,
-        activatedAt: r.activatedAt,
-        lastLogin: r.lastLogin,
+        status: (r.status as any) || 'active',
+        datePreRegistered: (r as any).datePreRegistered || new Date().toISOString(),
+        activatedAt: (r as any).activatedAt || '',
+        lastLogin: (r as any).lastLogin || '',
       }))
     : INITIAL_PRE_REGISTERED_STAFF;
 
