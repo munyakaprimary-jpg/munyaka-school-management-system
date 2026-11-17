@@ -124,7 +124,27 @@ export const setActiveStaffSession = (staff: any): void => {
 export const fetchStaffFromFirestore = async (): Promise<any[]> => {
   try {
     const snapshot = await getDocs(collection(db, 'staff'));
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(docSnap => {
+      const d = docSnap.data() || {};
+      const raw = d.rawPayload || {};
+      const exactRole = d.role || d.category || raw.category || raw.role || raw.assignedRole || 'Subject Teacher';
+      const sysRole = d.systemRole || mapDesignationToSystemRole(raw.assignedRole || raw.role || exactRole);
+      const password = d.password || raw.password || '';
+      const accessCode = d.accessCode || raw.accessCode || d.code || raw.code || d.pin || raw.pin || '';
+      const loginEnabled = d.loginEnabled ?? raw.loginEnabled ?? d.login_enabled ?? raw.login_enabled ?? true;
+
+      return {
+        id: docSnap.id,
+        ...raw,
+        ...d,
+        role: exactRole,
+        systemRole: sysRole,
+        password,
+        accessCode,
+        tempAccessCode: accessCode,
+        loginEnabled,
+      };
+    });
   } catch (e) {
     return [];
   }
