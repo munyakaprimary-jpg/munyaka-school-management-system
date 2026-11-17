@@ -476,7 +476,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
     { icon: GraduationCap, label: 'Promote Learners', path: '/promote', roles: ['admin', 'head_teacher', 'owner'] },
   ] : isLibraryTeacher ? [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/library', roles: ['library_teacher', 'librarian'] },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['library_teacher', 'librarian'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['library_teacher', 'librarian'] },
     { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['library_teacher', 'librarian'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['library_teacher', 'librarian'] },

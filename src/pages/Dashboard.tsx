@@ -34,7 +34,7 @@ const Dashboard: React.FC = () => {
     userName.includes('JANET GATHONI KUNGU');
 
   if (isLibrarian && !roleLower.includes('admin') && !userName.includes('ADMIN')) {
-    return <TeacherDashboard />;
+    return <LibrarianPortalView />;
   }
 
   const isIctTechnician = roleLower === 'ict_technician' || roleLower === 'ict_teacher' || roleLower.includes('ict') || resolvedR === 'ict_technician' || resolvedR === 'ict_teacher';
