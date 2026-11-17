@@ -429,23 +429,24 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const isTeacherRole = userRoleLower === 'teacher' || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher';
 
   const menuItems = isTeacherRole ? [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: Users, label: 'My Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: ClipboardCheck, label: 'Roll Call / Attendance', path: '/attendance', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: FileSpreadsheet, label: 'Assessments & Marks', path: '/assessments', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'], subItems: [
-          { icon: ClipboardCheck, label: 'Grading Review', path: '/grading', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-          { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-          { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-          { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-          { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: Users, label: 'My Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: ClipboardCheck, label: 'Roll Call / Attendance', path: '/attendance', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: FileSpreadsheet, label: 'Assessments & Marks', path: '/assessments', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'], subItems: [
+          { icon: ClipboardCheck, label: 'Grading Review', path: '/grading', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+          { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+          { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+          { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+          { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
         ] },
-        { icon: FileText, label: 'Sync & Export Package', path: '/teacher-export', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-        { icon: ClipboardList, label: 'Exam Types', path: '/teacher/exam-types', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-        { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
+        { icon: FileText, label: 'Sync & Export Package', path: '/teacher-export', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher', 'ict_teacher'] },
+        { icon: ClipboardList, label: 'Exam Types', path: '/teacher/exam-types', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher', 'ict_teacher'] },
+        { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
+    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
   ] : [
     // ── Dashboard — position #1 for ALL roles; the Dashboard component
     // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
@@ -514,8 +515,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student', 'ict_technician', 'ict_teacher'] },
     { icon: FlaskConical, label: 'Science Lab Workstation', path: '/science-lab', global: true },
     { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'head_teacher', 'ict_technician', 'ict_teacher'] },
-    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'ict_technician', 'ict_teacher'] },
-    { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'ict_technician', 'ict_teacher'] },
+    { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'ict_technician', 'ict_teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
         { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student', 'parent', 'librarian', 'ict_technician', 'ict_teacher'] },
@@ -812,7 +813,28 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   <Link to="/profile" onClick={() => setIsOpen(false)}>
                     <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{user?.name || 'Admin'}</p>
                   </Link>
-                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Administrator'}</p>
+                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">
+                    {(() => {
+                      try {
+                        const staffRaw = localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff') || '[]';
+                        const staffList = JSON.parse(staffRaw);
+                        if (Array.isArray(staffList)) {
+                          const found = staffList.find((s: any) =>
+                            (s.email && user?.email && s.email.toLowerCase() === user.email.toLowerCase()) ||
+                            (s.name && user?.name && s.name.toLowerCase() === user.name.toLowerCase()) ||
+                            (s.staffId && (user as any)?.staffId && s.staffId === (user as any).staffId)
+                          );
+                          if (found) {
+                            const roleTitle = found.role || found.title || found.category || found.assignedRole;
+                            if (roleTitle) {
+                              return String(roleTitle).replace(/_/g, ' ').toUpperCase();
+                            }
+                          }
+                        }
+                      } catch {}
+                      return (user?.role || 'Administrator').replace(/_/g, ' ');
+                    })()}
+                  </p>
                 </div>
               )}
             </div>

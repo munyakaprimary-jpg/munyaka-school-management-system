@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
+import { getStaffMaster } from '@/services/staffMasterService';
 import { useCentralData } from '@/hooks/useCentralData';
 import TeacherExportModule from '@/components/teacher/TeacherExportModule';
 import TeacherSyncQrGenerator from '@/components/teacher/TeacherSyncQrGenerator';
@@ -99,25 +100,36 @@ export default function TeacherDashboard() {
     return currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || 'Grade 4 Blue';
   });
 
-  const rawRole = currUserObj.rbacRole || currUserObj.role || currUserObj.department || (user as any)?.rbacRole || user?.role || '';
-  const normalizedRole = String(rawRole).toLowerCase().trim();
-  const userName = String(currUserObj.name || currUserObj.fullName || user?.name || '').toUpperCase();
-  const assignedDept = String(currUserObj.assignedDepartment || currUserObj.department || (user as any)?.assignedDepartment || '').toLowerCase();
+  // Live-sync against Staff Directory to ensure true role is always respected
+  const activeEmail = String(currUserObj.email || user?.email || '').trim().toLowerCase();
+  const activeStaffId = String(currUserObj.staff_id || currUserObj.staffId || user?.staff_id || '').trim();
+  let trueStaffRecord: any = null;
+  try {
+    const staffMaster = getStaffMaster();
+    trueStaffRecord = staffMaster.find(s =>
+      (activeEmail && String(s.email || '').trim().toLowerCase() === activeEmail) ||
+      (activeStaffId && String(s.staffId || '').trim() === activeStaffId) ||
+      (currUserObj.name && String(s.name || '').trim().toUpperCase() === String(currUserObj.name).trim().toUpperCase())
+    );
+  } catch {}
+
+  const resolvedSysRole = String(trueStaffRecord?.systemRole || trueStaffRecord?.role || currUserObj.rbacRole || currUserObj.role || '').trim();
+  const normalizedRole = resolvedSysRole.toUpperCase().replace(/\s+/g, '_');
+  const normalizedRoleLower = normalizedRole.toLowerCase();
+
+  const userName = String(currUserObj.name || currUserObj.fullName || trueStaffRecord?.name || user?.name || '').toUpperCase();
+  const assignedDept = String(trueStaffRecord?.department || currUserObj.assignedDepartment || currUserObj.department || '').toLowerCase();
   
   const isLibraryStaff =
-    normalizedRole === 'library_teacher' ||
-    normalizedRole === 'librarian' ||
+    normalizedRoleLower.includes('library') ||
     assignedDept.includes('library') ||
-    title.includes('library') ||
-    normalizedRole.includes('library') ||
-    userName.includes('JANET GATHONI KUNGU');
+    userName.includes('JANET GATHONI');
 
   const isIctStaff =
-    normalizedRole === 'ict_teacher' ||
-    normalizedRole === 'ict_technician' ||
+    normalizedRoleLower.includes('ict') ||
+    normalizedRoleLower.includes('it') ||
     assignedDept.includes('ict') ||
-    title.includes('ict') ||
-    normalizedRole.includes('ict');
+    userName.includes('JAMES NDIKI');
 
   const hasAssignedClass = Boolean(selectedClass && selectedClass !== 'No Class Assigned');
 
@@ -131,6 +143,19 @@ export default function TeacherDashboard() {
     : isClassTeacher
     ? `You are signed in as ${teacherName} (Staff). Your dashboard is strictly restricted to assigned class (${assignedClassLabel}) data (Mathematics, Science & Technology, and Integrated Science).`
     : `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Specialist Educator & Subject Management (Mathematics, Science & Technology, and Integrated Science).`;
+
+  // Robust normalizer helper: strips "GRADE" case-insensitively, trims spaces, and standardizes streams
+  const normalizeGradeAndStream = (gradeStr: string, streamStr: string) => {
+    const cleanGrade = String(gradeStr || '')
+      .replace(/grade/gi, '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .trim()
+      .toUpperCase();
+    const cleanStream = String(streamStr || '')
+      .trim()
+      .toUpperCase();
+    return { cleanGrade, cleanStream, combined: `${cleanGrade} ${cleanStream}`.trim() };
+  };
 
   // ICT Teacher / ICT Technician Analytics Dashboard View
   if (isIctStaff) {
@@ -313,8 +338,11 @@ export default function TeacherDashboard() {
           </div>
           <div className="flex flex-wrap gap-3 mt-6 relative z-10">
             <Button
-              onClick={() => navigate('/inventory')}
-              className="bg-white text-blue-900 hover:bg-blue-50 font-bold rounded-xl shadow-sm flex items-center gap-2"
+              onClick={() => {
+                navigate('/ict-lab');
+                window.location.href = '/ict-lab';
+              }}
+              className="bg-white text-blue-950 hover:bg-blue-50 font-black px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2 cursor-pointer"
             >
               Open ICT & Device Inventory <ArrowRight className="w-4 h-4" />
             </Button>
@@ -357,7 +385,7 @@ export default function TeacherDashboard() {
             </div>
             <div className="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
               <span>Hardware Inventory</span>
-              <Button onClick={() => navigate('/inventory')} variant="link" className="p-0 h-auto text-xs font-bold text-blue-600 hover:text-blue-700">
+              <Button onClick={() => navigate('/ict-lab')} variant="link" className="p-0 h-auto text-xs font-bold text-blue-600 hover:text-blue-700">
                 Manage Devices &rarr;
               </Button>
             </div>
@@ -742,7 +770,7 @@ export default function TeacherDashboard() {
             {title.includes('library') ? (
               <Button onClick={() => navigate('/library')} className="bg-white text-emerald-800 font-bold rounded-xl">Open Library Management</Button>
             ) : title.includes('ict') ? (
-              <Button onClick={() => navigate('/inventory')} className="bg-white text-emerald-800 font-bold rounded-xl">Open ICT Lab Inventory</Button>
+              <Button onClick={() => navigate('/ict-lab')} className="bg-white text-emerald-800 font-bold rounded-xl">Open ICT Lab Inventory</Button>
             ) : title.includes('bursar') || title.includes('accountant') ? (
               <Button onClick={() => navigate('/fees')} className="bg-white text-emerald-800 font-bold rounded-xl">Open Fee Collections & Ledger</Button>
             ) : (
@@ -845,20 +873,7 @@ export default function TeacherDashboard() {
     });
   }, [students, activeAssignedClass]);
 
-  // Robust normalizer helper: strips "GRADE" case-insensitively, trims spaces, and standardizes streams
-  const normalizeGradeAndStream = (gradeStr: string, streamStr: string) => {
-    const cleanGrade = String(gradeStr || '')
-      .replace(/grade/gi, '')
-      .replace(/[^a-zA-Z0-9]/g, '')
-      .trim()
-      .toUpperCase();
-    const cleanStream = String(streamStr || '')
-      .trim()
-      .toUpperCase();
-    return { cleanGrade, cleanStream, combined: `${cleanGrade} ${cleanStream}`.trim() };
-  };
-
-  // Parse active assigned class and normalize
+// Parse active assigned class and normalize
   const activeClassNorm = React.useMemo(() => {
     const raw = String(fullClassTitle || '').trim();
     if (!raw || raw === 'No Class Assigned') return { cleanGrade: '', cleanStream: '', combined: '' };
