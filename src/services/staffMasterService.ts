@@ -46,6 +46,15 @@ export const TEACHING_SYSTEM_ROLES: MasterSystemRole[] = [
   'dhoi'
 ];
 
+export const isTeachingRole = (systemRoleOrTitle: string): boolean => {
+  const r = String(systemRoleOrTitle || '').toLowerCase().trim();
+  if (TEACHING_SYSTEM_ROLES.includes(r as any)) return true;
+  if (r.includes('teach') || r.includes('hoi') || r.includes('dhoi') || r.includes('ict') || r.includes('lab') || r.includes('library') || r.includes('librarian')) {
+    return !isNonTeachingDesignation(r);
+  }
+  return false;
+};
+
 export const isNonTeachingDesignation = (role: string): boolean => {
   const r = (role || '').toLowerCase().trim();
   return (
