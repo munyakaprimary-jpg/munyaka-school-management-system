@@ -950,7 +950,7 @@ const Login: React.FC = () => {
                                       value={staffPassword}
                                       onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
                                       placeholder="e.g. MUN-3MDC"
-                                      autoComplete="current-password"
+                                      autoComplete="one-time-code"
                                       className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-mono font-bold text-base focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 tracking-wider placeholder-slate-500"
                                     />
                                     <button

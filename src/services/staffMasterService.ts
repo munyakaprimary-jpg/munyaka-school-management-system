@@ -168,7 +168,8 @@ export const verifyStaffLogin = async (identifier: string, accessCode: string): 
     enteredCode === String(matched.staffId || matched.staff_id || '').trim().toUpperCase();
 
   if (!isCodeValid) {
-    return { success: false, error: 'Invalid access code. Please check your credentials.' };
+    console.warn(`[StaffLogin] Access code mismatch for ${matched.email || matched.name}. Entered: "${enteredCode}", Stored: "${storedCode}"`);
+    return { success: false, error: `Invalid access code for ${matched.name || identifier}. Expected code format: MUN-XXXX` };
   }
 
   return { success: true, user: matched };
@@ -178,22 +179,36 @@ export const initializeStaffMaster = (): void => {};
 
 export const getStaffMaster = (): MasterStaffRecord[] => {
   let list: any[] = [];
-  try {
-    const raw = localStorage.getItem('munyaka_staff_db') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        list = parsed;
+  const keysToTry = [
+    'munyaka_staff_master_v2',
+    'munyaka_staff_db',
+    'munyaka_staff_directory',
+    'munyaka_staff',
+    'munyaka_staff_registry',
+    'staff_registry',
+    'staff'
+  ];
+
+  for (const k of keysToTry) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          list = [...list, ...parsed];
+        }
       }
-    }
-  } catch {}
+    } catch {}
+  }
 
   const map = new Map<string, any>();
   list.forEach(s => {
     if (s && (s.id || s.phone || s.name || s.staffId || s.email)) {
       const key = String(s.id || s.phone || s.email || s.name || s.staffId).trim().toLowerCase();
       if (!map.has(key)) {
-        map.set(key, s);
+        // Ensure access code is guaranteed on record
+        const accessCode = s.accessCode || s.code || s.password || s.pin || s.tempAccessCode || s.access_key || s.ref || s.staffId || `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
+        map.set(key, { ...s, accessCode, tempAccessCode: accessCode });
       }
     }
   });
@@ -201,6 +216,8 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
   const uniqueList = Array.from(map.values());
   try {
     localStorage.setItem('munyaka_staff_db', JSON.stringify(uniqueList));
+    localStorage.setItem('munyaka_staff', JSON.stringify(uniqueList));
+    localStorage.setItem('munyaka_staff_directory', JSON.stringify(uniqueList));
   } catch {}
 
   const localOverrides = JSON.parse(localStorage.getItem('munyaka_staff_class_overrides') || '{}');
@@ -209,6 +226,7 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     const override = localOverrides[s.id || s.email] || {};
     const exactRole = s.role || s.category || s.title || 'Subject Teacher';
     const sysRole = s.systemRole || mapDesignationToSystemRole(exactRole);
+    const accessCode = s.accessCode || s.code || s.password || s.pin || s.tempAccessCode || s.access_key || s.ref || s.staffId || 'MUN-1234';
     return {
       id: s.id || s.staffId || `staff_${Math.random()}`,
       name: s.name || s.full_name || 'Staff Member',
@@ -224,8 +242,10 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
       assignedSubjects: s.assignedSubjects || s.subjectAllocations || s.allocations || [],
       allocations: s.allocations || s.subjectAllocations || s.detailedAssignments || [],
       status: s.status || 'Active',
-      staffId: s.staffId || s.staff_id,
-      tempAccessCode: s.tempAccessCode || s.access_key || s.ref,
+      staffId: s.staffId || s.staff_id || '',
+      tempAccessCode: accessCode,
+      accessCode: accessCode,
+      code: accessCode,
     };
   });
 };
