@@ -425,9 +425,21 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     setShowBottomNav(true);
   }, [location.pathname]);
 
-  const userRoleLower = String(user?.role || '').toLowerCase();
-  const isIctTeacherRole = userRoleLower === 'ict_teacher' || userRoleLower === 'ict';
+  const normalizedRole = String((user as any)?.systemRole || user?.role || (user as any)?.category || '').trim().toLowerCase();
+  const isIctTeacher = normalizedRole === 'ict_teacher' || normalizedRole === 'ict teacher' || normalizedRole === 'ict';
+  const userRoleLower = normalizedRole;
+  const isIctTeacherRole = isIctTeacher;
   const isTeacherRole = userRoleLower === 'teacher' || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher' || isIctTeacherRole;
+
+  // If ICT Teacher is on settings or any admin-only route, redirect immediately to /ict
+  useEffect(() => {
+    if (isIctTeacher) {
+      const path = location.pathname;
+      if (path.startsWith('/settings') || path.startsWith('/admin') || path.startsWith('/staff-registry') || path.startsWith('/fees')) {
+        navigate('/ict', { replace: true });
+      }
+    }
+  }, [isIctTeacher, location.pathname, navigate]);
 
   const menuItems = isTeacherRole ? [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
