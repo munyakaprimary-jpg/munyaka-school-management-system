@@ -41,6 +41,13 @@ const ProtectedRoute = ({
   const rawRole = (user.role || '').toLowerCase().trim();
   const upperRole = rawRole.toUpperCase();
 
+  // Guard: ict_teacher and ict_technician must never access admin or general management views
+  const isIctRole = rawRole === 'ict_teacher' || rawRole === 'ict_technician' || upperRole === 'ICT_TEACHER';
+  const isTryingRestricted = location.pathname.startsWith('/admin') || location.pathname.startsWith('/staff-registry') || location.pathname.includes('/settings/staff');
+  if (isIctRole && isTryingRestricted) {
+    return <Navigate to="/ict" replace />;
+  }
+
   const isOwnerOrSuper = upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN' || upperRole === 'SUPER';
   const isAdmin = upperRole === 'ADMIN' || upperRole === 'HOI' || upperRole === 'DHOI' || upperRole === 'ADMINISTRATOR';
 

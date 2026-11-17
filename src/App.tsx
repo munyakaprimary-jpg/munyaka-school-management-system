@@ -104,7 +104,8 @@ import StaffCheckInSelector from "./pages/StaffCheckInSelector";
 import AttendanceMonitor from "./pages/AttendanceMonitor";
 import DigitalHub from "./pages/DigitalHub";
 import DigitalLiteracyVideos from "./pages/DigitalLiteracyVideos";
-import ICTLabManagement from "./pages/ICTLabManagement";
+import ICTPortalDashboard from "./pages/ICTPortalDashboard";
+import ICTLabManagement from "./components/ICTLabManagement";
 import SystemAndAccountManagement from "./pages/SystemAndAccountManagement";
 import DigitalSkillsAssessment from "./pages/DigitalSkillsAssessment";
 import PracticalCompetencies from "./pages/PracticalCompetencies";
@@ -581,6 +582,7 @@ const App = () => {
                                             <Route path="/teacher/export" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'admin']}><AppUnlock><Layout><TeacherExportView /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/teacher-export" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'admin']}><AppUnlock><Layout><TeacherExportView /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/librarian/portal" element={<ProtectedRoute allowedRoles={['librarian', 'library_teacher', 'admin']}><AppUnlock><Layout><LibrarianPortalView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/ict" element={<ProtectedRoute allowedRoles={['ict_teacher', 'ict_technician', 'admin']}><AppUnlock><Layout><ICTPortalDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/ict/portal" element={<ProtectedRoute allowedRoles={['ict_teacher', 'ict_technician', 'admin']}><AppUnlock><Layout><ICTLabManagement /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/bursar/portal" element={<ProtectedRoute allowedRoles={['bursar', 'admin']}><AppUnlock><Layout><BursarPortalView /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/headteacher/portal" element={<ProtectedRoute allowedRoles={['head_teacher', 'senior_teacher', 'admin']}><AppUnlock><Layout><HeadteacherPortalView /></Layout></AppUnlock></ProtectedRoute>} />

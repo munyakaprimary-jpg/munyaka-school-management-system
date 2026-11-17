@@ -9,8 +9,8 @@ export function getRoleLandingPage(role: string, customPermissions?: Record<stri
   if (lowerRole.includes('bursar') || title.includes('bursar') || title.includes('accountant')) {
     return '/fees';
   }
-  if (lowerRole.includes('ict') || lowerRole.includes('lab') || title.includes('ict') || title.includes('computer') || title.includes('lab') || normRole === 'ICT_TEACHER') {
-    return '/ict/portal';
+  if (lowerRole === 'ict_teacher' || lowerRole === 'ict_technician' || normRole === 'ICT_TEACHER' || lowerRole.includes('ict') || lowerRole.includes('lab') || title.includes('ict') || title.includes('computer') || title.includes('lab')) {
+    return '/ict';
   }
   if (lowerRole.includes('store') || title.includes('store')) {
     return '/payments';
