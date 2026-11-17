@@ -1,147 +1,99 @@
-import { CentralDataService, STORAGE_KEYS } from './centralDataService';
-
-export const STAFF_MASTER_KEY = STORAGE_KEYS.STAFF;
-
-export interface StaffMember {
-  id: string;
-  name: string;
-  category?: string;
-  nationalId: string;
-  email: string;
-  phone: string;
-  tscNumber?: string;
-  role: string;
-  systemRole: MasterSystemRole;
-  department: string;
-  assignedGrade?: string;
-  assignedStream?: string;
-  assignedSubjects?: string[];
-  status: 'Active' | 'Pre-Registered' | 'Suspended' | 'On Leave' | 'Inactive';
-  staffId?: string;
-  tempAccessCode?: string;
-  accessCode?: string;
-  joinedDate?: string;
-  gender?: string;
-  salary?: number | string;
-  emergencyContact?: string;
-  emergencyName?: string;
-  schoolId?: string;
-  datePreRegistered?: string;
-  activatedAt?: string;
-  lastLogin?: string;
-  profileComplete?: boolean;
-}
-
-export const initialStaff: StaffMember[] = [];
+import { CentralDataService } from './CentralDataService';
 
 export type MasterSystemRole =
-  | 'head_teacher'
-  | 'senior_teacher'
+  | 'hoi'
+  | 'dhoi'
   | 'class_teacher'
   | 'subject_teacher'
+  | 'ict_teacher'
+  | 'lab_teacher'
   | 'bursar'
-  | 'librarian'
-  | 'storekeeper'
-  | 'lab_assistant'
-  | 'ict_technician'
-  | 'support_staff'
-  | 'support_admin';
+  | 'library_teacher'
+  | 'store_master'
+  | 'admin'
+  | 'owner'
+  | 'unmapped';
 
 export interface MasterStaffRecord {
   id: string;
   name: string;
-  nationalId: string;
-  email: string;
-  phone: string;
+  nationalId?: string;
+  email?: string;
+  phone?: string;
   tscNumber?: string;
-  role: string;
+  role: string; // Exact Staff Directory role string e.g. "Class Teacher", "HOI", "Bursar"
   systemRole: MasterSystemRole;
-  department: string;
+  department?: string;
   assignedGrade?: string;
   assignedStream?: string;
   assignedSubjects?: string[];
-  status: 'Active' | 'Pre-Registered' | 'Suspended';
+  allocations?: any[];
+  status?: string;
   staffId?: string;
   tempAccessCode?: string;
   joinedDate?: string;
-  gender?: string;
-  salary?: number | string;
-  emergencyContact?: string;
-  emergencyName?: string;
-  schoolId?: string;
-  datePreRegistered?: string;
-  activatedAt?: string;
-  lastLogin?: string;
-  profileComplete?: boolean;
-  title?: string;
-  category?: string;
-  rbacRole?: string;
-  assignedClass?: string;
-  accessKey?: string;
-  designation?: string;
-  fullName?: string;
 }
 
 export const TEACHING_SYSTEM_ROLES: MasterSystemRole[] = [
-  'head_teacher',
-  'senior_teacher',
   'class_teacher',
   'subject_teacher',
   'ict_teacher',
-  'hoi' as any,
-  'dhoi' as any,
-  'admin' as any,
+  'lab_teacher',
+  'library_teacher',
+  'hoi',
+  'dhoi'
 ];
 
 export const isNonTeachingDesignation = (role: string): boolean => {
-  const r = (role || '').toLowerCase();
-  if (r.includes('hoi') || r.includes('dhoi') || r.includes('head') || r.includes('deputy') || r.includes('admin')) {
-    return false;
-  }
-  if (
-    r.includes('teacher') ||
-    r.includes('head') ||
-    r.includes('senior') ||
-    r.includes('educator') ||
-    r.includes('tutor') ||
-    r.includes('instructor') ||
-    r.includes('deputy')
-  ) {
-    return false;
-  }
-  return r.includes('librarian') || r.includes('bursar') || r.includes('store') || r.includes('accountant') || r.includes('secretary') || r.includes('support') || r.includes('nurse') || r.includes('security') || r.includes('catering');
+  const r = (role || '').toLowerCase().trim();
+  return (
+    r.includes('librarian') ||
+    r.includes('bursar') ||
+    r.includes('store') ||
+    r.includes('accountant') ||
+    r.includes('secretary') ||
+    r.includes('support') ||
+    r.includes('nurse') ||
+    r.includes('security') ||
+    r.includes('catering')
+  );
 };
 
 export const isLibrarianDesignation = (role: string): boolean => {
-  return (role || '').toLowerCase().includes('librarian');
+  const r = (role || '').toLowerCase().trim();
+  return r.includes('library') || r.includes('librarian');
 };
 
+/**
+ * Strict designation mapper with zero default fallback to subject_teacher.
+ * Unmapped roles return 'unmapped'.
+ */
 export const mapDesignationToSystemRole = (role: string): MasterSystemRole => {
   const r = (role || '').toLowerCase().trim();
-  if (r.includes('library') || r === 'library teacher' || r === 'librarian') return 'librarian';
-  if (r === 'subject teacher') return 'subject_teacher';
-  if (r === 'class teacher') return 'class_teacher';
-  if (r === 'senior teacher') return 'senior_teacher';
-  if (r === 'head teacher') return 'head_teacher';
-  if (r === 'deputy head teacher') return 'head_teacher';
-  if (r === 'bursar') return 'bursar';
-  if (r === 'librarian') return 'librarian';
-  if (r === 'ict technician') return 'ict_technician';
-  if (r === 'support staff') return 'support_staff';
+  if (r === 'hoi' || r.includes('head of institution') || r === 'principal') return 'hoi';
+  if (r === 'dhoi' || r.includes('deputy head') || r === 'deputy principal') return 'dhoi';
+  if (r === 'admin' || r === 'administrator') return 'admin';
+  if (r === 'class teacher' || r === 'classteacher') return 'class_teacher';
+  if (r === 'subject teacher' || r === 'subjectteacher') return 'subject_teacher';
+  if (r === 'ict teacher' || r === 'ict') return 'ict_teacher';
+  if (r === 'lab teacher' || r === 'science lab teacher') return 'lab_teacher';
+  if (r === 'bursar' || r === 'accountant') return 'bursar';
+  if (r === 'library teacher' || r === 'librarian') return 'library_teacher';
+  if (r === 'store master' || r === 'storekeeper') return 'store_master';
+  if (r === 'owner' || r === 'school owner') return 'owner';
 
-  if (r.includes('head') && !r.includes('subject') && !r.includes('class')) return 'head_teacher';
-  if (r.includes('deputy')) return 'head_teacher';
-  if (r.includes('senior')) return 'senior_teacher';
-  if (r.includes('class')) return 'class_teacher';
-  if (r.includes('library') || r.includes('librarian')) return 'librarian';
-  if (r.includes('subject') || (r.includes('teacher') && !r.includes('class') && !r.includes('senior') && !r.includes('head'))) return 'subject_teacher';
-  if (r.includes('librarian')) return 'librarian';
+  // Substring checks
+  if (r.includes('hoi') || r.includes('principal') || (r.includes('head') && !r.includes('subject') && !r.includes('class'))) return 'hoi';
+  if (r.includes('dhoi') || r.includes('deputy')) return 'dhoi';
+  if (r.includes('class teacher') || r.includes('class_teacher')) return 'class_teacher';
+  if (r.includes('subject teacher') || r.includes('subject_teacher')) return 'subject_teacher';
+  if (r.includes('ict')) return 'ict_teacher';
+  if (r.includes('lab')) return 'lab_teacher';
+  if (r.includes('library') || r.includes('librarian')) return 'library_teacher';
   if (r.includes('bursar') || r.includes('account')) return 'bursar';
-  if (r.includes('store')) return 'storekeeper';
-  if (r.includes('lab')) return 'lab_assistant';
-  if (r.includes('ict')) return 'ict_technician';
-  if (r.includes('support') || r.includes('cook') || r.includes('secretary')) return 'support_staff';
-  return 'subject_teacher';
+  if (r.includes('store')) return 'store_master';
+
+  return 'unmapped';
 };
 
 export const initializeStaffMaster = (): void => {};
@@ -149,7 +101,7 @@ export const initializeStaffMaster = (): void => {};
 export const getStaffMaster = (): MasterStaffRecord[] => {
   let list: any[] = [];
   try {
-    const raw = localStorage.getItem('munyaka_staff_db');
+    const raw = localStorage.getItem('munyaka_staff_db') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
@@ -177,6 +129,8 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
   
   return uniqueList.map((s: any) => {
     const override = localOverrides[s.id || s.email] || {};
+    const exactRole = s.role || s.category || s.title || 'Subject Teacher';
+    const sysRole = s.systemRole || mapDesignationToSystemRole(exactRole);
     return {
       id: s.id || s.staffId || `staff_${Math.random()}`,
       name: s.name || s.full_name || 'Staff Member',
@@ -184,8 +138,8 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
       email: s.email || '',
       phone: s.phone || '',
       tscNumber: s.tscNumber || s.tsc_no,
-      role: s.role || 'Teacher',
-      systemRole: s.systemRole || 'subject_teacher',
+      role: exactRole,
+      systemRole: sysRole,
       department: s.department || 'Administration',
       assignedGrade: override.assignedGrade || s.assignedGrade || s.assigned_grade || s.grade || '',
       assignedStream: override.assignedStream || s.assignedStream || s.assigned_stream || s.stream || '',
@@ -212,12 +166,12 @@ export const getCategorizedMetrics = (_schoolId?: string | null) => {
   const staff = getStaffMaster();
   const teachingStaff = staff.filter(s => {
     const roleStr = `${s.role || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
-    const isExplicitNonTeaching = roleStr.includes('bursar') || roleStr.includes('librarian') || roleStr.includes('store') || roleStr.includes('accountant') || roleStr.includes('support') || roleStr.includes('secretary') || roleStr.includes('security') || roleStr.includes('catering') || roleStr.includes('ict technician');
+    const isExplicitNonTeaching = isNonTeachingDesignation(roleStr);
     return (TEACHING_SYSTEM_ROLES.includes(s.systemRole) || roleStr.includes('teach')) && !isExplicitNonTeaching;
   });
   const nonTeachingStaff = staff.filter(s => {
     const roleStr = `${s.role || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
-    const isExplicitNonTeaching = roleStr.includes('bursar') || roleStr.includes('librarian') || roleStr.includes('store') || roleStr.includes('accountant') || roleStr.includes('support') || roleStr.includes('secretary') || roleStr.includes('security') || roleStr.includes('catering') || roleStr.includes('ict technician');
+    const isExplicitNonTeaching = isNonTeachingDesignation(roleStr);
     return !TEACHING_SYSTEM_ROLES.includes(s.systemRole) || isExplicitNonTeaching;
   });
   const teachingTotal = teachingStaff.length;
@@ -259,8 +213,8 @@ export const addStaffMaster = (record: Omit<MasterStaffRecord, 'id' | 'staffId' 
     email: created.email || '',
     phone: created.phone || '',
     tscNumber: (created as any).tscNumber,
-    role: created.role || '',
-    systemRole: (created as any).systemRole || 'subject_teacher',
+    role: created.role || record.role,
+    systemRole: (created as any).systemRole || record.systemRole,
     department: created.department || '',
     assignedGrade: (created as any).assignedGrade || record.assignedGrade,
     assignedStream: (created as any).assignedStream || record.assignedStream,
@@ -277,111 +231,4 @@ export const updateStaffMaster = (id: string, updates: Partial<MasterStaffRecord
 
 export const deleteStaffMaster = (id: string): void => {
   CentralDataService.deleteStaff(id);
-};
-
-export const activateStaffMaster = (id: string): void => {
-  CentralDataService.updateStaff(id, { status: 'Active' });
-};
-
-export const bulkActivateStaffMaster = (ids: string[]): void => {
-  const staff = CentralDataService.getStaff();
-  let changed = false;
-  staff.forEach((s: any) => {
-    if (ids.includes(s.id)) {
-      s.status = 'Active';
-      changed = true;
-    }
-  });
-  if (changed) {
-    CentralDataService.saveStaff(staff);
-  }
-};
-
-export const authenticateUser = (emailInput: string, accessCodeInput: string) => {
-  const staffList = getStaffMaster();
-  const cleanEmail = emailInput.trim().toLowerCase();
-  const cleanCode = accessCodeInput.trim().toUpperCase();
-
-  const matchedUser = staffList.find(user => {
-    const userEmail = (user.email || '').trim().toLowerCase();
-    const userCode = (user.tempAccessCode || (user as any).accessCode || (user as any).code || '').trim().toUpperCase();
-    return (
-      userEmail === cleanEmail &&
-      (userCode === cleanCode || userCode === accessCodeInput.trim() || cleanCode.includes(userCode))
-    );
-  });
-
-  if (!matchedUser) {
-    throw new Error("Invalid Email or Access Code. Please check your credentials.");
-  }
-
-  return matchedUser;
-};
-
-export const verifyStaffLogin = (identifier: string, pass: string): { success: boolean; user?: MasterStaffRecord; error?: string } => {
-  try {
-    const matched = authenticateUser(identifier, pass);
-    return { success: true, user: matched };
-  } catch (err: any) {
-    const staffList = getStaffMaster();
-    const cleanEmail = identifier.trim().toLowerCase();
-    const cleanCode = pass.trim().toUpperCase();
-
-    const defaultStaff: MasterStaffRecord = {
-      id: `staff-${Date.now()}`,
-      name: cleanEmail.includes('@') ? cleanEmail.split('@')[0].replace(/\\./g, ' ').replace(/\\b\\w/g, l => l.toUpperCase()) : 'Staff Member',
-      nationalId: '12345678',
-      email: cleanEmail.includes('@') ? cleanEmail : `${cleanEmail}@munyaka.sc.ke`,
-      tempAccessCode: cleanCode.startsWith('MUN-') ? cleanCode : `MUN-${cleanCode.replace(/[^A-Z0-9]/g, '').slice(0, 4) || '1234'}`,
-      role: 'Teacher',
-      systemRole: 'class_teacher',
-      department: 'Academics',
-      status: 'Active',
-      tscNumber: 'TSC-' + Math.floor(100000 + Math.random() * 900000),
-      assignedGrade: 'Grade 5',
-      assignedStream: 'Green',
-      assignedSubjects: ['Mathematics', 'English'],
-      phone: '+254700000000'
-    };
-    staffList.push(defaultStaff);
-    CentralDataService.saveStaff(staffList);
-    return { success: true, user: defaultStaff };
-  }
-};
-export const isTeachingRole = (_role: string) => true;
-
-/**
- * Dynamically resolves active staff session from canonical staff directory (munyaka_staff)
- * and persists the full live staff record to munyaka_current_staff.
- */
-export const setActiveStaffSession = (selectedUser: { id?: string; email?: string; name?: string }) => {
-  try {
-    const rawStaffList = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || '[]';
-    let liveStaffRecord = selectedUser;
-
-    try {
-      const staffDirectory = JSON.parse(rawStaffList);
-      if (Array.isArray(staffDirectory)) {
-        const found = staffDirectory.find((s: any) =>
-          (s.id && selectedUser.id && s.id === selectedUser.id) ||
-          (s.email && selectedUser.email && s.email.toLowerCase() === selectedUser.email.toLowerCase()) ||
-          (s.name && selectedUser.name && s.name.toLowerCase() === selectedUser.name.toLowerCase()) ||
-          (s.fullName && selectedUser.name && s.fullName.toLowerCase() === selectedUser.name.toLowerCase())
-        );
-        if (found) {
-          liveStaffRecord = found;
-        }
-      }
-    } catch (parseErr) {
-      console.warn('Error parsing staff directory during session set:', parseErr);
-    }
-
-    localStorage.setItem('munyaka_current_staff', JSON.stringify(liveStaffRecord));
-    
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('staff_session_updated'));
-    }
-  } catch (e) {
-    console.error('Failed to sync staff session:', e);
-  }
 };

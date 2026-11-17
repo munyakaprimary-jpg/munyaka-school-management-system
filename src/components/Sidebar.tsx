@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { mapRoleLabelToRbacKey } from '@/constants/roles';
+import { mapRoleLabelToRbacKey, getExactStaffRoleTitle } from '@/constants/roles';
 import {
   LayoutDashboard,
   Users,
@@ -100,24 +100,10 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   // Dynamically fetch active registered user profile from unified staff table
     const getActiveUserRole = () => {
-      if (!user) return 'STAFF';
-  
-      const normRole = String(user.role || '').toUpperCase();
-      if (normRole === 'ADMIN' || normRole === 'SUPER_ADMIN' || normRole === 'OWNER' || normRole === 'PRINCIPAL') {
-        return normRole;
-      }
-  
-      const staffRegistry = JSON.parse(localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || '[]');
-  
-      const match = staffRegistry.find((s: any) =>
-        (s.email && user.email && s.email.toLowerCase() === user.email.toLowerCase()) ||
-        (s.name && user.name && s.name.toLowerCase() === user.name.toLowerCase()) ||
-        (s.id && user.id && s.id === user.id)
-      );
-  
-      const rawRole = match?.role || match?.assignedRole || match?.rbacRole || user.role || 'STAFF';
-      const normalizedRbacKey = mapRoleLabelToRbacKey(rawRole) || rawRole;
-      return normalizedRbacKey.toUpperCase();
+      if (!user) return 'Guest';
+      const rawRole = user.role || user.title || 'Staff';
+      return getExactStaffRoleTitle(rawRole);
+    };
     };
 
   const activeRole = getActiveUserRole();

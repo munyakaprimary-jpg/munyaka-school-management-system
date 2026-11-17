@@ -13,6 +13,7 @@ import {
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
 import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
+import { mapRoleLabelToRbacKey, getExactStaffRoleTitle } from '@/constants/roles';
 import { startHeartbeatService, stopHeartbeatService } from '@/services/deviceHeartbeat';
 import { auth } from '@/config/firebase';
 import { signOut } from 'firebase/auth';
@@ -26,7 +27,8 @@ interface User {
   name: string;
   email: string;
   phone?: string;
-  role: UserRole;
+  role: string; // exact Staff Directory role string e.g. "Class Teacher", "HOI", "Bursar"
+  rbacRole?: string; // normalized portal key e.g. "class_teacher", "hoi", "bursar"
   title?: string;
   identifier?: string;
   avatar?: string;
@@ -276,6 +278,39 @@ const persistCurrentAuthRole = (role: string | null) => {
   } catch {}
 };
 
+/**
+ * Re-match a session user against the live Staff Directory and persist their
+ * exact role string into React auth state and localStorage. If no match is
+ * found, the session user is returned unchanged (no default fallback).
+ */
+const syncSessionRoleWithStaffDirectory = (sessionUser: Partial<User> | null): Partial<User> | null => {
+  if (!sessionUser) return sessionUser;
+  try {
+    const staffList = getStaffMaster();
+    const emailKey = String(sessionUser.email || '').trim().toLowerCase();
+    const idKey = String(sessionUser.id || '').trim().toLowerCase();
+    const matched = staffList.find(s => {
+      const sEmail = String(s.email || '').trim().toLowerCase();
+      const sId = String(s.id || s.staffId || '').trim().toLowerCase();
+      return (emailKey && sEmail === emailKey) || (idKey && sId === idKey);
+    });
+    if (matched) {
+      const rawRole = String((matched as any).role || (matched as any).category || (matched as any).title || (matched as any).designation || '').trim();
+      if (rawRole) {
+        const exactRole = getExactStaffRoleTitle(rawRole);
+        const rbacKey = mapRoleLabelToRbacKey(exactRole);
+        return {
+          ...sessionUser,
+          role: exactRole,
+          rbacRole: rbacKey,
+          title: exactRole,
+        };
+      }
+    }
+  } catch {}
+  return sessionUser;
+};
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -294,8 +329,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const parsed = JSON.parse(savedUser) as Partial<User> | null;
         if (parsed && typeof parsed === 'object' && parsed.role) {
           if ((parsed.role as string) === 'super_admin') parsed.role = 'admin' as UserRole;
-          if (!cancelled) setUser(parsed as User);
-          persistCurrentAuthRole(parsed.role as string);
+          const synced = syncSessionRoleWithStaffDirectory(parsed);
+          if (!cancelled) setUser(synced as User);
+          localStorage.setItem('munyaka_session', JSON.stringify(synced));
+          localStorage.setItem('munyaka_current_user', JSON.stringify(synced));
+          persistCurrentAuthRole((synced.role as string) || parsed.role);
         } else {
           if (!cancelled) setUser(null);
           persistCurrentAuthRole(null);
@@ -448,22 +486,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
 
-      const rawRole = String((matchedStaff as any).systemRole || (matchedStaff as any).role || 'staff').trim().toUpperCase();
-      const normalizedRole: UserRole = rawRole.includes('TEACHER') && !rawRole.includes('NON') ? 'teacher' :
-                                        rawRole.includes('ADMIN') ? 'admin' :
-                                        rawRole.includes('OWNER') || rawRole.includes('SUPER') ? 'owner' :
-                                        rawRole.includes('STUDENT') ? 'student' :
-                                        rawRole.includes('PARENT') ? 'parent' :
-                                        rawRole.includes('ACCOUNTANT') ? 'accountant' :
-                                        rawRole.includes('DRIVER') ? 'driver' : 'staff';
+      const rawRole = String((matchedStaff as any).role || (matchedStaff as any).category || (matchedStaff as any).title || (matchedStaff as any).designation || 'Subject Teacher').trim();
+      const exactRole = getExactStaffRoleTitle(rawRole);
+      const rbacKey = mapRoleLabelToRbacKey(exactRole);
 
       const loggedUser: User = {
         id: (matchedStaff as any).id || 'staff-' + Date.now(),
         name: (matchedStaff as any).name || (matchedStaff as any).fullName || 'Staff Member',
         email: (matchedStaff as any).email || `${cleanInput}@munyaka.sc.ke`,
         phone: (matchedStaff as any).phone || '+254 700 000 000',
-        role: normalizedRole,
-        title: (matchedStaff as any).title || (matchedStaff as any).category || (matchedStaff as any).designation || 'Staff',
+        role: exactRole,
+        rbacRole: rbacKey,
+        title: exactRole,
         identifier: (matchedStaff as any).tscNumber || (matchedStaff as any).nationalId || (matchedStaff as any).id,
         avatar: (matchedStaff as any).avatar || String((matchedStaff as any).name || (matchedStaff as any).fullName || 'ST').split(' ').map((n: string) => n[0] || '').join('').substring(0, 2).toUpperCase(),
         assignedClass: (matchedStaff as any).assignedGrade || (matchedStaff as any).assignedClass || '',

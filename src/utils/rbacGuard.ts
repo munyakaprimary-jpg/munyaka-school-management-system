@@ -4,6 +4,7 @@
  */
 
 import { getPermissionsMatrix, resolveRole, roleHas as matrixRoleHas } from '@/rbac/permissionMatrix';
+import { getExactStaffRoleTitle } from '@/constants/roles';
 import { getCurrentSessionUser, SessionUser } from '@/services/authService';
 
 export interface RBACCheckOptions {

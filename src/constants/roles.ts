@@ -1,41 +1,104 @@
 /**
- * Centralized Staff Role Mapping & RBAC Constants
+ * Role Constants and Strict Mapping Helpers
+ * Enforces the exact 9 Staff Directory roles with zero default fallback.
  */
 
-export interface StaffRoleOption {
-  label: string;
-  rbacKey: string;
-  defaultTitle: string;
-  systemRole: string;
+export const EXACT_STAFF_ROLES = [
+  'Class Teacher',
+  'Subject Teacher',
+  'ICT Teacher',
+  'Lab Teacher',
+  'Bursar',
+  'Library Teacher',
+  'HOI',
+  'DHOI',
+  'Store Master'
+] as const;
+
+export type ExactStaffRole = typeof EXACT_STAFF_ROLES[number];
+
+/**
+ * Normalize a staff role string: trim and collapse internal whitespace.
+ */
+export function normalizeStaffRole(raw: string): string {
+  return String(raw || '').trim().replace(/\s+/g, ' ');
 }
 
-export const STAFF_ROLE_OPTIONS: StaffRoleOption[] = [
-  { label: 'Class Teacher', rbacKey: 'class_teacher', defaultTitle: 'Class Teacher', systemRole: 'class_teacher' },
-  { label: 'Subject Teacher', rbacKey: 'subject_teacher', defaultTitle: 'Subject Teacher', systemRole: 'subject_teacher' },
-  { label: 'ICT Teacher', rbacKey: 'ict_teacher', defaultTitle: 'ICT Teacher', systemRole: 'ict_teacher' },
-  { label: 'Lab Teacher', rbacKey: 'lab_teacher', defaultTitle: 'Lab Teacher', systemRole: 'subject_teacher' },
-  { label: 'Library Teacher', rbacKey: 'library_teacher', defaultTitle: 'Library Teacher', systemRole: 'subject_teacher' },
-  { label: 'Bursar', rbacKey: 'bursar', defaultTitle: 'Bursar / Accounts', systemRole: 'bursar' },
-  { label: 'HOI', rbacKey: 'hoi', defaultTitle: 'Head of Institution', systemRole: 'head_teacher' },
-  { label: 'DHOI', rbacKey: 'dhoi', defaultTitle: 'Deputy Head of Institution', systemRole: 'head_teacher' },
-  { label: 'Store Master', rbacKey: 'store_master', defaultTitle: 'Store Master', systemRole: 'storekeeper' }
-];
-
+/**
+ * Strict mapping from exact staff role to RBAC key / portal identifier.
+ * Zero default fallback: unmapped roles return 'unmapped'.
+ */
 export function mapRoleLabelToRbacKey(labelOrRole: string): string {
-  const norm = String(labelOrRole || '').trim().toLowerCase();
-  const found = STAFF_ROLE_OPTIONS.find(
-    o => o.label.toLowerCase() === norm || o.rbacKey.toLowerCase() === norm || o.defaultTitle.toLowerCase() === norm
-  );
-  if (found) return found.rbacKey;
+  const norm = normalizeStaffRole(labelOrRole);
+  const lower = norm.toLowerCase();
 
-  if (norm.includes('admin') || norm.includes('owner')) return 'admin';
-  if (norm.includes('hoi')) return 'hoi';
-  if (norm.includes('dhoi')) return 'dhoi';
-  if (norm.includes('head')) return 'admin';
-  if (norm.includes('bursar') || norm.includes('accountant')) return 'bursar';
-  if (norm.includes('ict')) return 'ict_teacher';
-  if (norm.includes('librar')) return 'library_teacher';
-  if (norm.includes('store')) return 'store_master';
-  if (norm.includes('class')) return 'class_teacher';
-  return 'subject_teacher';
+  switch (lower) {
+    case 'hoi':
+    case 'head of institution':
+    case 'principal':
+      return 'hoi';
+    case 'dhoi':
+    case 'deputy head of institution':
+      return 'dhoi';
+    case 'admin':
+    case 'administrator':
+      return 'admin';
+    case 'class teacher':
+    case 'classteacher':
+      return 'class_teacher';
+    case 'subject teacher':
+    case 'subjectteacher':
+    case 'teacher':
+      return 'subject_teacher';
+    case 'ict teacher':
+    case 'ict':
+    case 'ict_teacher':
+      return 'ict_teacher';
+    case 'lab teacher':
+    case 'science lab teacher':
+    case 'lab_teacher':
+      return 'lab_teacher';
+    case 'bursar':
+    case 'accountant':
+      return 'bursar';
+    case 'library teacher':
+    case 'librarian':
+      return 'library_teacher';
+    case 'store master':
+    case 'storekeeper':
+    case 'store_master':
+      return 'store_master';
+    case 'owner':
+    case 'school owner':
+      return 'owner';
+    case 'student':
+    case 'learner':
+      return 'student';
+    case 'parent':
+    case 'guardian':
+      return 'parent';
+    default:
+      return 'unmapped';
+  }
+}
+
+/**
+ * Get exact display title for a staff role.
+ */
+export function getExactStaffRoleTitle(rawRole: string): string {
+  const norm = normalizeStaffRole(rawRole);
+  const key = mapRoleLabelToRbacKey(norm);
+  switch (key) {
+    case 'hoi': return 'HOI';
+    case 'dhoi': return 'DHOI';
+    case 'admin': return 'Admin';
+    case 'class_teacher': return 'Class Teacher';
+    case 'subject_teacher': return 'Subject Teacher';
+    case 'ict_teacher': return 'ICT Teacher';
+    case 'lab_teacher': return 'Lab Teacher';
+    case 'bursar': return 'Bursar';
+    case 'library_teacher': return 'Library Teacher';
+    case 'store_master': return 'Store Master';
+    default: return norm || 'Staff Member';
+  }
 }
