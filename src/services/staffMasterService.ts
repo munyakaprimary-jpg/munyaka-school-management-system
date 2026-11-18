@@ -1,6 +1,7 @@
 import { CentralDataService } from './centralDataService';
 import { db } from '@/config/firebase';
 import { collection, getDocs } from 'firebase/firestore';
+import { getCanonicalStaffId, toFlatStaffSchema, deduplicateStaffRecords } from '@/utils/staffCanonicalUtils';
 
 export type MasterSystemRole =
   | 'hoi'
@@ -18,6 +19,7 @@ export type MasterSystemRole =
 
 export interface MasterStaffRecord {
   id: string;
+  canonicalId?: string;
   name: string;
   nationalId?: string;
   email?: string;
@@ -111,7 +113,13 @@ export const mapDesignationToSystemRole = (role: string): MasterSystemRole => {
 
 export const setActiveStaffSession = (staff: any): void => {
   try {
-    localStorage.setItem('munyaka_current_staff', JSON.stringify(staff));
+    const canonicalId = getCanonicalStaffId(staff);
+    const sessionData = {
+      ...staff,
+      canonicalId,
+      id: staff.id || canonicalId,
+    };
+    localStorage.setItem('munyaka_current_staff', JSON.stringify(sessionData));
     window.dispatchEvent(new Event('staff_session_updated'));
   } catch (e) {}
 };
@@ -120,29 +128,32 @@ export const setActiveStaffSession = (staff: any): void => {
  * Fetch the live Staff Directory from the Firestore `staff` collection.
  * Returns an empty array when offline or unavailable so callers can fall back
  * to the offline localStorage registry.
+ * Uses flat schema (no rawPayload wrapping) and canonical document IDs.
  */
 export const fetchStaffFromFirestore = async (): Promise<any[]> => {
   try {
     const snapshot = await getDocs(collection(db, 'staff'));
     return snapshot.docs.map(docSnap => {
       const d = docSnap.data() || {};
-      const raw = d.rawPayload || {};
-      const exactRole = d.role || d.category || raw.category || raw.role || raw.assignedRole || 'Subject Teacher';
-      const sysRole = d.systemRole || mapDesignationToSystemRole(raw.assignedRole || raw.role || exactRole);
-      const password = d.password || raw.password || '';
-      const accessCode = d.accessCode || raw.accessCode || d.code || raw.code || d.pin || raw.pin || '';
-      const loginEnabled = d.loginEnabled ?? raw.loginEnabled ?? d.login_enabled ?? raw.login_enabled ?? true;
+      // Use flat schema - all core fields at root level
+      const flat = toFlatStaffSchema(d);
+      const exactRole = flat.role || flat.category || flat.designation || flat.assignedRole || 'Subject Teacher';
+      const sysRole = flat.systemRole || mapDesignationToSystemRole(flat.assignedRole || flat.role || exactRole);
+      const password = flat.password || '';
+      const accessCode = flat.accessCode || flat.code || flat.tempAccessCode || '';
+      const loginEnabled = flat.loginEnabled ?? true;
+      const canonicalId = flat.canonicalId || getCanonicalStaffId(d);
 
       return {
-        id: docSnap.id,
-        ...raw,
-        ...d,
+        id: flat.id || canonicalId || docSnap.id,
+        ...flat,
         role: exactRole,
         systemRole: sysRole,
         password,
         accessCode,
         tempAccessCode: accessCode,
         loginEnabled,
+        canonicalId,
       };
     });
   } catch (e) {
@@ -253,8 +264,11 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     } catch {}
   }
 
+  // Use canonical deduplication utility
+  const deduplicated = deduplicateStaffRecords(list);
+
   const map = new Map<string, any>();
-  list.forEach(s => {
+  deduplicated.forEach(s => {
     if (s && (s.id || s.phone || s.name || s.staffId || s.email)) {
       const key = String(s.id || s.phone || s.email || s.name || s.staffId).trim().toLowerCase();
       if (!map.has(key)) {
@@ -356,8 +370,10 @@ export const addStaffMaster = (record: Omit<MasterStaffRecord, 'id' | 'staffId' 
     assignedSubjects: record.assignedSubjects,
     status: record.status || 'Pre-Registered',
   });
+  const canonicalId = getCanonicalStaffId(created);
   return {
-    id: created.id,
+    id: created.id || canonicalId,
+    canonicalId,
     name: created.name || '',
     nationalId: (created as any).nationalId || '',
     email: created.email || '',
@@ -376,7 +392,13 @@ export const addStaffMaster = (record: Omit<MasterStaffRecord, 'id' | 'staffId' 
 };
 
 export const updateStaffMaster = (id: string, updates: Partial<MasterStaffRecord>): void => {
-  CentralDataService.updateStaff(id, updates as any);
+  // If updating by ID, ensure canonical ID is used for the staff record
+  const canonicalId = getCanonicalStaffId({ id });
+  const updatedData = {
+    ...updates,
+    canonicalId,
+  };
+  CentralDataService.updateStaff(id, updatedData as any);
 };
 
 export const deleteStaffMaster = (id: string): void => {

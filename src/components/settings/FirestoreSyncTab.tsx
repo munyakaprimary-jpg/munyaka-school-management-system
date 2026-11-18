@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { migrateLegacyLearnerIds } from '@/utils/migrateLegacyLearnerIds';
 import { HarmonizedLearnerService } from '@/services/harmonizedLearnerService';
+import { getCanonicalStaffId, toFlatStaffSchema, deduplicateStaffRecords } from '@/utils/staffCanonicalUtils';
 
 /**
  * Returns true when the learners directory is empty across all known localStorage keys.
@@ -1536,69 +1537,62 @@ export default function FirestoreSyncTab() {
       }
 
       if (!staffMembers.length) {
-        staffMembers = [];
-      }
-
-      // Deduplicate by ID / National ID / TSC and ensure MUN- prefix
-      const seenIds = new Set<string>();
-      const uniqueStaff = staffMembers.filter((st: any) => {
-        if (!st) return false;
-        const sid = String(st?.id || st?.staffId || '');
-        if (!sid.startsWith('MUN-')) return false;
-        const key = sid.trim().toLowerCase();
-        if (!key || seenIds.has(key)) return false;
-        seenIds.add(key);
-        return true;
-      });
-
-      const batch = writeBatch(db);
-      let countSynced = 0;
-
-      for (const st of uniqueStaff) {
-        const identifier = st?.nationalId ?? st?.tscNumber ?? st?.staffId ?? st?.id ?? `staff_${countSynced + 1}`;
-        const cleanIdSlug = String(identifier).toLowerCase().replace(/[^a-z0-9]/g, '_');
-        
-        // Clean composite pattern: staff_{national_id_or_tsc_or_staff_id}
-        const docId = `staff_${cleanIdSlug}`;
-        const ref = doc(db, 'staff', docId);
-
-        const fullName = st?.name ?? st?.fullName ?? st?.staffName ?? 'Unnamed Staff';
-        const role = st?.role ?? st?.designation ?? st?.jobTitle ?? st?.category ?? 'Staff Member';
-        const tscOrId = st?.tscNumber ?? st?.tsc_no ?? st?.nationalId ?? st?.staffId ?? st?.id ?? '';
-        
-        const email = st?.email ?? `${fullName.toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
-
-        const mappedData = {
-          staffId: st?.id ?? st?.staffId ?? identifier,
-          name: fullName,
-          role: role,
-          tscNumber: st?.tscNumber ?? st?.tsc_no ?? null,
-          nationalId: st?.nationalId ?? st?.national_id ?? null,
-          email: email.includes('@') ? email : `${email}@munyaka.sc.ke`,
-          phone: st?.phone ?? st?.phoneNumber ?? st?.tel ?? 'N/A',
-          category: st?.category ?? (st?.tscNumber ? 'Teaching' : 'Non-Teaching'),
-          syncedAt: new Date().toISOString(),
-          rawPayload: st
-        };
-
-        batch.set(ref, mappedData, { merge: true });
-        countSynced++;
-      }
-
-      await batch.commit();
-      setLastSynced(new Date());
-      showSuccess(`Successfully synchronized ${countSynced} staff members to 'staff' Firestore collection!`);
-
-      await handleTestCloudTables();
-    } catch (err: any) {
-      console.error('Staff Firestore sync error:', err);
-      const msg = err.message || 'Unknown error';
-      setErrorMessage(msg);
-      showError(`Staff Sync Failed: ${msg}`);
-    } finally {
-      setIsSyncingStaff(false);
-    }
-  }
+              staffMembers = [];
+            }
+      
+            // Use canonical deduplication utility to prefer flat records over legacy rawPayload-wrapped docs
+            const deduplicated = deduplicateStaffRecords(staffMembers);
+      
+            const batch = writeBatch(db);
+            let countSynced = 0;
+      
+            for (const st of deduplicated) {
+              // Use canonical ID generation for Firestore document IDs
+              const canonicalId = getCanonicalStaffId(st);
+              const cleanIdSlug = String(canonicalId).toLowerCase().replace(/[^a-z0-9]/g, '_');
+              const docId = `staff_${cleanIdSlug}`;
+              const ref = doc(db, 'staff', docId);
+      
+              // Use flat schema - all core fields at root level, NO rawPayload wrapping
+              const flat = toFlatStaffSchema(st);
+              const fullName = flat.name ?? st?.name ?? st?.fullName ?? 'Unnamed Staff';
+              const role = flat.role ?? st?.role ?? st?.designation ?? st?.jobTitle ?? st?.category ?? 'Staff Member';
+              const tscOrId = flat.tscNumber ?? st?.tscNumber ?? st?.tsc_no ?? st?.nationalId ?? st?.staffId ?? st?.id ?? '';
+      
+              const email = flat.email ?? `${fullName.toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
+      
+              const mappedData = {
+                id: flat.id || canonicalId,
+                canonicalId,
+                staffId: (flat.id || flat.canonicalId || st?.id || st?.staffId || '') as string,
+                name: fullName,
+                role: role,
+                tscNumber: flat.tscNumber ?? st?.tscNumber ?? st?.tsc_no ?? null,
+                nationalId: flat.nationalId ?? st?.nationalId ?? st?.national_id ?? null,
+                email: flat.email ?? (email.includes('@') ? email : `${email}@munyaka.sc.ke`),
+                phone: flat.phone ?? st?.phone ?? st?.phoneNumber ?? st?.tel ?? 'N/A',
+                category: flat.category ?? (flat.tscNumber ? 'Teaching' : 'Non-Teaching'),
+                syncedAt: flat.updatedAt ?? new Date().toISOString(),
+              };
+      
+              batch.set(ref, mappedData, { merge: true });
+              countSynced++;
+            }
+      
+            await batch.commit();
+            setLastSynced(new Date());
+            showSuccess(`Successfully synchronized ${countSynced} staff members to 'staff' Firestore collection!`);
+      
+            await handleTestCloudTables();
+          } catch (err: any) {
+            console.error('Staff Firestore sync error:', err);
+            const msg = err.message || 'Unknown error';
+            setErrorMessage(msg);
+            showError(`Staff Sync Failed: ${msg}`);
+          } finally {
+            setIsSyncingStaff(false);
+          }
+        }
 
   async function syncReportCardsToCloud() {
     if (isSyncingReportCards) return;

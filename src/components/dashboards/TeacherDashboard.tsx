@@ -27,6 +27,7 @@ import { useCentralData } from '@/hooks/useCentralData';
 import TeacherExportModule from '@/components/teacher/TeacherExportModule';
 import TeacherSyncQrGenerator from '@/components/teacher/TeacherSyncQrGenerator';
 import { getFormattedRoleLabel } from '@/utils/staffRoleUtils';
+import { getCanonicalStaffId } from '@/utils/staffCanonicalUtils';
 import { db } from '@/config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
@@ -826,7 +827,11 @@ export default function TeacherDashboard() {
   // Firestore `staff` collection so the choice survives across devices/sessions.
   const persistAssignedClassToFirestore = async (val: string) => {
     try {
+      // Use canonical staff ID for the Firestore document ID
+      const staffRecord = matchedStaffRecord || currentUserObj || user;
+      const canonicalId = getCanonicalStaffId(staffRecord || {});
       const staffDocId = String(
+        canonicalId ||
         matchedStaffRecord?.id ||
         matchedStaffRecord?.staffId ||
         matchedStaffRecord?.staff_id ||

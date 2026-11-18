@@ -1,12 +1,28 @@
+import { getCanonicalStaffId, toFlatStaffSchema, deduplicateStaffRecords } from '@/utils/staffCanonicalUtils';
+
 export const deduplicateStaff = (list: any[]) => {
   const seen = new Set();
-  return list.filter((staff) => {
-    const key = (staff.email || staff.fullName || staff.name || '').trim().toLowerCase();
-    if (!key) return true;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+  const result: any[] = [];
+  const sorted = [...(list || [])].sort((a, b) => {
+    const aIsFlat = a && !a.rawPayload ? 1 : 0;
+    const bIsFlat = b && !b.rawPayload ? 1 : 0;
+    if (aIsFlat !== bIsFlat) return bIsFlat - aIsFlat;
+    const aKey = (a?.email || a?.fullName || a?.name || '').trim().toLowerCase();
+    const bKey = (b?.email || b?.fullName || b?.name || '').trim().toLowerCase();
+    return String(aKey).localeCompare(String(bKey));
   });
+  for (const staff of sorted) {
+    if (!staff) continue;
+    const key = (staff.email || staff.fullName || staff.name || '').trim().toLowerCase();
+    if (!key) {
+      result.push(staff);
+      continue;
+    }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(staff);
+  }
+  return result;
 };
 
 export const getStoredStaff = () => {

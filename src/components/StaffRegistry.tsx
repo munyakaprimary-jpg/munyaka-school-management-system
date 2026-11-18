@@ -50,6 +50,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { getCanonicalStaffId, toFlatStaffSchema, deduplicateStaffRecords } from '@/utils/staffCanonicalUtils';
 
 const defaultCbcLearningAreas: any[] = [];
 
@@ -72,6 +73,7 @@ export interface StaffAllocationRecord {
 
 export interface StaffMember {
   id: string;
+  canonicalId?: string;
   name: string;
   category: StaffCategoryRole;
   title: string;
@@ -194,125 +196,130 @@ export default function StaffRegistry() {
   };
 
   const [staffList, setStaffList] = useState<StaffMember[]>(() => {
-    const saved = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_v2');
-    let loadedStaff: any[] = [];
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          loadedStaff = parsed;
+      const saved = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_v2');
+      let loadedStaff: any[] = [];
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            loadedStaff = parsed;
+          }
+        } catch (e) {
+          console.error(e);
         }
-      } catch (e) {
-        console.error(e);
       }
-    }
-    // Sanitize and deduplicate loaded list or return empty array if none
-    const seenIds = new Set<string>();
-    const sanitized: StaffMember[] = loadedStaff
-      .filter((staff: any) => {
-        const sid = String(staff?.id || staff?.staffId || staff?.staff_id || staff?.accessCode || staff?.code || '');
-        return Boolean(sid);
-      })
-      .map((staff) => {
-        let id = String(staff.id || staff.staffId || staff.staff_id || staff.accessCode || staff.code || '');
-        if (!id.startsWith('MUN-')) {
-          id = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
-        }
-        if (seenIds.has(id)) {
-          id = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
-        }
-        seenIds.add(id);
-
-        let cat: StaffCategoryRole = staff.category;
-        if (cat === ('Teaching Staff' as any)) cat = 'Subject Teacher';
-        else if (cat === ('Administration' as any)) cat = 'HOI';
-        else if (cat === ('Support Staff' as any)) cat = 'Store Master';
-        else if (!cat) cat = 'Class Teacher';
-
-        const rawClasses = staff.assignedClasses || staff.classes || [];
-        const cleanClasses = Array.isArray(rawClasses)
-          ? rawClasses.map((c: any) => {
-            if (!c) return '';
-            if (typeof c === 'string') return c;
-            if (typeof c === 'object') {
-              return String(c.grade || c.name || c.className || `${c.subject || ''} ${c.grade || ''}${c.stream || ''}`.trim() || JSON.stringify(c));
-            }
-            return String(c);
-          }).filter(Boolean)
-        : [];
-
-        const rawStreams = staff.assignedStreams || staff.streams || [];
-        const cleanStreams = Array.isArray(rawStreams)
-          ? rawStreams.map((s: any) => {
-              if (!s) return '';
-              if (typeof s === 'string') return s;
-              if (typeof s === 'object') {
-                return String(s.stream || s.name || `${s.grade || ''} ${s.stream || ''}`.trim() || JSON.stringify(s));
+      // Use canonical deduplication utility
+      const deduplicated = deduplicateStaffRecords(loadedStaff);
+      // Sanitize and deduplicate loaded list or return empty array if none
+      const seenIds = new Set<string>();
+      const sanitized: StaffMember[] = deduplicated
+        .filter((staff: any) => {
+          const sid = String(staff?.id || staff?.staffId || staff?.staff_id || staff?.accessCode || staff?.code || '');
+          return Boolean(sid);
+        })
+        .map((staff) => {
+          // Use canonical ID for staff records
+          const canonicalId = getCanonicalStaffId(staff);
+          let id = String(staff.id || staff.staffId || staff.staff_id || staff.accessCode || staff.code || canonicalId);
+          if (!id.startsWith('MUN-') && !id.startsWith('staff_')) {
+            id = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
+          }
+          if (seenIds.has(id)) {
+            id = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
+          }
+          seenIds.add(id);
+  
+          let cat: StaffCategoryRole = staff.category;
+          if (cat === ('Teaching Staff' as any)) cat = 'Subject Teacher';
+          else if (cat === ('Administration' as any)) cat = 'HOI';
+          else if (cat === ('Support Staff' as any)) cat = 'Store Master';
+          else if (!cat) cat = 'Class Teacher';
+  
+          const rawClasses = staff.assignedClasses || staff.classes || [];
+          const cleanClasses = Array.isArray(rawClasses)
+            ? rawClasses.map((c: any) => {
+              if (!c) return '';
+              if (typeof c === 'string') return c;
+              if (typeof c === 'object') {
+                return String(c.grade || c.name || c.className || `${c.subject || ''} ${c.grade || ''}${c.stream || ''}`.trim() || JSON.stringify(c));
               }
-              return String(s);
-            }).filter(s => s && s !== 'Mercury')
-          : [];
-
-        const rawSubjects = staff.subjects || staff.assignedSubjects || [];
-        const cleanSubjects = Array.isArray(rawSubjects)
-          ? rawSubjects.map((sub: any) => {
-              if (!sub) return '';
-              if (typeof sub === 'string') return sub;
-              if (typeof sub === 'object') {
-                return String(sub.name || sub.title || sub.subject || sub.learningArea || JSON.stringify(sub));
-              }
-              return String(sub);
+              return String(c);
             }).filter(Boolean)
           : [];
-
-        const defaultGrade = cleanClasses[0] || 'Grade 7';
-        const defaultStream = cleanStreams[0] || '';
-
-        const cleanAllocations = Array.isArray(staff.allocations)
-          ? staff.allocations
-              .filter((a: any) => a && typeof a === 'object' && a.subject)
-              .map((a: any) => ({
-                subject: String(a.subject),
-                grade: String(a.grade || defaultGrade),
-                stream: a.stream && a.stream !== 'Mercury' ? String(a.stream) : defaultStream
-              }))
-          : cleanSubjects.map((sub: string) => ({
-              subject: sub,
-              grade: defaultGrade,
-              stream: defaultStream
-            }));
-
-        return {
-          id,
-          name: staff.name || 'Unnamed Staff',
-          category: cat,
-          title: staff.title || cat,
-          rbacRole: staff.rbacRole || staff.role || staff.designation || staff.assignedRole || mapRoleLabelToRbacKey(cat),
-          role: staff.role || staff.rbacRole || cat,
-          designation: staff.designation || staff.title || cat,
-          assignedRole: staff.assignedRole || staff.rbacRole || cat,
-          tscNumber: staff.tscNumber || (cat !== 'Bursar' && cat !== 'Store Master' ? '327775' : undefined),
-          nationalId: staff.nationalId || (cat === 'Bursar' || cat === 'Store Master' ? '31452981' : undefined),
-          email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
-          phone: staff.phone || '+254 712 345 678',
-          subjects: cleanSubjects,
-          assignedClasses: cleanClasses,
-          assignedStreams: cleanStreams,
-          accessCode: staff.accessCode || staff.code || staff.teacherCode || staff.tempAccessCode || `MUN-${Math.floor(1000 + Math.random() * 9000)}`,
-          homeroomGrade: staff.homeroomGrade || defaultGrade,
-          homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
-          allocations: cleanAllocations,
-          status: staff.status || 'Active',
-          createdAt: staff.createdAt || new Date().toISOString(),
-          // New auth fields with defaults
-          password: staff.password || staff.tempAccessCode || undefined,
-          lastPasswordChange: staff.lastPasswordChange || undefined,
-          loginEnabled: staff.loginEnabled !== false // default true
-        };
-      });
-
-    return sanitized;
-  });
+  
+          const rawStreams = staff.assignedStreams || staff.streams || [];
+          const cleanStreams = Array.isArray(rawStreams)
+            ? rawStreams.map((s: any) => {
+                if (!s) return '';
+                if (typeof s === 'string') return s;
+                if (typeof s === 'object') {
+                  return String(s.stream || s.name || `${s.grade || ''} ${s.stream || ''}`.trim() || JSON.stringify(s));
+                }
+                return String(s);
+              }).filter(s => s && s !== 'Mercury')
+            : [];
+  
+          const rawSubjects = staff.subjects || staff.assignedSubjects || [];
+          const cleanSubjects = Array.isArray(rawSubjects)
+            ? rawSubjects.map((sub: any) => {
+                if (!sub) return '';
+                if (typeof sub === 'string') return sub;
+                if (typeof sub === 'object') {
+                  return String(sub.name || sub.title || sub.subject || sub.learningArea || JSON.stringify(sub));
+                }
+                return String(sub);
+              }).filter(Boolean)
+            : [];
+  
+          const defaultGrade = cleanClasses[0] || 'Grade 7';
+          const defaultStream = cleanStreams[0] || '';
+  
+          const cleanAllocations = Array.isArray(staff.allocations)
+            ? staff.allocations
+                .filter((a: any) => a && typeof a === 'object' && a.subject)
+                .map((a: any) => ({
+                  subject: String(a.subject),
+                  grade: String(a.grade || defaultGrade),
+                  stream: a.stream && a.stream !== 'Mercury' ? String(a.stream) : defaultStream
+                }))
+            : cleanSubjects.map((sub: string) => ({
+                subject: sub,
+                grade: defaultGrade,
+                stream: defaultStream
+              }));
+  
+          return {
+            id,
+            canonicalId,
+            name: staff.name || 'Unnamed Staff',
+            category: cat,
+            title: staff.title || cat,
+            rbacRole: staff.rbacRole || staff.role || staff.designation || staff.assignedRole || mapRoleLabelToRbacKey(cat),
+            role: staff.role || staff.rbacRole || cat,
+            designation: staff.designation || staff.title || cat,
+            assignedRole: staff.assignedRole || staff.rbacRole || cat,
+            tscNumber: staff.tscNumber || (cat !== 'Bursar' && cat !== 'Store Master' ? '327775' : undefined),
+            nationalId: staff.nationalId || (cat === 'Bursar' || cat === 'Store Master' ? '31452981' : undefined),
+            email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
+            phone: staff.phone || '+254 712 345 678',
+            subjects: cleanSubjects,
+            assignedClasses: cleanClasses,
+            assignedStreams: cleanStreams,
+            accessCode: staff.accessCode || staff.code || staff.teacherCode || staff.tempAccessCode || `MUN-${Math.floor(1000 + Math.random() * 9000)}`,
+            homeroomGrade: staff.homeroomGrade || defaultGrade,
+            homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
+            allocations: cleanAllocations,
+            status: staff.status || 'Active',
+            createdAt: staff.createdAt || new Date().toISOString(),
+            // New auth fields with defaults
+            password: staff.password || staff.tempAccessCode || undefined,
+            lastPasswordChange: staff.lastPasswordChange || undefined,
+            loginEnabled: staff.loginEnabled !== false // default true
+          };
+        });
+  
+      return sanitized;
+    });
 
   useEffect(() => {
     localStorage.setItem('munyaka_staff', JSON.stringify(staffList));
@@ -702,13 +709,19 @@ export default function StaffRegistry() {
   };
 
   // Save helper function whenever list changes or new staff is added
-  const saveStaffToStorage = (newList: StaffMember[]) => {
-    setStaffList(newList);
-    localStorage.setItem('munyaka_staff', JSON.stringify(newList));
-    localStorage.setItem('munyaka_staff_v2', JSON.stringify(newList));
-    localStorage.setItem('munyaka_staff_directory', JSON.stringify(newList));
-    localStorage.setItem('munyaka_staff_db', JSON.stringify(newList));
-  };
+    const saveStaffToStorage = (newList: StaffMember[]) => {
+      // Apply canonical IDs and flat schema to all staff records
+      const canonicalList = newList.map(staff => ({
+        ...staff,
+        canonicalId: staff.canonicalId || getCanonicalStaffId(staff),
+        id: staff.id || staff.canonicalId || getCanonicalStaffId(staff),
+      }));
+      setStaffList(canonicalList);
+      localStorage.setItem('munyaka_staff', JSON.stringify(canonicalList));
+      localStorage.setItem('munyaka_staff_v2', JSON.stringify(canonicalList));
+      localStorage.setItem('munyaka_staff_directory', JSON.stringify(canonicalList));
+      localStorage.setItem('munyaka_staff_db', JSON.stringify(canonicalList));
+    };
 
   // Extract unique learning areas names for subject pill grid
   const availableLearningAreas = Array.isArray(defaultCbcLearningAreas) && defaultCbcLearningAreas.length > 0
