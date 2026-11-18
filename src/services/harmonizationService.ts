@@ -46,10 +46,48 @@ export const harmonizationService = {
       reader.onload = (e) => {
         try {
           const content = e.target?.result as string;
-          const jsonData = JSON.parse(content);
+          let jsonData = JSON.parse(content);
           
-          if (!jsonData || typeof jsonData !== 'object' || !jsonData.metadata) {
-            throw new Error('Invalid package format: missing root metadata property.');
+          // Auto-normalize missing metadata headers & support arrays/delta objects (backward compatibility)
+          if (!jsonData || typeof jsonData !== 'object') {
+            jsonData = {
+              metadata: {
+                senderName: file.name.replace(/\.[^/.]+$/, ''),
+                staffId: 'STAFF-' + Math.random().toString(36).substring(2, 7),
+                role: 'staff',
+                timestamp: new Date().toISOString()
+              },
+              data: { items: Array.isArray(jsonData) ? jsonData : [jsonData] }
+            };
+          } else if (!jsonData.metadata && !jsonData.version) {
+            const keys = Object.keys(jsonData);
+            jsonData = {
+              metadata: {
+                senderName: jsonData.teacherName || jsonData.name || file.name.replace(/\.[^/.]+$/, ''),
+                staffId: jsonData.staffId || jsonData.id || 'STAFF-' + Math.random().toString(36).substring(2, 7),
+                role: jsonData.role || jsonData.category || 'staff',
+                assignedClass: jsonData.grade || jsonData.assignedGrade || jsonData.class,
+                assignedStream: jsonData.stream || jsonData.assignedStream,
+                timestamp: jsonData.timestamp || jsonData.exportedAt || new Date().toISOString()
+              },
+              data: {
+                attendance: jsonData.attendance || jsonData.attendanceRecords || [],
+                checkIns: jsonData.checkIns || jsonData.teacherCheckInLogs || [],
+                marks: jsonData.marks || jsonData.cbcAssessments || [],
+                inventory: jsonData.inventory || jsonData.classInventory || jsonData.books || jsonData.loans || [],
+                learners: jsonData.learners || []
+              },
+              rawPayload: jsonData
+            };
+          } else if (jsonData.metadata && !jsonData.data) {
+            // If metadata exists but data is missing or scattered in root
+            jsonData.data = {
+              attendance: jsonData.attendance || jsonData.attendanceRecords || [],
+              checkIns: jsonData.checkIns || jsonData.teacherCheckInLogs || [],
+              marks: jsonData.marks || jsonData.cbcAssessments || [],
+              inventory: jsonData.inventory || jsonData.classInventory || jsonData.books || jsonData.loans || [],
+              learners: jsonData.learners || []
+            };
           }
 
           const metadata = jsonData.metadata;
