@@ -744,13 +744,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = () => {
+    // Clear all cached session state before saving new auth state
     localStorage.removeItem('munyaka_session');
     localStorage.removeItem('munyaka_auth_user');
     localStorage.removeItem('munyaka_current_user');
+    localStorage.removeItem('munyaka_current_staff');
     localStorage.removeItem('munyaka_admin_session');
     localStorage.removeItem('saved_password');
     localStorage.removeItem('munyaka_saved_password');
     localStorage.removeItem('munyaka_remembered_user');
+    localStorage.removeItem('munyaka_rbac_permissions');
+    localStorage.removeItem('munyaka_staff_class_overrides');
     try {
       sessionStorage.clear();
       if (auth) {

@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+import React from 'react';
 import OwnerDashboard from "@/components/dashboards/OwnerDashboard";
 import AdminDashboard from "@/components/dashboards/AdminDashboard";
 import TeacherDashboard from "@/components/dashboards/TeacherDashboard";
 import LibraryDashboard from "@/components/dashboards/LibraryDashboard";
-import ICTLabManagement from "@/pages/ICTLabManagement";
 import ICTPortalDashboard from "@/pages/ICTPortalDashboard";
-import LibrarianPortalView from "@/pages/LibrarianPortalView";
 import { useAuth } from "@/context/AuthContext";
-import { resolveRole, roleHas } from "@/rbac/permissionMatrix";
-import { isTeacherRole } from "@/utils/roleHelper";
+import {
+  normalizeStaffRole,
+  isAdminRole,
+  isClassTeacherRole,
+  isSubjectTeacherRole,
+  isIctTeacherRole,
+  isLibrarianRole,
+  isBursarRole,
+} from "@/utils/roleNormalizer";
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -21,50 +26,50 @@ const Dashboard: React.FC = () => {
     }
   })();
 
-  const userRole = storedUser.rbacRole || storedUser.role || user?.role || '';
-  const roleLower = String(userRole).toLowerCase().trim();
-  const normalizedRole = roleLower.toUpperCase().replace(/\s+/g, '_');
+  // Normalize role from all possible sources using unified role normalizer
+  // Checks assignedRole, role, category, and rawPayload fields
+  const normalizedRole = normalizeStaffRole(
+    storedUser.rbacRole || storedUser.role || user?.role || '',
+    (user as any)?.staffCategory,
+    (user as any)?.assignedRole,
+    (user as any)?.rawPayload
+  );
+
   const userName = String(storedUser.name || storedUser.fullName || user?.name || '').toUpperCase();
-  const resolvedR = resolveRole(userRole);
 
-  const isLibraryTeacher =
-    normalizedRole === 'LIBRARY_TEACHER' ||
-    roleLower === 'library_teacher' ||
-    roleLower.includes('librarian') ||
-    roleLower.includes('library') ||
-    resolvedR === 'librarian' ||
-    resolvedR === 'library_teacher' ||
-    userName.includes('JANET KUNGU') ||
-    userName.includes('JANET GATHONI');
-
-  if (isLibraryTeacher && !['HOI', 'DHOI', 'ADMIN', 'OWNER'].includes(normalizedRole) && !roleLower.includes('admin') && !userName.includes('ADMIN')) {
-    return <LibraryDashboard />;
-  }
-
-  const isIctTechnician = roleLower === 'ict_technician' || roleLower === 'ict_teacher' || roleLower.includes('ict') || resolvedR === 'ict_technician' || resolvedR === 'ict_teacher';
-  if (isIctTechnician && !roleLower.includes('admin')) {
-    return <ICTPortalDashboard />;
-  }
-
-  const isTeacher = isTeacherRole(userRole, (user as any)?.staffCategory, (user as any)?.specialties) ||
-    resolvedR === 'teacher' || resolvedR === 'class_teacher' || resolvedR === 'subject_teacher' ||
-    resolvedR === 'senior_teacher' || roleLower.includes('teacher') || roleLower.includes('educator') ||
-    roleLower === 'staff' || roleLower === 'staff_member' || userName.includes('ALICE MUKITE');
-
-  const isAdminOrOwner = ['HOI', 'DHOI', 'ADMIN', 'OWNER', 'SUPER_ADMIN'].includes(normalizedRole) || roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || resolvedR === 'admin';
-
-  if (isTeacher && !isAdminOrOwner) {
-    return <TeacherDashboard />;
-  }
-
-  if (roleLower === 'owner') {
-    return <OwnerDashboard />;
-  }
-
-  if (['HOI', 'DHOI', 'ADMIN', 'OWNER', 'SUPER_ADMIN'].includes(normalizedRole) || roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner') {
+  // Admin/owner roles get Admin Dashboard
+  if (isAdminRole(normalizedRole) || normalizedRole === 'admin' || normalizedRole === 'owner') {
     return <AdminDashboard />;
   }
 
+  // Class Teacher gets Class Teacher Dashboard
+  if (isClassTeacherRole(normalizedRole)) {
+    return <TeacherDashboard />;
+  }
+
+  // Subject Teacher gets Teacher Dashboard (shared with Class Teacher)
+  if (isSubjectTeacherRole(normalizedRole)) {
+    return <TeacherDashboard />;
+  }
+
+  // ICT Teacher gets ICT Portal Dashboard
+  if (isIctTeacherRole(normalizedRole)) {
+    return <ICTPortalDashboard />;
+  }
+
+  // Library Teacher gets Library Dashboard
+  if (isLibrarianRole(normalizedRole)) {
+    return <LibraryDashboard />;
+  }
+
+  // Bursar gets Admin Dashboard (or could have their own dashboard)
+  if (isBursarRole(normalizedRole)) {
+    return <AdminDashboard />;
+  }
+
+  // Default fallback - block non-admin roles from Admin Dashboard
+  // For any other role, redirect to appropriate dashboard
+  // This prevents unauthorized access to Admin Dashboard
   return <AdminDashboard />;
 };
 
