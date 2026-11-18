@@ -91,8 +91,9 @@ export function mapRoleToRbacKey(role: string): string {
   if (roleMap[norm]) return roleMap[norm];
 
   // Substring/pattern-based mappings
-  if (norm.includes('class teacher') || norm.includes('classteacher')) return 'class_teacher';
-  if (norm.includes('subject teacher') || norm.includes('subjectteacher')) return 'subject_teacher';
+  if (norm.includes('class teacher') || norm.includes('classteacher') || norm.includes('class_teacher')) return 'class_teacher';
+  if (norm.includes('subject teacher') || norm.includes('subjectteacher') || norm.includes('subject_teacher')) return 'subject_teacher';
+  if (norm === 'teacher' || norm.includes('teacher') || norm.includes('educator')) return 'class_teacher';
   if (norm.includes('ict teacher') || norm.includes('ict') || norm.includes('ict_teacher')) return 'ict_teacher';
   if (norm.includes('lab teacher') || norm.includes('lab_teacher') || norm.includes('science lab')) return 'lab_teacher';
   if (norm.includes('library teacher') || norm.includes('librarian') || norm.includes('library')) return 'library_teacher';

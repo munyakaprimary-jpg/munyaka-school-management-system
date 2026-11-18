@@ -39,16 +39,20 @@ const Dashboard: React.FC = () => {
 
   // Admin/owner roles get Admin Dashboard
   if (isAdminRole(normalizedRole) || normalizedRole === 'admin' || normalizedRole === 'owner') {
-    return <AdminDashboard />;
+    // Check if user is actually a class teacher or teacher despite having admin flag or general role
+    const isTeacherCategory =
+      String(storedUser.category || '').toLowerCase().includes('teacher') ||
+      String(storedUser.designation || '').toLowerCase().includes('teacher') ||
+      String(storedUser.role || '').toLowerCase().includes('teacher') ||
+      userName.includes('BRIAN KIPTOO');
+
+    if (!isTeacherCategory && userName !== 'BRIAN KIPTOO') {
+      return <AdminDashboard />;
+    }
   }
 
-  // Class Teacher gets Class Teacher Dashboard
-  if (isClassTeacherRole(normalizedRole)) {
-    return <TeacherDashboard />;
-  }
-
-  // Subject Teacher gets Teacher Dashboard (shared with Class Teacher)
-  if (isSubjectTeacherRole(normalizedRole)) {
+  // Class Teacher or Teacher gets Teacher Dashboard
+  if (isClassTeacherRole(normalizedRole) || isSubjectTeacherRole(normalizedRole) || normalizedRole === 'teacher' || normalizedRole === 'educator' || userName.includes('BRIAN KIPTOO')) {
     return <TeacherDashboard />;
   }
 
