@@ -1134,43 +1134,6 @@ export default function TeacherDashboard() {
         </Card>
       </div>
 
-        {/* Metric Card 2: Class Enrollment */}
-        <Card className="bg-white/90 backdrop-blur-sm border-blue-100 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Class Enrollment</CardTitle>
-            <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
-              <Users className="w-5 h-5" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900 tracking-tight">
-              {totalLearners} {totalLearners === 1 ? 'Learner' : 'Learners'}
-            </div>
-            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <span className="text-emerald-600 font-semibold">{totalLearners > 0 ? `${totalLearners} registered` : '0 registered'}</span> in Central DB
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Metric Card 3: Attendance Today */}
-        <Card className="bg-white/90 backdrop-blur-sm border-purple-100 shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Attendance Today</CardTitle>
-            <div className="p-2 bg-purple-50 rounded-xl text-purple-600">
-              <ClipboardCheck className="w-5 h-5" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900 tracking-tight">
-              {attendanceRate}%
-            </div>
-            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <span className="text-purple-600 font-semibold">{attendanceToday} present today</span> ({Math.max(0, totalLearners - attendanceToday)} absent)
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Main Action Hub */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
