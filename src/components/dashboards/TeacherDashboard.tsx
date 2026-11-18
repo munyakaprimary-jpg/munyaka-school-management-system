@@ -788,6 +788,14 @@ export default function TeacherDashboard() {
     );
   }
 
+  const currentUserObj = React.useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+    } catch {
+      return {};
+    }
+  }, []);
+
   // Allow teacher to select class if unassigned, but ENFORCE strict class lock if assigned or locked
   const matchedStaffRecord = React.useMemo(() => {
     try {
