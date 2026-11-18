@@ -786,65 +786,69 @@ export default function TeacherDashboard() {
     );
   }
 
-  const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
-  const [selectedClassOverride, setSelectedClassOverride] = React.useState<string | null>(null);
-
-  // Check munyaka_central_db.staff or teachers for logged in user assignment
-  const centralDb = React.useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-    } catch {
-      return {};
-    }
-  }, []);
-
-  const staffList = React.useMemo(() => {
-    return centralDb.staff || centralDb.teachers || [];
-  }, [centralDb]);
-
-  const matchedStaffRecord = React.useMemo(() => {
-    const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '');
-    const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase();
-    const userNameKey = String(teacherName).toLowerCase();
-
-    return staffList.find((st: any) => {
-      const stId = String(st.id || st.staffId || st.tscNo || '');
-      const stEmail = String(st.email || '').toLowerCase();
-      const stName = String(st.name || st.fullName || st.username || '').toLowerCase();
-      return (userId && stId === userId) || (userEmail && stEmail === userEmail) || (userNameKey && stName.includes(userNameKey));
-    });
-  }, [staffList, user, currentUserObj, teacherName]);
-
+  // Allow teacher to select class if unassigned, but ENFORCE strict class lock if assigned or locked
   const assignedClassesRaw = matchedStaffRecord?.assignedClasses || matchedStaffRecord?.assignedClass || (user as any)?.assignedClasses || currentUserObj.assignedClasses || [];
   const defaultAssignedClass = Array.isArray(assignedClassesRaw) && assignedClassesRaw.length > 0
     ? assignedClassesRaw[0]
     : String(matchedStaffRecord?.assignedGrade || matchedStaffRecord?.grade || (user as any)?.assignedClass || (user as any)?.gradeStream || currentUserObj.assignedClass || currentUserObj.gradeStream || '');
 
-  const activeAssignedClass = selectedClassOverride !== null ? selectedClassOverride : (defaultAssignedClass || '');
+  // Persistent class lock state from localStorage & staff record
+  const lockStorageKey = `munyaka_teacher_locked_class_${matchedStaffRecord?.id || currentUserObj.id || user?.id || 'default'}`;
+  
+  const [selectedClassOverride, setSelectedClassOverride] = React.useState<string | null>(() => {
+    try {
+      const storedLock = localStorage.getItem(lockStorageKey);
+      if (storedLock) return storedLock;
+    } catch {}
+    return matchedStaffRecord?.lockedClass || currentUserObj.lockedClass || null;
+  });
+
+  const activeAssignedClass = selectedClassOverride !== null ? selectedClassOverride : (defaultAssignedClass || (allDynamicClassOptions[0] || 'Grade 4 Blue'));
   const fullClassTitle = activeAssignedClass ? activeAssignedClass : 'No Class Assigned';
 
-  // Persist the teacher's assigned class selection to their document in the
-  // Firestore `staff` collection so the choice survives across devices/sessions.
-  const persistAssignedClassToFirestore = async (val: string) => {
+  // Automatically lock class and persist to localStorage & staff record when chosen or assigned
+  const handleClassSelectionLock = async (val: string) => {
+    setSelectedClassOverride(val);
+    setSelectedClass(val);
     try {
-      // Use canonical staff ID for the Firestore document ID
-      const staffRecord = matchedStaffRecord || currentUserObj || user;
-      const canonicalId = getCanonicalStaffId(staffRecord || {});
-      const staffDocId = String(
-        canonicalId ||
-        matchedStaffRecord?.id ||
-        matchedStaffRecord?.staffId ||
-        matchedStaffRecord?.staff_id ||
-        currentUserObj.id ||
-        user?.id ||
-        ''
-      );
-      if (!staffDocId) return;
-      await setDoc(doc(db, 'staff', staffDocId), { assignedClass: val, updatedAt: new Date().toISOString() }, { merge: true });
-    } catch (err) {
-      console.warn('Failed to persist assignedClass to Firestore staff collection:', err);
+      localStorage.setItem(lockStorageKey, val);
+    } catch {}
+    // Persist to staff record & Firestore
+    try {
+      const staffDocId = String(matchedStaffRecord?.id || matchedStaffRecord?.staffId || currentUserObj.id || user?.id || '');
+      if (staffDocId) {
+        await setDoc(doc(db, 'staff', staffDocId), {
+          assignedClass: val,
+          lockedClass: val,
+          isClassLocked: true,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
+    } catch (e) {
+      console.warn('Failed to persist class lock to Firestore:', e);
     }
   };
+
+  // Restrict dropdown options strictly to teacher's assigned allocations (assignedClasses / assignedStreams / homeroom)
+  const allowedClassOptions = React.useMemo(() => {
+    const list: string[] = [];
+    if (Array.isArray(assignedClassesRaw) && assignedClassesRaw.length > 0) {
+      assignedClassesRaw.forEach((c: string) => {
+        if (c && !list.includes(c)) list.push(c);
+      });
+    }
+    if (matchedStaffRecord?.homeroomGrade && matchedStaffRecord?.homeroomStream) {
+      const home = `${matchedStaffRecord.homeroomGrade} ${matchedStaffRecord.homeroomStream}`;
+      if (!list.includes(home)) list.push(home);
+    }
+    if (defaultAssignedClass && !list.includes(defaultAssignedClass)) {
+      list.push(defaultAssignedClass);
+    }
+    // If no assigned allocations found, fallback to all dynamic options
+    return list.length > 0 ? list : allDynamicClassOptions;
+  }, [assignedClassesRaw, matchedStaffRecord, defaultAssignedClass, allDynamicClassOptions]);
+
+  const [selectedClass, setSelectedClass] = React.useState<string>(activeAssignedClass || allowedClassOptions[0] || 'Grade 4 Blue');
 
   // Load learners from all possible unified sources (Firestore central DB and offline localStorage caches)
   const allLearners = React.useMemo(() => {
@@ -986,13 +990,15 @@ export default function TeacherDashboard() {
             <Badge className="bg-white/20 text-white hover:bg-white/30 border-none font-bold uppercase tracking-wider text-[10px]">
               {user?.role ? user.role.toUpperCase() + ' DASHBOARD' : 'STAFF DASHBOARD'}
             </Badge>
-            <span className="text-xs text-blue-200 font-medium">• Active Session</span>
+            <Badge variant="outline" className="bg-emerald-500/30 text-emerald-200 border-emerald-400 font-bold text-[10px] flex items-center gap-1">
+              <Lock className="w-3 h-3" /> Locked Class: {fullClassTitle}
+            </Badge>
           </div>
           <h1 className="text-2xl md:text-3xl font-black tracking-tight">
             Welcome back, {teacherName}!
           </h1>
           <p className="text-blue-100 text-sm md:text-base max-w-xl font-medium">
-            {(user as any)?.assignedGrade ? `Your dashboard is restricted to assigned class (${(user as any).assignedGrade} ${(user as any).assignedStream || ''}) data.` : `Signed in with ${user?.role || 'Staff'} permissions.`}
+            Your data entry is strictly locked to <strong className="text-white underline">{fullClassTitle}</strong>. Cross-grade access is locked.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 relative z-10">
@@ -1001,14 +1007,14 @@ export default function TeacherDashboard() {
             className="bg-white text-indigo-700 hover:bg-blue-50 font-bold rounded-xl shadow-sm"
           >
             <ClipboardCheck className="w-4 h-4 mr-2 text-indigo-600" />
-            Mark Attendance
+            Mark Attendance ({fullClassTitle})
           </Button>
           <Button
             onClick={() => navigate('/assessments')}
             className="bg-indigo-600 text-white hover:bg-indigo-500 font-bold rounded-xl border border-indigo-400 shadow-sm"
           >
             <FileSpreadsheet className="w-4 h-4 mr-2 text-white" />
-            Enter Exam Marks
+            Enter Exam Marks ({fullClassTitle})
           </Button>
           <TeacherSyncQrGenerator
             grade={gradePart}
@@ -1025,27 +1031,108 @@ export default function TeacherDashboard() {
         </div>
       </div>
 
-      {/* Quick Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Metric Card 1: Assigned Class */}
-        <Card className="bg-white/90 backdrop-blur-sm border-emerald-100 shadow-sm hover:shadow-md transition-shadow">
+      {/* Quick Metrics & Strict Class Lock Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Strict Class Lock Card */}
+        <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white border-slate-700 shadow-xl col-span-1 lg:col-span-1 flex flex-col justify-between">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] uppercase font-extrabold tracking-wider bg-teal-800 px-2 py-0.5 rounded text-teal-200">
+                {getFormattedRoleLabel(teacherRole)}
+              </span>
+              <Badge variant="outline" className="bg-emerald-500/20 text-emerald-300 border-emerald-400 font-bold text-xs flex items-center gap-1">
+                <Lock className="w-3 h-3 text-emerald-400" /> LOCKED
+              </Badge>
+            </div>
+            <CardTitle className="text-lg font-black text-white">Assigned Homeroom Lock</CardTitle>
+            <CardDescription className="text-slate-300 text-xs">
+              Strictly bound to {fullClassTitle}. All data entry is restricted to this class.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-white/5 p-3.5 rounded-xl border border-white/10 space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+                <span>Bound Class & Stream</span>
+                <span className="text-emerald-400 font-bold flex items-center gap-1"><Lock className="w-3 h-3" /> Locked</span>
+              </div>
+              <Select
+                value={activeAssignedClass}
+                onValueChange={(val) => {
+                  handleClassSelectionLock(val);
+                }}
+                disabled={true}
+              >
+                <SelectTrigger className="bg-slate-950 border-slate-700 text-white font-bold rounded-xl h-10">
+                  <SelectValue placeholder="Select class..." />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                  {allowedClassOptions.map((cls: string) => (
+                    <SelectItem key={cls} value={cls} className="font-bold focus:bg-teal-800 focus:text-white">
+                      {cls}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-start gap-2 text-xs text-amber-200/90 bg-amber-950/40 p-3 rounded-xl border border-amber-800/50">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+              <span>Cross-grade selection is disabled. Contact Admin to reassign or unlock your teaching stream.</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Metric Card 2: Total Learners */}
+        <Card className="bg-white/90 backdrop-blur-sm border-slate-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Assigned Class</CardTitle>
-            <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
-              <BookOpen className="w-5 h-5" />
+            <CardTitle className="text-sm font-medium text-slate-600">Enrolled Learners ({fullClassTitle})</CardTitle>
+            <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
+              <Users className="w-5 h-5" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-xl font-bold text-slate-900 tracking-tight">
-              {fullClassTitle}
+          <CardContent className="space-y-3">
+            <div className="text-3xl font-black text-slate-900 tracking-tight">
+              {totalLearners}
             </div>
-            <p className="text-xs text-slate-500 flex items-center gap-1">
-              <span>Primary Homeroom & Subject Stream</span>
+            <p className="text-xs text-slate-500 font-medium">
+              Registered learners in your assigned class stream
             </p>
-            <div className="pt-1">
-              <Select
-                value={selectedClass}
-                onValueChange={(val) => {
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full font-bold border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl"
+              onClick={() => navigate('/learners')}
+            >
+              View Class Learners <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Metric Card 3: Roll Call & Attendance */}
+        <Card className="bg-white/90 backdrop-blur-sm border-slate-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-600">Today's Attendance Rate</CardTitle>
+            <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600">
+              <ClipboardCheck className="w-5 h-5" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-3xl font-black text-slate-900 tracking-tight">
+              {attendanceRate}%
+            </div>
+            <p className="text-xs text-slate-500 font-medium">
+              {attendanceToday} of {totalLearners} learners present today
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full font-bold border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-xl"
+              onClick={() => navigate('/attendance')}
+            >
+              Mark Roll Call <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
                   setSelectedClass(val);
                   try {
                     const existing = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
