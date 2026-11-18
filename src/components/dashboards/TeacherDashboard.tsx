@@ -789,6 +789,24 @@ export default function TeacherDashboard() {
   }
 
   // Allow teacher to select class if unassigned, but ENFORCE strict class lock if assigned or locked
+  const matchedStaffRecord = React.useMemo(() => {
+    try {
+      const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+      const staffList = centralDb.staff || centralDb.teachers || [];
+      const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '');
+      const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase();
+      const userNameKey = String(teacherName).toLowerCase();
+      return staffList.find((st: any) => {
+        const stId = String(st.id || st.staffId || st.tscNo || '');
+        const stEmail = String(st.email || '').toLowerCase();
+        const stName = String(st.name || st.fullName || st.username || '').toLowerCase();
+        return (userId && stId === userId) || (userEmail && stEmail === userEmail) || (userNameKey && stName.includes(userNameKey));
+      }) || {};
+    } catch {
+      return {};
+    }
+  }, [user, currentUserObj, teacherName]);
+
   const assignedClassesRaw = matchedStaffRecord?.assignedClasses || matchedStaffRecord?.assignedClass || (user as any)?.assignedClasses || currentUserObj.assignedClasses || [];
   const defaultAssignedClass = Array.isArray(assignedClassesRaw) && assignedClassesRaw.length > 0
     ? assignedClassesRaw[0]
