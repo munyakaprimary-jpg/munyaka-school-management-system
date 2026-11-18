@@ -1133,28 +1133,6 @@ export default function TeacherDashboard() {
           </CardContent>
         </Card>
       </div>
-                  setSelectedClass(val);
-                  try {
-                    const existing = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
-                    existing.assignedClass = val;
-                    localStorage.setItem('munyaka_current_user', JSON.stringify(existing));
-                  } catch {}
-                }}
-              >
-                <SelectTrigger className="w-full h-9 bg-slate-50 border-emerald-200 font-bold text-xs text-slate-800 rounded-xl">
-                  <SelectValue placeholder="Switch Class..." />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {allDynamicClassOptions.map((classNameOption) => (
-                    <SelectItem key={classNameOption} value={classNameOption} className="text-xs font-semibold">
-                      {classNameOption}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Metric Card 2: Class Enrollment */}
         <Card className="bg-white/90 backdrop-blur-sm border-blue-100 shadow-sm hover:shadow-md transition-shadow">
