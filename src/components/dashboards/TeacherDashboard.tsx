@@ -820,18 +820,36 @@ export default function TeacherDashboard() {
     ? assignedClassesRaw[0]
     : String(matchedStaffRecord?.assignedGrade || matchedStaffRecord?.grade || (user as any)?.assignedClass || (user as any)?.gradeStream || currentUserObj.assignedClass || currentUserObj.gradeStream || '');
 
-  // Persistent class lock state from localStorage & staff record
-  const lockStorageKey = `munyaka_teacher_locked_class_${matchedStaffRecord?.id || currentUserObj.id || user?.id || 'default'}`;
-  
+  // 1. Initialize selectedClass as "" (empty string) and isLocked as false by default
   const [selectedClassOverride, setSelectedClassOverride] = React.useState<string | null>(() => {
     try {
       const storedLock = localStorage.getItem(lockStorageKey);
       if (storedLock) return storedLock;
     } catch {}
-    return matchedStaffRecord?.lockedClass || currentUserObj.lockedClass || null;
+
+    // 2. Only auto-bind & lock from explicit staff profile fields
+    const explicitAssignment =
+      matchedStaffRecord?.lockedClass ||
+      currentUserObj.lockedClass ||
+      matchedStaffRecord?.assignedClass ||
+      currentUserObj.assignedClass ||
+      (matchedStaffRecord?.homeroomGrade && matchedStaffRecord?.homeroomStream ? `${matchedStaffRecord.homeroomGrade} ${matchedStaffRecord.homeroomStream}` : '') ||
+      (currentUserObj.homeroomGrade && currentUserObj.homeroomStream ? `${currentUserObj.homeroomGrade} ${currentUserObj.homeroomStream}` : '') ||
+      (Array.isArray(matchedStaffRecord?.assignedClasses) && matchedStaffRecord.assignedClasses[0] ? matchedStaffRecord.assignedClasses[0] : '') ||
+      (Array.isArray(currentUserObj.assignedClasses) && currentUserObj.assignedClasses[0] ? currentUserObj.assignedClasses[0] : '') ||
+      '';
+
+    // Ignore generic placeholder "Grade 1 Blue" unless explicitly present in their record
+    if (explicitAssignment && explicitAssignment !== 'Grade 1 Blue') {
+      return explicitAssignment;
+    }
+
+    return null;
   });
 
-  const activeAssignedClass = selectedClassOverride !== null ? selectedClassOverride : (defaultAssignedClass || (allDynamicClassOptions[0] || 'Grade 4 Blue'));
+  // If no explicit class is assigned in Firestore/profile, keep empty so teacher selects
+  const activeAssignedClass = selectedClassOverride !== null ? selectedClassOverride : '';
+  const isClassLocked = Boolean(selectedClassOverride && selectedClassOverride !== '');
   const fullClassTitle = activeAssignedClass ? activeAssignedClass : 'No Class Assigned';
 
   // Automatically lock class and persist to localStorage & staff record when chosen or assigned
@@ -855,6 +873,32 @@ export default function TeacherDashboard() {
     } catch (e) {
       console.warn('Failed to persist class lock to Firestore:', e);
     }
+  };
+
+  // 4. Admin/Debug Reset Option to unlock class
+  const handleResetClassLock = async () => {
+    const pin = prompt('Enter Admin PIN to reset teacher class lock:');
+    if (pin !== '1234' && pin !== '0000' && pin !== 'admin') {
+      if (pin !== null) alert('Incorrect Admin PIN.');
+      return;
+    }
+    setSelectedClassOverride('');
+    setSelectedClass('');
+    try {
+      localStorage.removeItem(lockStorageKey);
+    } catch {}
+    try {
+      const staffDocId = String(matchedStaffRecord?.id || matchedStaffRecord?.staffId || currentUserObj.id || user?.id || '');
+      if (staffDocId) {
+        await setDoc(doc(db, 'staff', staffDocId), {
+          assignedClass: '',
+          lockedClass: '',
+          isClassLocked: false,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
+    } catch {}
+    alert('Class lock successfully reset. You can now select a new class.');
   };
 
   // Restrict dropdown options strictly to teacher's assigned allocations (assignedClasses / assignedStreams / homeroom)
@@ -1066,30 +1110,48 @@ export default function TeacherDashboard() {
               <span className="text-[10px] uppercase font-extrabold tracking-wider bg-teal-800 px-2 py-0.5 rounded text-teal-200">
                 {getFormattedRoleLabel(teacherRole)}
               </span>
-              <Badge variant="outline" className="bg-emerald-500/20 text-emerald-300 border-emerald-400 font-bold text-xs flex items-center gap-1">
-                <Lock className="w-3 h-3 text-emerald-400" /> LOCKED
-              </Badge>
+              {isClassLocked ? (
+                <Badge variant="outline" className="bg-emerald-500/20 text-emerald-300 border-emerald-400 font-bold text-xs flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-emerald-400" /> LOCKED
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-400 font-bold text-xs flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 text-amber-400" /> UNBOUND
+                </Badge>
+              )}
             </div>
-            <CardTitle className="text-lg font-black text-white">Assigned Homeroom Lock</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-black text-white">Assigned Homeroom Lock</CardTitle>
+              {isClassLocked && (
+                <button
+                  onClick={handleResetClassLock}
+                  className="text-xs text-amber-300 hover:text-white underline font-semibold transition-colors"
+                >
+                  Reset Lock (Admin PIN)
+                </button>
+              )}
+            </div>
             <CardDescription className="text-slate-300 text-xs">
-              Strictly bound to {fullClassTitle}. All data entry is restricted to this class.
+              {isClassLocked ? `Strictly bound to ${fullClassTitle}. All data entry is restricted.` : `Please select your assigned class and stream to lock your session.`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-white/5 p-3.5 rounded-xl border border-white/10 space-y-2">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
                 <span>Bound Class & Stream</span>
-                <span className="text-emerald-400 font-bold flex items-center gap-1"><Lock className="w-3 h-3" /> Locked</span>
+                <span className={isClassLocked ? "text-emerald-400 font-bold flex items-center gap-1" : "text-amber-400 font-bold flex items-center gap-1"}>
+                  {isClassLocked ? <><Lock className="w-3 h-3" /> Locked</> : <><AlertCircle className="w-3 h-3" /> Select Class</>}
+                </span>
               </div>
               <Select
                 value={activeAssignedClass}
                 onValueChange={(val) => {
                   handleClassSelectionLock(val);
                 }}
-                disabled={true}
+                disabled={isClassLocked}
               >
                 <SelectTrigger className="bg-slate-950 border-slate-700 text-white font-bold rounded-xl h-10">
-                  <SelectValue placeholder="Select class..." />
+                  <SelectValue placeholder="-- Select Your Class & Stream --" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-700 text-white">
                   {allowedClassOptions.map((cls: string) => (
@@ -1102,7 +1164,7 @@ export default function TeacherDashboard() {
             </div>
             <div className="flex items-start gap-2 text-xs text-amber-200/90 bg-amber-950/40 p-3 rounded-xl border border-amber-800/50">
               <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
-              <span>Cross-grade selection is disabled. Contact Admin to reassign or unlock your teaching stream.</span>
+              <span>{isClassLocked ? 'Cross-grade selection is disabled. Contact Admin to reassign or unlock your teaching stream.' : 'Select your class above to bind your session and unlock student registers & assessments.'}</span>
             </div>
           </CardContent>
         </Card>
