@@ -97,9 +97,11 @@ export default function TeacherDashboard() {
       'Grade 7 Blue', 'Grade 8 Blue', 'Grade 9 Blue'
     ];
   }, [gradesStreamsConfig]);
-  const [selectedClass, setSelectedClass] = React.useState<string>(() => {
+  const [selectedClassState, setSelectedClassState] = React.useState<string>(() => {
     return currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || 'Grade 4 Blue';
   });
+  const selectedClass = selectedClassState;
+  const setSelectedClass = setSelectedClassState;
 
   // Live-sync against Staff Directory to ensure true role is always respected
   const activeEmail = String(currUserObj.email || user?.email || '').trim().toLowerCase();
@@ -132,10 +134,10 @@ export default function TeacherDashboard() {
     assignedDept.includes('ict') ||
     userName.includes('JAMES NDIKI');
 
-  const hasAssignedClass = Boolean(selectedClass && selectedClass !== 'No Class Assigned');
+  const hasAssignedClass = Boolean(selectedClassState && selectedClassState !== 'No Class Assigned');
 
   const isClassTeacher = hasAssignedClass && !isLibraryStaff && !isIctStaff;
-  const assignedClassLabel = selectedClass || (isLibraryStaff ? 'Library & Media Center' : isIctStaff ? 'ICT Department' : 'No Class Assigned');
+  const assignedClassLabel = selectedClassState || (isLibraryStaff ? 'Library & Media Center' : isIctStaff ? 'ICT Department' : 'No Class Assigned');
   
   const welcomeSubtitle = isLibraryStaff
     ? `You are signed in as ${teacherName} (Staff). Your dashboard is assigned to Library & Resource Management.`
@@ -847,8 +849,6 @@ export default function TeacherDashboard() {
     // If no assigned allocations found, fallback to all dynamic options
     return list.length > 0 ? list : allDynamicClassOptions;
   }, [assignedClassesRaw, matchedStaffRecord, defaultAssignedClass, allDynamicClassOptions]);
-
-  const [selectedClass, setSelectedClass] = React.useState<string>(activeAssignedClass || allowedClassOptions[0] || 'Grade 4 Blue');
 
   // Load learners from all possible unified sources (Firestore central DB and offline localStorage caches)
   const allLearners = React.useMemo(() => {
