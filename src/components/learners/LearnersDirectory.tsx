@@ -829,7 +829,7 @@ export default function LearnersDirectory() {
 }
 
 // Inline Form Modal for Adding / Editing Learner
-function LearnerFormModal(props: { learner: any; onClose: () => void; onSave: (l: any) => void }) {
+function LearnerFormModal(props: any) {
   const { learner, onClose, onSave } = props;
   const [availableGrades, setAvailableGrades] = useState<string[]>([
     'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'
