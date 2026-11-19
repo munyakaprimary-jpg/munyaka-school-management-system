@@ -850,19 +850,6 @@ export default function TeacherDashboard() {
 
     return null;
   });
-      (matchedStaffRecord?.homeroomGrade && matchedStaffRecord?.homeroomStream ? `${matchedStaffRecord.homeroomGrade} ${matchedStaffRecord.homeroomStream}` : '') ||
-      (currentUserObj.homeroomGrade && currentUserObj.homeroomStream ? `${currentUserObj.homeroomGrade} ${currentUserObj.homeroomStream}` : '') ||
-      (Array.isArray(matchedStaffRecord?.assignedClasses) && matchedStaffRecord.assignedClasses[0] ? matchedStaffRecord.assignedClasses[0] : '') ||
-      (Array.isArray(currentUserObj.assignedClasses) && currentUserObj.assignedClasses[0] ? currentUserObj.assignedClasses[0] : '') ||
-      '';
-
-    // Ignore generic placeholder "Grade 1 Blue" unless explicitly present in their record
-    if (explicitAssignment && explicitAssignment !== 'Grade 1 Blue') {
-      return explicitAssignment;
-    }
-
-    return null;
-  });
 
   // Fetch authoritative assignment and lock status from Firestore staff collection on mount (Firestore ALWAYS takes priority over localStorage)
   React.useEffect(() => {
