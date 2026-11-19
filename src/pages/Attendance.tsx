@@ -49,6 +49,40 @@ export default function Attendance() {
     return localStorage.getItem('manual_afternoon_lock') === 'true';
   });
 
+  // Auto-initialize grade & stream from URL query params or teacher class lock
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const qGrade = params.get('grade');
+      const qStream = params.get('stream');
+      if (qGrade) {
+        setSelectedGrade(qGrade.startsWith('Grade') ? qGrade : `Grade ${qGrade}`);
+      }
+      if (qStream) {
+        setSelectedStream(qStream);
+      }
+    } catch {}
+
+    try {
+      const lockKeyPrefix = 'munyaka_teacher_class_lock_';
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(lockKeyPrefix)) {
+          const val = localStorage.getItem(key);
+          if (val && val !== 'No Class Assigned') {
+            const parts = val.trim().split(/\s+/);
+            if (parts.length >= 2) {
+              const stream = parts[parts.length - 1];
+              const grade = parts.slice(0, parts.length - 1).join(' ');
+              setSelectedGrade(grade.startsWith('Grade') ? grade : `Grade ${grade}`);
+              setSelectedStream(stream);
+            }
+          }
+        }
+      }
+    } catch {}
+  }, []);
+
   // Configurable Cutoff Time Settings (From and To ranges)
   const [morningFromTime, setMorningFromTime] = useState<string>(() => {
     return localStorage.getItem('attendance_morning_from') || '08:00';

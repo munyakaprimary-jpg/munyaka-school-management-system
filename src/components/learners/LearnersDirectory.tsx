@@ -102,9 +102,18 @@ export default function LearnersDirectory() {
   const isTeacherLocked = Boolean(teacherBoundClass);
   const boundClassParsed = useMemo(() => parseBoundClass(teacherBoundClass), [teacherBoundClass]);
 
-  // Auto-apply class lock on mount
+  // Auto-apply class lock or query params on mount
   useEffect(() => {
-    if (isTeacherLocked && boundClassParsed.grade) {
+    const params = new URLSearchParams(window.location.search);
+    const qGrade = params.get('grade');
+    const qStream = params.get('stream');
+
+    if (qGrade) {
+      setSelectedGrade(qGrade.startsWith('Grade') ? qGrade : `Grade ${qGrade}`);
+      if (qStream) {
+        setSelectedStream(qStream);
+      }
+    } else if (isTeacherLocked && boundClassParsed.grade) {
       setSelectedGrade(`Grade ${boundClassParsed.grade}`);
       if (boundClassParsed.stream) {
         setSelectedStream(boundClassParsed.stream);

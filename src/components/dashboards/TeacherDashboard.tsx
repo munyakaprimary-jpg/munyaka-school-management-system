@@ -1098,14 +1098,14 @@ export default function TeacherDashboard() {
         </div>
         <div className="flex flex-wrap items-center gap-3 relative z-10">
           <Button
-            onClick={() => navigate('/attendance')}
+            onClick={() => navigate(`/attendance?grade=${encodeURIComponent(gradePart)}&stream=${encodeURIComponent(streamPart)}`)}
             className="bg-white text-indigo-700 hover:bg-blue-50 font-bold rounded-xl shadow-sm"
           >
             <ClipboardCheck className="w-4 h-4 mr-2 text-indigo-600" />
             Mark Attendance ({fullClassTitle})
           </Button>
           <Button
-            onClick={() => navigate('/assessments')}
+            onClick={() => navigate(`/assessments?grade=${encodeURIComponent(gradePart)}&stream=${encodeURIComponent(streamPart)}`)}
             className="bg-indigo-600 text-white hover:bg-indigo-500 font-bold rounded-xl border border-indigo-400 shadow-sm"
           >
             <FileSpreadsheet className="w-4 h-4 mr-2 text-white" />
@@ -1205,7 +1205,7 @@ export default function TeacherDashboard() {
               variant="outline"
               size="sm"
               className="w-full font-bold border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl"
-              onClick={() => navigate('/learners')}
+              onClick={() => navigate(`/learners?grade=${encodeURIComponent(gradePart)}&stream=${encodeURIComponent(streamPart)}`)}
             >
               View Class Learners <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
@@ -1231,7 +1231,7 @@ export default function TeacherDashboard() {
               variant="outline"
               size="sm"
               className="w-full font-bold border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-xl"
-              onClick={() => navigate('/attendance')}
+              onClick={() => navigate(`/attendance?grade=${encodeURIComponent(gradePart)}&stream=${encodeURIComponent(streamPart)}`)}
             >
               Mark Roll Call <ArrowRight className="w-4 h-4 ml-2" />
             </Button>

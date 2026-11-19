@@ -123,8 +123,51 @@ const Assessments = () => {
     return [String(currentY - 1), String(currentY), String(currentY + 1), String(currentY + 2)];
   });
   
-  const [grade, setGrade] = useState<string>(() => "Grade 4");
-  const [stream, setStream] = useState<string>("All Streams");
+  const [grade, setGrade] = useState<string>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const qGrade = params.get('grade');
+      if (qGrade) return qGrade.startsWith('Grade') ? qGrade : `Grade ${qGrade}`;
+
+      const lockKeyPrefix = 'munyaka_teacher_class_lock_';
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(lockKeyPrefix)) {
+          const val = localStorage.getItem(key);
+          if (val && val !== 'No Class Assigned') {
+            const parts = val.trim().split(/\s+/);
+            if (parts.length >= 2) {
+              const g = parts.slice(0, parts.length - 1).join(' ');
+              return g.startsWith('Grade') ? g : `Grade ${g}`;
+            }
+          }
+        }
+      }
+    } catch {}
+    return "Grade 4";
+  });
+  const [stream, setStream] = useState<string>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const qStream = params.get('stream');
+      if (qStream) return qStream;
+
+      const lockKeyPrefix = 'munyaka_teacher_class_lock_';
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(lockKeyPrefix)) {
+          const val = localStorage.getItem(key);
+          if (val && val !== 'No Class Assigned') {
+            const parts = val.trim().split(/\s+/);
+            if (parts.length >= 2) {
+              return parts[parts.length - 1];
+            }
+          }
+        }
+      }
+    } catch {}
+    return "Blue";
+  });
   const [examType, setExamType] = useState<string>("Formative Assessment");
     const [maxMarks, setMaxMarks] = useState<number>(100);
     const [examTypesList, setExamTypesList] = useState<any[]>(() => {
