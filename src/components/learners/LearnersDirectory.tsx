@@ -767,40 +767,6 @@ export default function LearnersDirectory() {
                   setPasswordError('');
                 }}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200 dark:shadow-none transition-all"
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-              <input
-                type="password"
-                placeholder="Enter administrator password..."
-                value={adminPasswordInput}
-                onChange={(e) => {
-                  setAdminPasswordInput(e.target.value);
-                  if (passwordError) setPasswordError('');
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleConfirmDelete();
-                }}
-                autoFocus
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500 placeholder-slate-400"
-              />
-              {passwordError && (
-                <p className="text-xs font-semibold text-rose-600 flex items-center gap-1 mt-1">
-                  {passwordError}
-                </p>
-              )}
-            </div>
-
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => {
