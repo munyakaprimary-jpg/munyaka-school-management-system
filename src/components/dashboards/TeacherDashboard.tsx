@@ -825,19 +825,31 @@ export default function TeacherDashboard() {
     ? assignedClassesRaw[0]
     : String(matchedStaffRecord?.assignedGrade || matchedStaffRecord?.grade || (user as any)?.assignedClass || (user as any)?.gradeStream || currentUserObj.assignedClass || currentUserObj.gradeStream || '');
 
-  // 1. Initialize selectedClassOverride and isClassLocked from Firestore staff collection first, falling back to localStorage
+  // 1. Initialize selectedClassOverride and isClassLocked directly from matchedStaffRecord / Firestore without fallback to generic "Grade 1 Green"
   const [selectedClassOverride, setSelectedClassOverride] = React.useState<string | null>(() => {
+    const staffRecClass = String(
+      matchedStaffRecord?.assignedClass ||
+      matchedStaffRecord?.lockedClass ||
+      (matchedStaffRecord?.homeroomGrade && matchedStaffRecord?.homeroomStream ? `${matchedStaffRecord.homeroomGrade} ${matchedStaffRecord.homeroomStream}` : '') ||
+      currentUserObj.assignedClass ||
+      currentUserObj.lockedClass ||
+      (currentUserObj.homeroomGrade && currentUserObj.homeroomStream ? `${currentUserObj.homeroomGrade} ${currentUserObj.homeroomStream}` : '') ||
+      ''
+    ).trim();
+
+    if (staffRecClass && staffRecClass !== 'No Class Assigned') {
+      return staffRecClass.replace(/[()]/g, '').replace(/\s+/g, ' ').trim();
+    }
+
     try {
       const storedLock = localStorage.getItem(lockStorageKey);
-      if (storedLock) return storedLock;
+      if (storedLock && storedLock !== 'Grade 1 Green' && storedLock !== 'No Class Assigned') {
+        return storedLock;
+      }
     } catch {}
 
-    // 2. Only auto-bind & lock from explicit staff profile fields
-    const explicitAssignment =
-      matchedStaffRecord?.lockedClass ||
-      currentUserObj.lockedClass ||
-      matchedStaffRecord?.assignedClass ||
-      currentUserObj.assignedClass ||
+    return null;
+  });
       (matchedStaffRecord?.homeroomGrade && matchedStaffRecord?.homeroomStream ? `${matchedStaffRecord.homeroomGrade} ${matchedStaffRecord.homeroomStream}` : '') ||
       (currentUserObj.homeroomGrade && currentUserObj.homeroomStream ? `${currentUserObj.homeroomGrade} ${currentUserObj.homeroomStream}` : '') ||
       (Array.isArray(matchedStaffRecord?.assignedClasses) && matchedStaffRecord.assignedClasses[0] ? matchedStaffRecord.assignedClasses[0] : '') ||
@@ -906,7 +918,7 @@ export default function TeacherDashboard() {
 
           const isLocked = fetchedData.isClassLocked === true || Boolean(authoritativeClass);
 
-          if (authoritativeClass && authoritativeClass !== 'Grade 1 Blue') {
+          if (authoritativeClass && authoritativeClass !== 'Grade 1 Green' && authoritativeClass !== 'Grade 1 Blue') {
             setSelectedClassOverride(authoritativeClass);
             setSelectedClass(authoritativeClass);
             try {
