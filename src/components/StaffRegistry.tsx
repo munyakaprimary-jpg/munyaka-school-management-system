@@ -51,6 +51,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { getCanonicalStaffId, toFlatStaffSchema, deduplicateStaffRecords } from '@/utils/staffCanonicalUtils';
+import { db } from '@/config/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 const defaultCbcLearningAreas: any[] = [];
 
@@ -90,6 +92,7 @@ export interface StaffMember {
   assignedStreams?: string[];
   homeroomGrade?: string;
   homeroomStream?: string;
+  isClassLocked?: boolean;
   allocations?: StaffAllocationRecord[];
   accessCode: string;
   teacherCode?: string;
@@ -167,6 +170,7 @@ export default function StaffRegistry() {
   const [assignedStreams, setAssignedStreams] = useState<string[]>([]);
   const [homeroomGrade, setHomeroomGrade] = useState('Grade 7');
   const [homeroomStream, setHomeroomStream] = useState('');
+  const [isClassLocked, setIsClassLocked] = useState(false);
   const [allocations, setAllocations] = useState<StaffAllocationRecord[]>([]);
   const [activeSubjectForAllocation, setActiveSubjectForAllocation] = useState<string | null>(null);
 
@@ -391,6 +395,7 @@ export default function StaffRegistry() {
     setAssignedStreams(sanitizedStreams);
     setHomeroomGrade(staff.homeroomGrade || loadedClasses[0] || 'Grade 7');
     setHomeroomStream(staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : (sanitizedStreams[0] || ''));
+    setIsClassLocked(staff.isClassLocked === true);
     
     let loadedAllocs: StaffAllocationRecord[] = [];
     if (Array.isArray(staff.allocations) && staff.allocations.length > 0) {
@@ -658,8 +663,9 @@ export default function StaffRegistry() {
       assignedClasses: isTeachingStaff ? assignedClasses : [],
       assignedStreams: isTeachingStaff ? assignedStreams : [],
       homeroomGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
-      homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
-      createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString(),
+            homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
+            isClassLocked: category === 'Class Teacher' ? isClassLocked : false,
+            createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString(),
       // Auth fields
       password: password, // Store plain for admin visibility (in production, only hash)
       passwordHash: passwordHash,
@@ -681,6 +687,22 @@ export default function StaffRegistry() {
     // The staff record itself contains all authentication data
 
     saveStaffToStorage(updatedList);
+
+    // Sync to Firestore staff collection
+    try {
+      const staffDocId = String(staffRecord.id || '');
+      if (staffDocId && db) {
+        await setDoc(doc(db, 'staff', staffDocId), {
+          ...staffRecord,
+          homeroomGrade: category === 'Class Teacher' ? homeroomGrade : '',
+          homeroomStream: category === 'Class Teacher' ? homeroomStream : '',
+          isClassLocked: category === 'Class Teacher' ? isClassLocked : false,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
+    } catch (e) {
+      console.warn('Failed to sync staff class lock to Firestore:', e);
+    }
 
     addPendingSyncItem({
       id: staffRecord.id,
@@ -1236,43 +1258,78 @@ export default function StaffRegistry() {
                 </div>
 
                 {/* Conditional Homeroom Grade & Stream Selector for Class Teacher */}
-                {category === 'Class Teacher' && (
-                  <div className="sm:col-span-2 p-4 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl space-y-3">
-                    <div className="flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4 text-emerald-600" />
-                      <div>
-                        <h4 className="text-xs font-bold text-emerald-900">Assigned Homeroom Grade & Stream</h4>
-                        <p className="text-[11px] text-emerald-700">Select the primary homeroom class supervised by this Class Teacher.</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Grade</label>
-                        <select
-                          value={homeroomGrade}
-                          onChange={(e) => setHomeroomGrade(e.target.value)}
-                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
-                        >
-                          {availableSchoolClasses.map((cls) => (
-                            <option key={cls} value={cls}>{cls}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Stream</label>
-                        <select
-                          value={homeroomStream}
-                          onChange={(e) => setHomeroomStream(e.target.value)}
-                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
-                        >
-                          {availableSchoolStreams.map((strm) => (
-                            <option key={strm} value={strm}>{strm}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                                {category === 'Class Teacher' && (
+                                  <div className="sm:col-span-2 p-4 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl space-y-3">
+                                    <div className="flex items-center gap-2">
+                                      <GraduationCap className="w-4 h-4 text-emerald-600" />
+                                      <div>
+                                        <h4 className="text-xs font-bold text-emerald-900">Assigned Homeroom Grade & Stream</h4>
+                                        <p className="text-[11px] text-emerald-700">Select the primary homeroom class supervised by this Class Teacher.</p>
+                                      </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                      <div>
+                                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Grade</label>
+                                        <select
+                                          value={homeroomGrade}
+                                          onChange={(e) => setHomeroomGrade(e.target.value)}
+                                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                                        >
+                                          {availableSchoolClasses.map((cls) => (
+                                            <option key={cls} value={cls}>{cls}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div>
+                                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Stream</label>
+                                        <select
+                                          value={homeroomStream}
+                                          onChange={(e) => setHomeroomStream(e.target.value)}
+                                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                                        >
+                                          {availableSchoolStreams.map((strm) => (
+                                            <option key={strm} value={strm}>{strm}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    </div>
+                                    {/* Class Lock Status Toggle */}
+                                    <div className="border-t border-emerald-200/50 pt-3">
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <label className="text-[11px] font-semibold text-emerald-800 block mb-0.5">Class Lock Status</label>
+                                          <p className="text-[10px] text-emerald-600">When locked, the teacher cannot change their assigned class from their dashboard.</p>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => setIsClassLocked(!isClassLocked)}
+                                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                                            isClassLocked ? 'bg-emerald-600' : 'bg-slate-200'
+                                          }`}
+                                          role="switch"
+                                          aria-checked={isClassLocked}
+                                        >
+                                          <span
+                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                              isClassLocked ? 'translate-x-6' : 'translate-x-1'
+                                            }`}
+                                          />
+                                        </button>
+                                      </div>
+                                      <p className={`text-[11px] font-medium ${isClassLocked ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                        {isClassLocked ? (
+                                          <>
+                                            <Lock className="w-3 h-3 inline mr-1" /> Locked — Teacher cannot change class assignment
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Unlock className="w-3 h-3 inline mr-1" /> Unlocked — Teacher can select their class
+                                          </>
+                                        )}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
 
                 <div>
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">

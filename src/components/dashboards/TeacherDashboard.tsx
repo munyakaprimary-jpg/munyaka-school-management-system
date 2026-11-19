@@ -30,7 +30,7 @@ import { getFormattedRoleLabel } from '@/utils/staffRoleUtils';
 import { getCanonicalStaffId } from '@/utils/staffCanonicalUtils';
 import { matchesBoundClass, getTeacherBoundClass } from '@/utils/classLockUtils';
 import { db } from '@/config/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
@@ -825,7 +825,7 @@ export default function TeacherDashboard() {
     ? assignedClassesRaw[0]
     : String(matchedStaffRecord?.assignedGrade || matchedStaffRecord?.grade || (user as any)?.assignedClass || (user as any)?.gradeStream || currentUserObj.assignedClass || currentUserObj.gradeStream || '');
 
-  // 1. Initialize selectedClass as "" (empty string) and isLocked as false by default
+  // 1. Initialize selectedClassOverride and isClassLocked from Firestore staff collection first, falling back to localStorage
   const [selectedClassOverride, setSelectedClassOverride] = React.useState<string | null>(() => {
     try {
       const storedLock = localStorage.getItem(lockStorageKey);
@@ -851,6 +851,49 @@ export default function TeacherDashboard() {
 
     return null;
   });
+
+  // Fetch latest staff record from Firestore on mount to sync lock status and assignment instantly
+  React.useEffect(() => {
+    const fetchFirestoreStaffLock = async () => {
+      try {
+        const staffDocId = String(matchedStaffRecord?.id || currentUserObj.id || user?.id || '');
+        if (staffDocId && db) {
+          const docRef = doc(db, 'staff', staffDocId);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            const fsGrade = String(data.homeroomGrade || '').trim();
+            const fsStream = String(data.homeroomStream || '').trim();
+            const fsIsLocked = Boolean(data.isClassLocked);
+            
+            let targetClass = '';
+            if (fsGrade && fsStream) {
+              targetClass = `${fsGrade} ${fsStream}`;
+            } else if (data.assignedClass) {
+              targetClass = String(data.assignedClass);
+            }
+
+            if (fsIsLocked && targetClass) {
+              setSelectedClassOverride(targetClass);
+              setSelectedClass(targetClass);
+              try {
+                localStorage.setItem(lockStorageKey, targetClass);
+              } catch {}
+            } else if (!fsIsLocked) {
+              // If admin unlocked class, clear override
+              setSelectedClassOverride(null);
+              try {
+                localStorage.removeItem(lockStorageKey);
+              } catch {}
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to fetch staff lock from Firestore:', e);
+      }
+    };
+    fetchFirestoreStaffLock();
+  }, [matchedStaffRecord?.id, currentUserObj.id, user?.id]);
 
   // If no explicit class is assigned in Firestore/profile, keep empty so teacher selects
   const activeAssignedClass = selectedClassOverride !== null ? selectedClassOverride : '';
@@ -878,32 +921,6 @@ export default function TeacherDashboard() {
     } catch (e) {
       console.warn('Failed to persist class lock to Firestore:', e);
     }
-  };
-
-  // 4. Admin/Debug Reset Option to unlock class
-  const handleResetClassLock = async () => {
-    const pin = prompt('Enter Admin PIN to reset teacher class lock:');
-    if (pin !== '1234' && pin !== '0000' && pin !== 'admin') {
-      if (pin !== null) alert('Incorrect Admin PIN.');
-      return;
-    }
-    setSelectedClassOverride('');
-    setSelectedClass('');
-    try {
-      localStorage.removeItem(lockStorageKey);
-    } catch {}
-    try {
-      const staffDocId = String(matchedStaffRecord?.id || matchedStaffRecord?.staffId || currentUserObj.id || user?.id || '');
-      if (staffDocId) {
-        await setDoc(doc(db, 'staff', staffDocId), {
-          assignedClass: '',
-          lockedClass: '',
-          isClassLocked: false,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      }
-    } catch {}
-    alert('Class lock successfully reset. You can now select a new class.');
   };
 
   // Restrict dropdown options strictly to teacher's assigned allocations (assignedClasses / assignedStreams / homeroom)
@@ -1104,15 +1121,7 @@ export default function TeacherDashboard() {
             </div>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-black text-white">Assigned Homeroom Lock</CardTitle>
-              {isClassLocked && (
-                <button
-                  onClick={handleResetClassLock}
-                  className="text-xs text-amber-300 hover:text-white underline font-semibold transition-colors"
-                >
-                  Reset Lock (Admin PIN)
-                </button>
-              )}
-            </div>
+                          </div>
             <CardDescription className="text-slate-300 text-xs">
               {isClassLocked ? `Strictly bound to ${fullClassTitle}. All data entry is restricted.` : `Please select your assigned class and stream to lock your session.`}
             </CardDescription>
