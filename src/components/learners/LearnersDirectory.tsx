@@ -125,24 +125,20 @@ export default function LearnersDirectory() {
 
   // Auto-apply class lock or query params on mount
   useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const qGrade = params.get('grade');
-      const qStream = params.get('stream');
+    const params = new URLSearchParams(window.location.search);
+    const qGrade = params.get('grade');
+    const qStream = params.get('stream');
 
-      if (qGrade) {
-        setSelectedGrade(qGrade.startsWith('Grade') ? qGrade : `Grade ${qGrade}`);
-        if (qStream) {
-          setSelectedStream(qStream);
-        }
-      } else if (isTeacherLocked && !isAdminUser && boundClassParsed.grade) {
-        setSelectedGrade(boundClassParsed.grade.startsWith('Grade') ? boundClassParsed.grade : `Grade ${boundClassParsed.grade}`);
-        if (boundClassParsed.stream) {
-          setSelectedStream(boundClassParsed.stream);
-        }
+    if (qGrade) {
+      setSelectedGrade(qGrade.startsWith('Grade') ? qGrade : `Grade ${qGrade}`);
+      if (qStream) {
+        setSelectedStream(qStream);
       }
-    } catch {
-      // ignore
+    } else if (isTeacherLocked && !isAdminUser && boundClassParsed.grade) {
+      setSelectedGrade(boundClassParsed.grade.startsWith('Grade') ? boundClassParsed.grade : `Grade ${boundClassParsed.grade}`);
+      if (boundClassParsed.stream) {
+        setSelectedStream(boundClassParsed.stream);
+      }
     }
   }, [isTeacherLocked, isAdminUser, boundClassParsed.grade, boundClassParsed.stream]);
 
