@@ -780,6 +780,14 @@ export default function LearnersDirectory() {
           </div>
         </div>
       )}
+                Enter Admin Password to permanently delete {deleteTargetIds.length} learner(s).
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Admin Password
+              </label>
               <input
                 type="password"
                 placeholder="Enter administrator password..."
