@@ -28,6 +28,7 @@ import TeacherExportModule from '@/components/teacher/TeacherExportModule';
 import TeacherSyncQrGenerator from '@/components/teacher/TeacherSyncQrGenerator';
 import { getFormattedRoleLabel } from '@/utils/staffRoleUtils';
 import { getCanonicalStaffId } from '@/utils/staffCanonicalUtils';
+import { matchesBoundClass, getTeacherBoundClass } from '@/utils/classLockUtils';
 import { db } from '@/config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
@@ -45,6 +46,10 @@ export default function TeacherDashboard() {
   const settings = (centralData as any)?.settings || {};
 
   const teacherName = user?.name || (user as any)?.username || 'Teacher';
+  
+  // Unique storage key per teacher for class lock persistence
+  const lockStorageKey = `munyaka_teacher_class_lock_${String(user?.id || user?.email || teacherName).toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+  
   const teacherRole = user?.role || 'subject_teacher';
   const staffTitle = String((user as any)?.title || (user as any)?.category || '');
   const title = staffTitle.toLowerCase();
@@ -973,32 +978,9 @@ export default function TeacherDashboard() {
 
   // Exact & normalized matching learners across directory sources
   const classStudents = React.useMemo(() => {
-    if (!fullClassTitle || fullClassTitle === 'No Class Assigned' || !activeClassNorm.cleanGrade) return [];
-    
-    return allLearners.filter((s: any) => {
-      const lGradeRaw = String(s?.grade || s?.currentGrade || s?.gradeLevel || s?.class || '').trim();
-      const lStreamRaw = String(s?.stream || '').trim();
-      const lNorm = normalizeGradeAndStream(lGradeRaw, lStreamRaw);
-
-      // Check multiple matching vectors:
-      // 1. Clean grade match and (optional or matching) stream match
-      // 2. Combined string inclusion (e.g. "4 GREEN" matching "4 GREEN")
-      const gradeMatches = lNorm.cleanGrade === activeClassNorm.cleanGrade ||
-                           lNorm.cleanGrade.includes(activeClassNorm.cleanGrade) ||
-                           activeClassNorm.cleanGrade.includes(lNorm.cleanGrade);
-      
-      const streamMatches = !activeClassNorm.cleanStream ||
-                            !lNorm.cleanStream ||
-                            lNorm.cleanStream === activeClassNorm.cleanStream ||
-                            lNorm.cleanStream.includes(activeClassNorm.cleanStream) ||
-                            activeClassNorm.cleanStream.includes(lNorm.cleanStream);
-
-      const combinedMatches = lNorm.combined.includes(activeClassNorm.combined) ||
-                              activeClassNorm.combined.includes(lNorm.combined);
-
-      return (gradeMatches && streamMatches) || combinedMatches;
-    });
-  }, [allLearners, fullClassTitle, activeClassNorm]);
+    if (!fullClassTitle || fullClassTitle === 'No Class Assigned') return [];
+    return allLearners.filter((s: any) => matchesBoundClass(s, fullClassTitle));
+  }, [allLearners, fullClassTitle]);
 
   const totalLearners = classStudents.length;
 
