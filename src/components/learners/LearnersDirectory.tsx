@@ -7,7 +7,7 @@ import TransferInModal from './TransferInModal';
 import { showSuccess, showError } from '@/utils/toast';
 import { generateUniqueCohortAdmissionNumber } from '@/utils/admissionUtils';
 import { getActiveAdminPassword } from '@/services/adminCredentials';
-import { findAssessmentBirthCertDuplicate, formatAssessmentDuplicateError } from '@/utils/learnerIdentity';
+import { findAssessmentBirthCertDuplicate, formatAssessmentDuplicateError } from '@/utils/admissionUtils';
 import { matchesBoundClass, getTeacherBoundClass, parseBoundClass } from '@/utils/classLockUtils';
 import { useAuth } from '@/context/AuthContext';
 
@@ -892,10 +892,14 @@ function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | nul
       const stored = localStorage.getItem('munyaka_learners') || localStorage.getItem('school_learners_data');
       const allLearners: Learner[] = stored ? JSON.parse(stored) : [];
       const res = generateUniqueCohortAdmissionNumber(targetGrade, allLearners);
-      return res.admissionNumber;
+      return res?.admissionNumber || `ADM-${Math.floor(1000 + Math.random() * 9000)}`;
     } catch (e) {
-      const res = generateUniqueCohortAdmissionNumber(targetGrade, []);
-      return res.admissionNumber;
+      try {
+        const res = generateUniqueCohortAdmissionNumber(targetGrade, []);
+        return res?.admissionNumber || `ADM-${Math.floor(1000 + Math.random() * 9000)}`;
+      } catch {
+        return `ADM-${Math.floor(1000 + Math.random() * 9000)}`;
+      }
     }
   };
 

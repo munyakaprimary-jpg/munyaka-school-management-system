@@ -49,7 +49,7 @@ export const getAllExistingAdmissionNumbers = (existingLearners: any[] = []): Se
 };
 
 export const generateUniqueCohortAdmissionNumber = (
-  studentGrade: string,
+  studentGrade: string = 'Grade 4',
   existingLearners: any[] = [],
   currentCode?: string
 ): { admissionNumber: string; randomCode: string } => {
