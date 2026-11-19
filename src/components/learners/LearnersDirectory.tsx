@@ -682,27 +682,25 @@ export default function LearnersDirectory() {
       {isAddModalOpen && (
         <LearnerFormModal
           learner={editingLearner}
-          onClose={() => setIsAddModalOpen(false)}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setEditingLearner(null);
+          }}
           onSave={(savedLearner) => {
+            let updated: Learner[];
             if (editingLearner) {
-              const updated = learners.map(l => l.id === savedLearner.id ? savedLearner : l);
-              persistLearners(updated);
+              updated = learners.map(l => (l.id === savedLearner.id ? savedLearner : l));
             } else {
-              const updated = [savedLearner, ...learners];
-              persistLearners(updated);
+              updated = [savedLearner, ...learners];
+            }
+            setLearners(updated);
+            try {
+              localStorage.setItem('munyaka_learners', JSON.stringify(updated));
+            } catch (e) {
+              console.error(e);
             }
             setIsAddModalOpen(false);
-          }}
-        />
-      )}
-
-      {isTransferInModalOpen && (
-        <TransferInModal
-          isOpen={isTransferInModalOpen}
-          onClose={() => setIsTransferInModalOpen(false)}
-          onTransferInComplete={(newL) => {
-            const updated = [newL, ...learners];
-            persistLearners(updated);
+            setEditingLearner(null);
           }}
         />
       )}
@@ -731,6 +729,57 @@ export default function LearnersDirectory() {
             <div className="space-y-2">
               <h3 className="text-lg font-black text-slate-900 dark:text-white">Admin Authentication Required</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
+                Enter Admin Password to permanently delete {deleteTargetIds.length} learner(s).
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Admin Password
+              </label>
+              <input
+                type="password"
+                placeholder="Enter administrator password..."
+                value={adminPasswordInput}
+                onChange={(e) => {
+                  setAdminPasswordInput(e.target.value);
+                  if (passwordError) setPasswordError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmDelete();
+                }}
+                autoFocus
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500 placeholder-slate-400"
+              />
+              {passwordError && (
+                <p className="text-xs font-semibold text-rose-600 flex items-center gap-1 mt-1">
+                  {passwordError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setDeleteTargetIds([]);
+                  setAdminPasswordInput('');
+                  setPasswordError('');
+                }}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200 dark:shadow-none transition-all"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
                 Enter Admin Password to permanently delete {deleteTargetIds.length} learner(s).
               </p>
             </div>
