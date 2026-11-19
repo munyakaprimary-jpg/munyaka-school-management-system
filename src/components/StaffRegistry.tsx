@@ -692,8 +692,10 @@ export default function StaffRegistry() {
     try {
       const staffDocId = String(staffRecord.id || '');
       if (staffDocId && db) {
+        const finalAssignedClass = category === 'Class Teacher' && homeroomGrade && homeroomStream ? `${homeroomGrade} ${homeroomStream}` : '';
         await setDoc(doc(db, 'staff', staffDocId), {
           ...staffRecord,
+          assignedClass: finalAssignedClass,
           homeroomGrade: category === 'Class Teacher' ? homeroomGrade : '',
           homeroomStream: category === 'Class Teacher' ? homeroomStream : '',
           isClassLocked: category === 'Class Teacher' ? isClassLocked : false,

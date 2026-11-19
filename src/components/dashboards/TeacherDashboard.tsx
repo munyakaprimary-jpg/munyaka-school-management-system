@@ -852,47 +852,74 @@ export default function TeacherDashboard() {
     return null;
   });
 
-  // Fetch latest staff record from Firestore on mount to sync lock status and assignment instantly
+  // Fetch authoritative assignment and lock status from Firestore staff collection on mount (Firestore ALWAYS takes priority over localStorage)
   React.useEffect(() => {
-    const fetchFirestoreStaffLock = async () => {
+    const fetchAuthoritativeFirestoreAssignment = async () => {
       try {
         const staffDocId = String(matchedStaffRecord?.id || currentUserObj.id || user?.id || '');
+        const staffEmail = String(matchedStaffRecord?.email || currentUserObj.email || user?.email || '').toLowerCase();
+        
+        let fetchedData: any = null;
         if (staffDocId && db) {
           const docRef = doc(db, 'staff', staffDocId);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-            const data = docSnap.data();
-            const fsGrade = String(data.homeroomGrade || '').trim();
-            const fsStream = String(data.homeroomStream || '').trim();
-            const fsIsLocked = Boolean(data.isClassLocked);
-            
-            let targetClass = '';
-            if (fsGrade && fsStream) {
-              targetClass = `${fsGrade} ${fsStream}`;
-            } else if (data.assignedClass) {
-              targetClass = String(data.assignedClass);
-            }
+            fetchedData = docSnap.data();
+          }
+        }
 
-            if (fsIsLocked && targetClass) {
-              setSelectedClassOverride(targetClass);
-              setSelectedClass(targetClass);
-              try {
-                localStorage.setItem(lockStorageKey, targetClass);
-              } catch {}
-            } else if (!fsIsLocked) {
-              // If admin unlocked class, clear override
-              setSelectedClassOverride(null);
-              try {
-                localStorage.removeItem(lockStorageKey);
-              } catch {}
+        // If not found by ID, try querying staff collection by email or name
+        if (!fetchedData && db) {
+          const { collection, getDocs, query, where } = await import('firebase/firestore');
+          if (staffEmail) {
+            const q = query(collection(db, 'staff'), where('email', '==', staffEmail));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+              fetchedData = snap.docs[0].data();
             }
           }
         }
+
+        if (fetchedData) {
+          // Extract class from all possible Admin Staff Registry fields in priority order
+          const rawAssignedClass = String(fetchedData.assignedClass || '').trim();
+          const rGrade = String(fetchedData.homeroomGrade || '').trim();
+          const rStream = String(fetchedData.homeroomStream || '').trim();
+          const arrClass = Array.isArray(fetchedData.assignedClasses) && fetchedData.assignedClasses[0] ? String(fetchedData.assignedClasses[0]) : '';
+          const arrStream = Array.isArray(fetchedData.assignedStreams) && fetchedData.assignedStreams[0] ? String(fetchedData.assignedStreams[0]) : '';
+          
+          let authoritativeClass = '';
+          if (rawAssignedClass && rawAssignedClass !== 'No Class Assigned') {
+            authoritativeClass = rawAssignedClass;
+          } else if (rGrade && rStream) {
+            authoritativeClass = `${rGrade} ${rStream}`;
+          } else if (arrClass && arrStream) {
+            authoritativeClass = `${arrClass} ${arrStream}`;
+          } else if (arrClass) {
+            authoritativeClass = arrClass;
+          }
+
+          // Normalize formatting e.g. "Grade 9 (Jupiter)" -> "Grade 9 Jupiter"
+          if (authoritativeClass) {
+            authoritativeClass = authoritativeClass.replace(/[()]/g, '').replace(/\s+/g, ' ').trim();
+          }
+
+          const isLocked = fetchedData.isClassLocked === true || Boolean(authoritativeClass);
+
+          if (authoritativeClass && authoritativeClass !== 'Grade 1 Blue') {
+            setSelectedClassOverride(authoritativeClass);
+            setSelectedClass(authoritativeClass);
+            try {
+              localStorage.setItem(lockStorageKey, authoritativeClass);
+            } catch {}
+          }
+        }
       } catch (e) {
-        console.warn('Failed to fetch staff lock from Firestore:', e);
+        console.warn('Failed to fetch authoritative assignment from Firestore:', e);
       }
     };
-    fetchFirestoreStaffLock();
+
+    fetchAuthoritativeFirestoreAssignment();
   }, [matchedStaffRecord?.id, currentUserObj.id, user?.id]);
 
   // If no explicit class is assigned in Firestore/profile, keep empty so teacher selects
