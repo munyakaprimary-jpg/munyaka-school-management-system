@@ -75,7 +75,7 @@ export function StaffAttendanceRegister() {
       }
 
       // Filter by selected grade and stream if available, or fallback to mock learners if empty
-      let filteredRoster = filterLearners(roster).filter((l) => {
+      let filteredRoster = filterLearners(roster).filter((l: any) => {
         const lGrade = String(l.grade || l.gradeLevel || l.class || '').trim().toLowerCase();
         const lStream = String(l.stream || '').trim().toLowerCase();
         const sGrade = selectedGrade.trim().toLowerCase();
