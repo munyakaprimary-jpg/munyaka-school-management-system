@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import ICTLabManagement from '@/components/ICTLabManagement';
 import DigitalSkillsAssessment from '@/pages/DigitalSkillsAssessment';
 import PracticalCompetencies from '@/pages/PracticalCompetencies';
+import { toast } from 'sonner';
 
 export default function ICTPortalDashboard() {
   const navigate = useNavigate();
@@ -334,7 +335,66 @@ export default function ICTPortalDashboard() {
               </p>
               <div className="pt-2 flex items-center justify-between border-t border-slate-800">
                 <span className="text-xs text-slate-400">Ready for export</span>
-                <Button onClick={() => alert('ICT Lab & Skills Report exported successfully.')} size="sm" className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl">
+                <Button onClick={() => {
+                  try {
+                    const assets = assetList;
+                    const competencies = competencyList;
+
+                    let csvContent = "\uFEFF"; // UTF-8 BOM
+                    csvContent += "MUNYAKA CENTRAL SCHOOL - ICT DEPARTMENT & DIGITAL LAB REPORT\n";
+                    csvContent += `Generated At,${new Date().toLocaleString()}\n`;
+                    csvContent += `Total Assets,${assets.length}\n`;
+                    csvContent += `Total Graded Competencies,${competencies.length}\n\n`;
+
+                    csvContent += "=== ICT ASSETS & HARDWARE INVENTORY ===\n";
+                    csvContent += "Asset ID,Asset Name,Category,Lab / Location,Status,Condition\n";
+                    if (assets.length === 0) {
+                      csvContent += "No ICT assets registered yet,,\n";
+                    } else {
+                      assets.forEach((a: any) => {
+                        const id = String(a.id || a.assetId || '').replace(/,/g, '');
+                        const name = String(a.name || a.assetName || '').replace(/,/g, '');
+                        const cat = String(a.category || a.type || '').replace(/,/g, '');
+                        const lab = String(a.lab || a.location || '').replace(/,/g, '');
+                        const status = String(a.status || 'Active').replace(/,/g, '');
+                        const cond = String(a.condition || 'Good').replace(/,/g, '');
+                        csvContent += `"${id}","${name}","${cat}","${lab}","${status}","${cond}"\n`;
+                      });
+                    }
+
+                    csvContent += "\n=== DIGITAL SKILLS & PRACTICAL COMPETENCIES ===\n";
+                    csvContent += "Record ID,Learner Name,Grade & Stream,Competency Strand,Activity,Rating,Observer\n";
+                    if (competencies.length === 0) {
+                      csvContent += "No competency records registered yet,,\n";
+                    } else {
+                      competencies.forEach((c: any, idx: number) => {
+                        const id = String(c.id || idx + 1).replace(/,/g, '');
+                        const name = String(c.studentName || c.name || '').replace(/,/g, '');
+                        const grade = String(`${c.grade || ''} ${c.stream || ''}`).trim().replace(/,/g, '');
+                        const strand = String(c.competency || c.strand || '').replace(/,/g, '');
+                        const act = String(c.activity || '').replace(/,/g, '');
+                        const rating = String(c.rating || '').replace(/,/g, '');
+                        const obs = String(c.observedBy || c.teacher || '').replace(/,/g, '');
+                        csvContent += `"${id}","${name}","${grade}","${strand}","${act}","${rating}","${obs}"\n`;
+                      });
+                    }
+
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `Munyaka-ICT-Lab-Skills-Report-${new Date().toISOString().slice(0, 10)}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+
+                    toast.success('ICT Lab & Skills Report CSV downloaded successfully.');
+                  } catch (e) {
+                    console.error('Export report error:', e);
+                    toast.error('Failed to export ICT report.');
+                  }
+                }} size="sm" className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl">
                   <Download className="w-3.5 h-3.5 mr-1.5" /> Export Report
                 </Button>
               </div>
