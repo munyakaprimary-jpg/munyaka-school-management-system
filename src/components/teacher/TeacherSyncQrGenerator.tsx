@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { QrCode, Download, Copy, ShieldCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '@/context/AuthContext';
+import { useClassLock } from '@/context/ClassLockContext';
 import { showSuccess, showError } from '@/utils/toast';
 
 const SCHOOL_CENTRE_CODE = '26534178';
@@ -96,11 +97,12 @@ export const TeacherSyncQrGenerator: React.FC<TeacherSyncQrGeneratorProps> = ({
   disabled = false,
 }) => {
   const { user } = useAuth();
+  const { activeClass, isAdmin } = useClassLock();
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrPayloadString, setQrPayloadString] = useState('');
 
-  const selectedGrade = grade || (user as any)?.assignedGrade || (user as any)?.assignedClass || 'Grade 4';
-  const selectedStream = stream || (user as any)?.assignedStream || (user as any)?.stream || 'Green';
+  const selectedGrade = grade || (!isAdmin && activeClass.grade ? activeClass.grade : ((user as any)?.assignedGrade || (user as any)?.assignedClass || 'Grade 4'));
+  const selectedStream = stream || (!isAdmin && activeClass.stream ? activeClass.stream : ((user as any)?.assignedStream || (user as any)?.stream || 'Yellow'));
   const todayLocalString = exportDate || new Date().toISOString().split('T')[0];
 
   const attendanceCount = (() => {

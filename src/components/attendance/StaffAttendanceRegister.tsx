@@ -13,6 +13,7 @@ import {
   Cloud,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useClassLock } from "@/context/ClassLockContext";
 import { CENTRAL_DB_KEY } from "@/components/AddMaterialModal";
 
 interface Learner {
@@ -32,10 +33,9 @@ interface AttendanceRecord {
 
 export function StaffAttendanceRegister() {
   const { user } = useAuth();
-  const roleLower = String(user?.role || '').toLowerCase();
-  const isAdmin = roleLower === 'admin' || roleLower === 'owner' || roleLower === 'super_admin';
-  const assignedGrade = !isAdmin ? (user?.assignedClass || user?.grade || 'Grade 1') : 'Grade 1';
-  const assignedStream = !isAdmin ? (user?.assignedStream || user?.stream || 'East') : 'East';
+  const { isLocked, activeClass, isAdmin, filterLearners } = useClassLock();
+  const assignedGrade = !isAdmin && activeClass.grade ? activeClass.grade : (!isAdmin ? (user?.assignedClass || user?.grade || 'Grade 4') : 'Grade 4');
+  const assignedStream = !isAdmin && activeClass.stream ? activeClass.stream : (!isAdmin ? (user?.assignedStream || user?.stream || 'Yellow') : 'Yellow');
 
   const [selectedGrade, setSelectedGrade] = useState<string>(assignedGrade);
   const [selectedStream, setSelectedStream] = useState<string>(assignedStream);
@@ -43,14 +43,14 @@ export function StaffAttendanceRegister() {
   // If teacher, enforce assigned grade and stream
   useEffect(() => {
     if (!isAdmin) {
-      if (user?.assignedClass || user?.grade) {
-        setSelectedGrade(user.assignedClass || user.grade || 'Grade 1');
+      if (activeClass.grade) {
+        setSelectedGrade(activeClass.grade);
       }
-      if (user?.assignedStream || user?.stream) {
-        setSelectedStream(user.assignedStream || user.stream || 'East');
+      if (activeClass.stream) {
+        setSelectedStream(activeClass.stream);
       }
     }
-  }, [user, isAdmin]);
+  }, [user, isAdmin, activeClass]);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [learners, setLearners] = useState<Learner[]>([]);
