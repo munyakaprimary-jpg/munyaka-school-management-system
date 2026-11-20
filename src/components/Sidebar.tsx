@@ -152,11 +152,11 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Daily Check-In', href: '/staff/check-in', icon: LogIn, allowedRoles: ['all'] },
     { name: 'Enter Marks', href: '/assessments', icon: FileSpreadsheet, allowedRoles: ['all'] },
     { name: 'Results Analysis', href: '/analysis', icon: BarChart3, allowedRoles: ['all'] },
+    { name: 'Report Cards', href: '/reports', icon: FileText, allowedRoles: ['all'] },
     { name: 'Digital Hub', href: '/digital-hub', icon: Laptop, allowedRoles: ['all'] },
     { name: 'Science Lab Workstation', href: '/science-lab', icon: FlaskConical, allowedRoles: ['all'] },
     { name: 'ICT Lab & Devices', href: '/ict-lab', icon: Monitor, allowedRoles: ['all'] },
     { name: 'Tools & Inventory', href: '/inventory', icon: Box, allowedRoles: ['all'] },
-    { name: 'Report Cards', href: '/reports', icon: FileText, allowedRoles: ['all'] },
     { name: 'Settings', href: '/settings', icon: Settings, allowedRoles: ['all'] },
   ];
 
