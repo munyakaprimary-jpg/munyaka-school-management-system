@@ -170,11 +170,24 @@ export default function StaffRegistry() {
   const [assignedStreams, setAssignedStreams] = useState<string[]>([]);
   const [homeroomGrade, setHomeroomGrade] = useState('Grade 7');
   const [homeroomStream, setHomeroomStream] = useState('');
-  const [isClassLocked, setIsClassLocked] = useState(false);
+  const [isClassLocked, setIsClassLocked] = useState(true);
   const [allocations, setAllocations] = useState<StaffAllocationRecord[]>([]);
   const [activeSubjectForAllocation, setActiveSubjectForAllocation] = useState<string | null>(null);
 
-  // Grades and streams configuration hook
+  // When homeroomGrade or homeroomStream changes for Class Teacher, default isClassLocked to true unless explicitly toggled by admin
+  const handleHomeroomGradeChange = (val: string) => {
+    setHomeroomGrade(val);
+    if (val && homeroomStream) {
+      setIsClassLocked(true);
+    }
+  };
+
+  const handleHomeroomStreamChange = (val: string) => {
+    setHomeroomStream(val);
+    if (homeroomGrade && val) {
+      setIsClassLocked(true);
+    }
+  };
   const { grades: availableSchoolClasses, getStreamsForGrade, streams: allGlobalStreams } = useGradesAndStreams();
 
   // Get relevant streams based on selected grades
@@ -660,12 +673,16 @@ export default function StaffRegistry() {
       nationalId: !isTeachingStaff ? nationalId.trim() : undefined,
       status,
       subjects: isTeachingStaff ? selectedSubjects : [],
-      assignedClasses: isTeachingStaff ? assignedClasses : [],
-      assignedStreams: isTeachingStaff ? assignedStreams : [],
+      assignedClasses: category === 'Class Teacher' && homeroomGrade && homeroomStream ? [`${homeroomGrade} ${homeroomStream}`] : (isTeachingStaff ? assignedClasses : []),
+      assignedStreams: category === 'Class Teacher' && homeroomStream ? [homeroomStream] : (isTeachingStaff ? assignedStreams : []),
       homeroomGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
-            homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
-            isClassLocked: category === 'Class Teacher' ? isClassLocked : false,
-            createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString(),
+      homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
+      assignedClass: category === 'Class Teacher' && homeroomGrade && homeroomStream ? `${homeroomGrade} ${homeroomStream}`.trim() : undefined,
+      assignedGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
+      assignedStream: category === 'Class Teacher' ? homeroomStream : undefined,
+      isClassLocked: category === 'Class Teacher' ? (homeroomGrade && homeroomStream ? (isClassLocked !== false) : false) : false,
+      classLocked: category === 'Class Teacher' ? (homeroomGrade && homeroomStream ? (isClassLocked !== false) : false) : false,
+      createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString(),
       // Auth fields
       password: password, // Store plain for admin visibility (in production, only hash)
       passwordHash: passwordHash,
@@ -674,42 +691,51 @@ export default function StaffRegistry() {
       accessCode: editingStaff?.accessCode || generateRandomCode()
     };
 
-    let updatedList: StaffMember[];
-    if (editingStaff) {
-      updatedList = staffList.map(s => s.id === editingStaff.id ? staffRecord : s);
-      toast.success("Staff profile updated successfully");
-    } else {
-      updatedList = [staffRecord, ...staffList];
-      toast.success("Staff member registered successfully with auto-generated auth profile");
-    }
-
-    // No separate user accounts table - staff IS the user account
-    // The staff record itself contains all authentication data
-
-    saveStaffToStorage(updatedList);
-
-    // Sync to Firestore staff collection
+    // Sync to Firestore staff collection atomically and update localStorage
     try {
       const staffDocId = String(staffRecord.id || '');
       if (staffDocId && db) {
-        const finalAssignedClass = category === 'Class Teacher' && homeroomGrade && homeroomStream ? `${homeroomGrade} ${homeroomStream}` : (assignedClasses[0] || '');
+        const finalAssignedClass = category === 'Class Teacher' && homeroomGrade && homeroomStream ? `${homeroomGrade} ${homeroomStream}`.trim() : (assignedClasses[0] || '');
         const primaryGrade = category === 'Class Teacher' ? homeroomGrade : (assignedClasses[0] || '');
         const primaryStream = category === 'Class Teacher' ? homeroomStream : (assignedStreams[0] || '');
+        const lockStatus = category === 'Class Teacher' ? (homeroomGrade && homeroomStream ? (isClassLocked !== false) : false) : false;
 
-        await setDoc(doc(db, 'staff', staffDocId), {
+        const atomPayload = {
           ...staffRecord,
           assignedClass: finalAssignedClass,
           assignedGrade: primaryGrade,
           assignedStream: primaryStream,
-          homeroomGrade: category === 'Class Teacher' ? homeroomGrade : primaryGrade,
-          homeroomStream: category === 'Class Teacher' ? homeroomStream : primaryStream,
-          isClassLocked: true,
+          homeroomGrade: primaryGrade,
+          homeroomStream: primaryStream,
+          isClassLocked: lockStatus,
+          classLocked: lockStatus,
           updatedAt: new Date().toISOString()
-        }, { merge: true });
+        };
+
+        await setDoc(doc(db, 'staff', staffDocId), atomPayload, { merge: true });
+
+        // Update staffRecord with atomic fields before saving to localStorage
+        staffRecord.assignedClass = finalAssignedClass;
+        staffRecord.assignedGrade = primaryGrade;
+        staffRecord.assignedStream = primaryStream;
+        staffRecord.homeroomGrade = primaryGrade;
+        staffRecord.homeroomStream = primaryStream;
+        staffRecord.isClassLocked = lockStatus;
+        staffRecord.classLocked = lockStatus;
       }
     } catch (e) {
-      console.warn('Failed to sync staff class lock to Firestore:', e);
+      console.warn('Failed to sync staff assignment to Firestore:', e);
     }
+
+    if (editingStaff) {
+      updatedList = staffList.map(s => s.id === editingStaff.id ? staffRecord : s);
+      toast.success("Staff profile and class assignments updated successfully");
+    } else {
+      updatedList = [staffRecord, ...staffList];
+      toast.success("Staff member registered successfully with auth profile");
+    }
+
+    saveStaffToStorage(updatedList);
 
     addPendingSyncItem({
       id: staffRecord.id,
@@ -1279,7 +1305,7 @@ export default function StaffRegistry() {
                                         <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Grade</label>
                                         <select
                                           value={homeroomGrade}
-                                          onChange={(e) => setHomeroomGrade(e.target.value)}
+                                          onChange={(e) => handleHomeroomGradeChange(e.target.value)}
                                           className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                                         >
                                           {availableSchoolClasses.map((cls) => (
@@ -1291,7 +1317,7 @@ export default function StaffRegistry() {
                                         <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Stream</label>
                                         <select
                                           value={homeroomStream}
-                                          onChange={(e) => setHomeroomStream(e.target.value)}
+                                          onChange={(e) => handleHomeroomStreamChange(e.target.value)}
                                           className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                                         >
                                           {availableSchoolStreams.map((strm) => (

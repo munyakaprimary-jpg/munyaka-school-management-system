@@ -806,14 +806,23 @@ export default function TeacherDashboard() {
     try {
       const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
       const staffList = centralDb.staff || centralDb.teachers || [];
-      const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '');
-      const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase();
-      const userNameKey = String(teacherName).toLowerCase();
+      const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '').trim();
+      const userTsc = String(user?.tscNumber || currentUserObj.tscNumber || (user as any)?.tscNo || '').trim();
+      const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase().trim();
+      const userNameKey = String(teacherName || user?.name || currentUserObj.fullName || '').toLowerCase().trim();
+
       return staffList.find((st: any) => {
-        const stId = String(st.id || st.staffId || st.tscNo || '');
-        const stEmail = String(st.email || '').toLowerCase();
-        const stName = String(st.name || st.fullName || st.username || '').toLowerCase();
-        return (userId && stId === userId) || (userEmail && stEmail === userEmail) || (userNameKey && stName.includes(userNameKey));
+        const stId = String(st.id || st.staffId || st.uid || st.canonicalId || '').trim();
+        const stTsc = String(st.tscNumber || st.tscNo || '').trim();
+        const stEmail = String(st.email || '').toLowerCase().trim();
+        const stName = String(st.name || st.fullName || st.username || '').toLowerCase().trim();
+
+        return (
+          (userId && (stId === userId)) ||
+          (userTsc && (stTsc === userTsc)) ||
+          (userEmail && (stEmail === userEmail)) ||
+          (userNameKey && (stName.includes(userNameKey) || userNameKey.includes(stName)))
+        );
       }) || {};
     } catch {
       return {};
@@ -851,74 +860,94 @@ export default function TeacherDashboard() {
     return null;
   });
 
-  // Fetch authoritative assignment and lock status from Firestore staff collection on mount (Firestore ALWAYS takes priority over localStorage)
+  // Fetch authoritative assignment and lock status from Firestore staff collection on mount AND real-time onSnapshot listener (Firestore ALWAYS takes priority over localStorage)
   React.useEffect(() => {
-    const fetchAuthoritativeFirestoreAssignment = async () => {
-      try {
-        const staffDocId = String(matchedStaffRecord?.id || currentUserObj.id || user?.id || '');
-        const staffEmail = String(matchedStaffRecord?.email || currentUserObj.email || user?.email || '').toLowerCase();
-        
-        let fetchedData: any = null;
-        if (staffDocId && db) {
-          const docRef = doc(db, 'staff', staffDocId);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            fetchedData = docSnap.data();
-          }
-        }
+    if (!db) return;
+    let unsubscribe: (() => void) | undefined;
 
-        // If not found by ID, try querying staff collection by email or name
-        if (!fetchedData && db) {
-          const { collection, getDocs, query, where } = await import('firebase/firestore');
-          if (staffEmail) {
-            const q = query(collection(db, 'staff'), where('email', '==', staffEmail));
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-              fetchedData = snap.docs[0].data();
+    const setupStaffSnapshotListener = async () => {
+      try {
+        const { collection, doc, onSnapshot, getDoc, getDocs, query, where } = await import('firebase/firestore');
+        const staffDocId = String(matchedStaffRecord?.id || currentUserObj.id || user?.id || '').trim();
+        const staffTsc = String(matchedStaffRecord?.tscNumber || currentUserObj.tscNumber || (user as any)?.tscNo || '').trim();
+        const staffEmail = String(matchedStaffRecord?.email || currentUserObj.email || user?.email || '').toLowerCase().trim();
+
+        // Listen to collection and match live by tscNumber, doc.id, id, uid, email, or name
+        unsubscribe = onSnapshot(collection(db, 'staff'), (snapshot) => {
+          let matchedDocData: any = null;
+
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const dId = String(docSnap.id || '').trim();
+            const dStaffId = String(data.id || data.staffId || data.uid || '').trim();
+            const dTsc = String(data.tscNumber || data.tscNo || '').trim();
+            const dEmail = String(data.email || '').toLowerCase().trim();
+            const dName = String(data.name || data.fullName || '').toLowerCase().trim();
+            const activeNameKey = String(teacherName || user?.name || currentUserObj.fullName || '').toLowerCase().trim();
+
+            if (
+              (staffDocId && (dId === staffDocId || dStaffId === staffDocId)) ||
+              (staffTsc && dTsc === staffTsc) ||
+              (staffEmail && dEmail === staffEmail) ||
+              (activeNameKey && dName.includes(activeNameKey))
+            ) {
+              matchedDocData = data;
+            }
+          });
+
+          if (matchedDocData) {
+            const rawAssignedClass = String(matchedDocData.assignedClass || '').trim();
+            const rGrade = String(matchedDocData.homeroomGrade || matchedDocData.assignedGrade || '').trim();
+            const rStream = String(matchedDocData.homeroomStream || matchedDocData.assignedStream || '').trim();
+            const arrClass = Array.isArray(matchedDocData.assignedClasses) && matchedDocData.assignedClasses[0] ? String(matchedDocData.assignedClasses[0]) : '';
+            
+            let authoritativeClass = '';
+            if (rawAssignedClass && rawAssignedClass !== 'No Class Assigned') {
+              authoritativeClass = rawAssignedClass;
+            } else if (rGrade && rStream) {
+              authoritativeClass = `${rGrade} ${rStream}`;
+            } else if (arrClass) {
+              authoritativeClass = arrClass;
+            }
+
+            if (authoritativeClass) {
+              authoritativeClass = authoritativeClass.replace(/[()]/g, '').replace(/\s+/g, ' ').trim();
+            }
+
+            // Class lock status: true if classLocked / isClassLocked is true OR if homeroom grade+stream is set
+            const isLocked = matchedDocData.isClassLocked === true || matchedDocData.classLocked === true || Boolean(rGrade && rStream);
+
+            if (authoritativeClass && authoritativeClass !== 'Grade 1 Green' && authoritativeClass !== 'Grade 1 Blue') {
+              setSelectedClassOverride(authoritativeClass);
+              setSelectedClass(authoritativeClass);
+              try {
+                localStorage.setItem(lockStorageKey, authoritativeClass);
+                // Also update cached staff array in localStorage immediately
+                const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+                if (Array.isArray(centralDb.staff)) {
+                  centralDb.staff = centralDb.staff.map((st: any) => {
+                    const stId = String(st.id || st.tscNumber || '');
+                    if (stId === staffDocId || stId === staffTsc || stId === staffEmail) {
+                      return { ...st, ...matchedDocData };
+                    }
+                    return st;
+                  });
+                  localStorage.setItem('munyaka_central_db', JSON.stringify(centralDb));
+                }
+              } catch {}
             }
           }
-        }
-
-        if (fetchedData) {
-          // Extract class from all possible Admin Staff Registry fields in priority order
-          const rawAssignedClass = String(fetchedData.assignedClass || '').trim();
-          const rGrade = String(fetchedData.homeroomGrade || '').trim();
-          const rStream = String(fetchedData.homeroomStream || '').trim();
-          const arrClass = Array.isArray(fetchedData.assignedClasses) && fetchedData.assignedClasses[0] ? String(fetchedData.assignedClasses[0]) : '';
-          const arrStream = Array.isArray(fetchedData.assignedStreams) && fetchedData.assignedStreams[0] ? String(fetchedData.assignedStreams[0]) : '';
-          
-          let authoritativeClass = '';
-          if (rawAssignedClass && rawAssignedClass !== 'No Class Assigned') {
-            authoritativeClass = rawAssignedClass;
-          } else if (rGrade && rStream) {
-            authoritativeClass = `${rGrade} ${rStream}`;
-          } else if (arrClass && arrStream) {
-            authoritativeClass = `${arrClass} ${arrStream}`;
-          } else if (arrClass) {
-            authoritativeClass = arrClass;
-          }
-
-          // Normalize formatting e.g. "Grade 9 (Jupiter)" -> "Grade 9 Jupiter"
-          if (authoritativeClass) {
-            authoritativeClass = authoritativeClass.replace(/[()]/g, '').replace(/\s+/g, ' ').trim();
-          }
-
-          const isLocked = fetchedData.isClassLocked === true || Boolean(authoritativeClass);
-
-          if (authoritativeClass && authoritativeClass !== 'Grade 1 Green' && authoritativeClass !== 'Grade 1 Blue') {
-            setSelectedClassOverride(authoritativeClass);
-            setSelectedClass(authoritativeClass);
-            try {
-              localStorage.setItem(lockStorageKey, authoritativeClass);
-            } catch {}
-          }
-        }
+        });
       } catch (e) {
-        console.warn('Failed to fetch authoritative assignment from Firestore:', e);
+        console.warn('Failed to setup authoritative staff snapshot listener:', e);
       }
     };
 
-    fetchAuthoritativeFirestoreAssignment();
+    setupStaffSnapshotListener();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [matchedStaffRecord?.id, currentUserObj.id, user?.id]);
 
   // If no explicit class is assigned in Firestore/profile, keep empty so teacher selects
