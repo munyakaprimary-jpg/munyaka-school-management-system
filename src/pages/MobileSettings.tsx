@@ -511,14 +511,25 @@ export default function MobileSettings() {
             )}
           </div>
 
-          {/* Sync Queue Preview */}
+              {/* Sync Queue Preview */}
           {syncQueue.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                Pending Items ({pendingSyncCount})
+                Pending Items ({syncQueue.filter((i: any) => !i.synced).length})
               </p>
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {syncQueue.slice(-8).reverse().map((item: any) => {
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {(() => {
+                  // Deduplicate queue items by canonical key or identifier
+                  const seenKeys = new Set();
+                  const uniqueQueue = syncQueue.filter((item: any) => {
+                    const p = item.payload || {};
+                    const key = `${item.type}_${item.id}_${p.tscNumber || p.admissionNumber || p.email || item.title || ''}`;
+                    if (seenKeys.has(key)) return false;
+                    seenKeys.add(key);
+                    return true;
+                  });
+
+                  return uniqueQueue.reverse().map((item: any) => {
                   const p = item.payload || {};
                   const typeLabel = String(item.type || 'Record').toUpperCase();
                   const actionLabel = String(item.action || 'create').toUpperCase();
@@ -527,16 +538,18 @@ export default function MobileSettings() {
                   let displayTitle = item.title;
                   let displaySubtitle = item.subtitle;
 
-                  if (!displayTitle) {
+                  if (!displayTitle || displayTitle === 'Pending Local Record') {
                     if (item.type === 'staff') {
                       const sName = p.fullName || p.name || 'Staff Member';
                       const sTsc = p.tscNumber || p.nationalId || p.staffId || 'ID';
-                      displayTitle = `Staff Update: ${sName} (TSC ${sTsc})`;
-                      displaySubtitle = `Role: ${p.category || p.role || 'Staff'} • Class: ${p.assignedClass || p.homeroomGrade || 'Unassigned'}`;
+                      const assignedStr = p.homeroomGrade && p.homeroomStream ? `Class: ${p.homeroomGrade} ${p.homeroomStream}` : (p.assignedClass ? `Class: ${p.assignedClass}` : `Role: ${p.category || p.role || 'Staff'}`);
+                      const lockStatus = p.isClassLocked || p.classLocked ? ' • Locked' : '';
+                      displayTitle = `Staff: ${sName} (TSC ${sTsc})`;
+                      displaySubtitle = `${assignedStr}${lockStatus}`;
                     } else if (item.type === 'learner') {
                       const lName = p.fullName || `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Learner';
                       const adm = p.admissionNumber || p.admNo || p.admission_no || 'ADM';
-                      displayTitle = `Learner Record: ${lName} (ADM ${adm})`;
+                      displayTitle = `Learner: ${lName} (ADM ${adm})`;
                       displaySubtitle = `Grade: ${p.grade || p.currentGrade || 'Grade'} ${p.stream || ''}`.trim();
                     } else if (item.type === 'attendance') {
                       displayTitle = `Roll Call: Grade ${p.grade || ''} ${p.stream || ''}`.trim();
@@ -593,7 +606,8 @@ export default function MobileSettings() {
                       </div>
                     </div>
                   );
-                })}
+                });
+              })()}
               </div>
             </div>
           )}
