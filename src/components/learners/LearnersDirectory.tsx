@@ -247,8 +247,6 @@ export default function LearnersDirectory() {
   }, [learners]);
 
   // Filtered learners using ClassLockContext & useClassLock
-  const { filterLearners, isLocked, activeClass, getAllowedGradeOptions, getAllowedStreamOptions } = useClassLock();
-
   const filteredLearners = useMemo(() => {
     const scoped = filterLearners(learners);
     return scoped.filter(l => {
