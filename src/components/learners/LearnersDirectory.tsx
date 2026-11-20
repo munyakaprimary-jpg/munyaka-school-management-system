@@ -80,38 +80,6 @@ export default function LearnersDirectory() {
   const [selectedGender, setSelectedGender] = useState('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Strict class lock for teachers (class_teacher / subject_teacher)
-  const teacherBoundClass = useMemo(() => {
-    try {
-      const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
-      const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-      const staffList = centralDb.staff || centralDb.teachers || [];
-      const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '');
-      const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase();
-      const matchedStaffRecord = staffList.find((st: any) => {
-        const stId = String(st.id || st.staffId || st.tscNo || '');
-        const stEmail = String(st.email || '').toLowerCase();
-        return (userId && stId === userId) || (userEmail && stEmail === userEmail);
-      }) || {};
-      return getTeacherBoundClass(currentUserObj, matchedStaffRecord);
-    } catch {
-      return null;
-    }
-  }, [user]);
-
-  const isTeacherLocked = Boolean(teacherBoundClass);
-  const boundClassParsed = useMemo(() => parseBoundClass(teacherBoundClass), [teacherBoundClass]);
-
-  // Auto-apply class lock on mount
-  useEffect(() => {
-    if (isTeacherLocked && boundClassParsed.grade) {
-      setSelectedGrade(`Grade ${boundClassParsed.grade}`);
-      if (boundClassParsed.stream) {
-        setSelectedStream(boundClassParsed.stream);
-      }
-    }
-  }, [isTeacherLocked, boundClassParsed.grade, boundClassParsed.stream]);
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isTransferInModalOpen, setIsTransferInModalOpen] = useState(false);
   const [editingLearner, setEditingLearner] = useState<Learner | null>(null);
@@ -144,6 +112,38 @@ export default function LearnersDirectory() {
     }
     setIsTransferInModalOpen(true);
   };
+
+  // Strict class lock for teachers (class_teacher / subject_teacher)
+  const teacherBoundClass = useMemo(() => {
+    try {
+      const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+      const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+      const staffList = centralDb.staff || centralDb.teachers || [];
+      const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '');
+      const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase();
+      const matchedStaffRecord = staffList.find((st: any) => {
+        const stId = String(st.id || st.staffId || st.tscNo || '');
+        const stEmail = String(st.email || '').toLowerCase();
+        return (userId && stId === userId) || (userEmail && stEmail === userEmail);
+      }) || {};
+      return getTeacherBoundClass(currentUserObj, matchedStaffRecord);
+    } catch {
+      return null;
+    }
+  }, [user]);
+
+  const isTeacherLocked = Boolean(teacherBoundClass);
+  const boundClassParsed = useMemo(() => parseBoundClass(teacherBoundClass), [teacherBoundClass]);
+
+  // Auto-apply class lock on mount
+  useEffect(() => {
+    if (isTeacherLocked && boundClassParsed.grade) {
+      setSelectedGrade(`Grade ${boundClassParsed.grade}`);
+      if (boundClassParsed.stream) {
+        setSelectedStream(boundClassParsed.stream);
+      }
+    }
+  }, [isTeacherLocked, boundClassParsed.grade, boundClassParsed.stream]);
 
   // Delete state & Admin Password modal state
   const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([]);
