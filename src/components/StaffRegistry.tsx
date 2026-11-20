@@ -177,16 +177,10 @@ export default function StaffRegistry() {
   // When homeroomGrade or homeroomStream changes for Class Teacher, default isClassLocked to true unless explicitly toggled by admin
   const handleHomeroomGradeChange = (val: string) => {
     setHomeroomGrade(val);
-    if (val && homeroomStream) {
-      setIsClassLocked(true);
-    }
   };
 
   const handleHomeroomStreamChange = (val: string) => {
     setHomeroomStream(val);
-    if (homeroomGrade && val) {
-      setIsClassLocked(true);
-    }
   };
   const { grades: availableSchoolClasses, getStreamsForGrade, streams: allGlobalStreams } = useGradesAndStreams();
 
@@ -406,9 +400,20 @@ export default function StaffRegistry() {
     });
 
     setAssignedStreams(sanitizedStreams);
-    setHomeroomGrade(staff.homeroomGrade || loadedClasses[0] || 'Grade 7');
-    setHomeroomStream(staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : (sanitizedStreams[0] || ''));
-    setIsClassLocked(staff.isClassLocked === true);
+    const resolvedHomeroomGrade = staff.homeroomGrade || (staff as any).assignedGrade || loadedClasses[0] || 'Grade 7';
+    const resolvedHomeroomStream = staff.homeroomStream || (staff as any).assignedStream || (sanitizedStreams[0] || '');
+    setHomeroomGrade(resolvedHomeroomGrade);
+    setHomeroomStream(resolvedHomeroomStream);
+
+    // Read all possible lock keys in order: isClassLocked, classLocked, isLocked, rawPayload.isClassLocked
+    const resolvedLockState = Boolean(
+      staff.isClassLocked ??
+      (staff as any).classLocked ??
+      (staff as any).isLocked ??
+      (staff as any).rawPayload?.isClassLocked ??
+      (resolvedHomeroomGrade && resolvedHomeroomStream ? true : false)
+    );
+    setIsClassLocked(resolvedLockState);
     
     let loadedAllocs: StaffAllocationRecord[] = [];
     if (Array.isArray(staff.allocations) && staff.allocations.length > 0) {
@@ -657,6 +662,10 @@ export default function StaffRegistry() {
     // Hash password for storage
     const passwordHash = await hashPassword(password);
     
+    const resolvedLockValue = category === 'Class Teacher'
+      ? (homeroomGrade && homeroomStream ? Boolean(isClassLocked) : false)
+      : false;
+
     const staffRecord: StaffMember = {
       id: generatedMunId,
       name: fullName.trim(),
@@ -680,8 +689,9 @@ export default function StaffRegistry() {
       assignedClass: category === 'Class Teacher' && homeroomGrade && homeroomStream ? `${homeroomGrade} ${homeroomStream}`.trim() : undefined,
       assignedGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
       assignedStream: category === 'Class Teacher' ? homeroomStream : undefined,
-      isClassLocked: category === 'Class Teacher' ? (homeroomGrade && homeroomStream ? (isClassLocked !== false) : false) : false,
-      classLocked: category === 'Class Teacher' ? (homeroomGrade && homeroomStream ? (isClassLocked !== false) : false) : false,
+      isClassLocked: resolvedLockValue,
+      classLocked: resolvedLockValue,
+      isLocked: resolvedLockValue,
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString(),
       // Auth fields
       password: password, // Store plain for admin visibility (in production, only hash)
@@ -689,7 +699,7 @@ export default function StaffRegistry() {
       lastPasswordChange: new Date().toISOString(),
       loginEnabled: status === 'Active',
       accessCode: editingStaff?.accessCode || generateRandomCode()
-    };
+    } as any;
 
     // Sync to Firestore staff collection atomically and update localStorage
     try {
@@ -698,7 +708,6 @@ export default function StaffRegistry() {
         const finalAssignedClass = category === 'Class Teacher' && homeroomGrade && homeroomStream ? `${homeroomGrade} ${homeroomStream}`.trim() : (assignedClasses[0] || '');
         const primaryGrade = category === 'Class Teacher' ? homeroomGrade : (assignedClasses[0] || '');
         const primaryStream = category === 'Class Teacher' ? homeroomStream : (assignedStreams[0] || '');
-        const lockStatus = category === 'Class Teacher' ? (homeroomGrade && homeroomStream ? (isClassLocked !== false) : false) : false;
 
         const atomPayload = {
           ...staffRecord,
@@ -707,21 +716,23 @@ export default function StaffRegistry() {
           assignedStream: primaryStream,
           homeroomGrade: primaryGrade,
           homeroomStream: primaryStream,
-          isClassLocked: lockStatus,
-          classLocked: lockStatus,
+          isClassLocked: resolvedLockValue,
+          classLocked: resolvedLockValue,
+          isLocked: resolvedLockValue,
           updatedAt: new Date().toISOString()
         };
 
         await setDoc(doc(db, 'staff', staffDocId), atomPayload, { merge: true });
 
         // Update staffRecord with atomic fields before saving to localStorage
-        staffRecord.assignedClass = finalAssignedClass;
-        staffRecord.assignedGrade = primaryGrade;
-        staffRecord.assignedStream = primaryStream;
+        (staffRecord as any).assignedClass = finalAssignedClass;
+        (staffRecord as any).assignedGrade = primaryGrade;
+        (staffRecord as any).assignedStream = primaryStream;
         staffRecord.homeroomGrade = primaryGrade;
         staffRecord.homeroomStream = primaryStream;
-        staffRecord.isClassLocked = lockStatus;
-        staffRecord.classLocked = lockStatus;
+        staffRecord.isClassLocked = resolvedLockValue;
+        (staffRecord as any).classLocked = resolvedLockValue;
+        (staffRecord as any).isLocked = resolvedLockValue;
       }
     } catch (e) {
       console.warn('Failed to sync staff assignment to Firestore:', e);
@@ -1139,9 +1150,9 @@ export default function StaffRegistry() {
 
                       <td className="py-3.5 px-3 max-w-[180px]">
                         {(() => {
-                          const isLocked = staff.isClassLocked === true || staff.classLocked === true || staff.lockedClass === true;
+                          const isLocked = staff.isClassLocked === true || (staff as any).classLocked === true || (staff as any).lockedClass === true;
                           const hasAssignment = (staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream)) ||
-                            (categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0) || staff.assignedClass));
+                            (categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0) || (staff as any).assignedClass));
 
                           if (!hasAssignment) {
                             return <span className="text-slate-400 text-xs">—</span>;
@@ -1167,10 +1178,10 @@ export default function StaffRegistry() {
                                     )}
                                   </span>
                                 </div>
-                              ) : categoryIsTeaching(staff.category) && (staff.assignedClass || (staff.assignedClasses && staff.assignedClasses.length > 0)) ? (
+                              ) : categoryIsTeaching(staff.category) && ((staff as any).assignedClass || (staff.assignedClasses && staff.assignedClasses.length > 0)) ? (
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-800 border border-indigo-200 shadow-xs" title={staff.assignedClass || staff.assignedClasses?.[0]}>
-                                    {staff.assignedClass || staff.assignedClasses?.[0]}
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-800 border border-indigo-200 shadow-xs" title={(staff as any).assignedClass || staff.assignedClasses?.[0]}>
+                                    {(staff as any).assignedClass || staff.assignedClasses?.[0]}
                                   </span>
                                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${isLocked ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`} title={isLocked ? 'Locked — Teacher cannot change class assignment' : 'Unlocked — Teacher can select their class'}>
                                     {isLocked ? (

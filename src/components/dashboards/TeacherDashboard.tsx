@@ -807,7 +807,7 @@ export default function TeacherDashboard() {
       const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
       const staffList = centralDb.staff || centralDb.teachers || [];
       const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '').trim();
-      const userTsc = String(user?.tscNumber || currentUserObj.tscNumber || (user as any)?.tscNo || '').trim();
+      const userTsc = String((user as any)?.tscNumber || (user as any)?.tscNumber || currentUserObj.tscNumber || (user as any)?.tscNo || '').trim();
       const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase().trim();
       const userNameKey = String(teacherName || user?.name || currentUserObj.fullName || '').toLowerCase().trim();
 
