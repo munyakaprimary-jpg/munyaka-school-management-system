@@ -119,10 +119,17 @@ export function useTeacherScope(): TeacherScope {
       Array.isArray((user as any)?.assignedClasses) && (user as any).assignedClasses[0] ? (user as any).assignedClasses[0] : null,
     ].filter(Boolean) as string[];
 
-    // Also check munyaka_current_user in localStorage
+    // Also check munyaka_current_user in localStorage and validate live doc updates
     try {
       const localCurr = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
-      if (localCurr.assignedClass && localCurr.assignedClass !== 'No Class Assigned') {
+      if (liveStaffDoc) {
+        const liveRaw = liveStaffDoc.assignedGrade && liveStaffDoc.assignedStream
+          ? `${liveStaffDoc.assignedGrade} ${liveStaffDoc.assignedStream}`
+          : (liveStaffDoc.assignedClass || (liveStaffDoc.homeroomGrade && liveStaffDoc.homeroomStream ? `${liveStaffDoc.homeroomGrade} ${liveStaffDoc.homeroomStream}` : ''));
+        if (liveRaw && liveRaw !== 'No Class Assigned') {
+          sources.unshift(liveRaw);
+        }
+      } else if (localCurr.assignedClass && localCurr.assignedClass !== 'No Class Assigned') {
         sources.unshift(localCurr.assignedClass);
       }
     } catch {}
