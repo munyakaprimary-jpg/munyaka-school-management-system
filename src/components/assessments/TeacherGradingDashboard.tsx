@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { normalizeGradeStr } from "@/utils/gradePermissionGuard";
+import { parseBoundClass, getTeacherBoundClass } from "@/utils/classLockUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -300,6 +301,57 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   const assignedGrade = !isAdmin ? (user?.assignedClass || user?.grade || 'Grade 1') : ALL_GRADES_VALUE;
   const assignedStream = !isAdmin ? (user?.assignedStream || user?.stream || ALL_STREAMS_VALUE) : ALL_STREAMS_VALUE;
 
+  // Teacher Class Lock (class_teacher / subject_teacher bound to an assigned class)
+  const teacherBoundClass = useMemo(() => {
+    try {
+      const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+      const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+      const staffList = centralDb.staff || centralDb.teachers || [];
+      const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '');
+      const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase();
+      const matchedStaffRecord = staffList.find((st: any) => {
+        const stId = String(st.id || st.staffId || st.tscNo || '');
+        const stEmail = String(st.email || '').toLowerCase();
+        return (userId && stId === userId) || (userEmail && stEmail === userEmail);
+      }) || {};
+      return getTeacherBoundClass(user, matchedStaffRecord);
+    } catch {
+      return null;
+    }
+  }, [user]);
+
+  const isTeacherLocked = Boolean(teacherBoundClass);
+  const boundClassParsed = useMemo(() => parseBoundClass(teacherBoundClass), [teacherBoundClass]);
+  const lockedGrade = isTeacherLocked && boundClassParsed.grade ? `Grade ${boundClassParsed.grade}` : '';
+  const lockedStream = isTeacherLocked && boundClassParsed.stream ? boundClassParsed.stream : '';
+  const isClassLocked = isTeacherLocked && Boolean(lockedGrade);
+
+  // Locked teacher: only the assigned grade/stream may be selected.
+  const lockedGradeOptions = useMemo(() => {
+    if (!isClassLocked) return GRADE_OPTIONS;
+    const lockedGradeNorm = lockedGrade.trim().toLowerCase();
+    const lockedGradeClean = lockedGrade.replace(/^Grade\s+/i, '').trim().toLowerCase();
+    const matched = GRADE_OPTIONS.filter((g) => {
+      const gNorm = g.trim().toLowerCase();
+      const gClean = g.replace(/^Grade\s+/i, '').trim().toLowerCase();
+      return gNorm === lockedGradeNorm || gClean === lockedGradeClean;
+    });
+    if (matched.length === 0) {
+      matched.push(lockedGrade);
+    }
+    return matched;
+  }, [isClassLocked, lockedGrade]);
+
+  const lockedStreamOptions = useMemo(() => {
+    if (!isClassLocked) return availableStreams;
+    const lockedStreamNorm = lockedStream.trim().toLowerCase();
+    const matched = availableStreams.filter((s) => String(s).trim().toLowerCase() === lockedStreamNorm);
+    if (matched.length === 0) {
+      matched.push(lockedStream);
+    }
+    return matched;
+  }, [availableStreams, isClassLocked, lockedStream]);
+
   const csvExport = useFileDownload();
 
   const [assessments, setAssessments] = useState<Assessment[]>([]);
@@ -339,16 +391,20 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   const [selectedStream, setSelectedStream] = useState<string>(!isAdmin ? assignedStream : ALL_STREAMS_VALUE);
 
   // Enforce grade & stream lock for teachers
-  useEffect(() => {
-    if (!isAdmin) {
-      if (user?.assignedClass || user?.grade) {
-        setSelectedGrade(user.assignedClass || user.grade || assignedGrade);
+    useEffect(() => {
+      if (!isAdmin) {
+        if (isClassLocked && lockedGrade) {
+          setSelectedGrade(lockedGrade);
+        } else if (user?.assignedClass || user?.grade) {
+          setSelectedGrade(user.assignedClass || user.grade || assignedGrade);
+        }
+        if (isClassLocked && lockedStream) {
+          setSelectedStream(lockedStream);
+        } else if (user?.assignedStream || user?.stream) {
+          setSelectedStream(user.assignedStream || user.stream || assignedStream);
+        }
       }
-      if (user?.assignedStream || user?.stream) {
-        setSelectedStream(user.assignedStream || user.stream || assignedStream);
-      }
-    }
-  }, [user, isAdmin, assignedGrade, assignedStream]);
+    }, [user, isAdmin, assignedGrade, assignedStream, isClassLocked, lockedGrade, lockedStream]);
 
   // ── Auto-reset: when grade or stream changes, select the first matching exam
   //    (but preserve "all" if the user had explicitly chosen it and it's still valid).
@@ -1080,42 +1136,42 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
           {/* Filters & Actions Grid Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-center pt-2">
             {/* Grade Selector */}
-            <div className="w-full">
-              <Select
-                value={selectedGrade}
-                onValueChange={(val) => isAdmin && setSelectedGrade(val)}
-                disabled={!isAdmin}
-              >
-                <SelectTrigger className={`w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-2xl text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-purple-500 cursor-pointer ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}>
-                  <SelectValue placeholder="All Grades" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_GRADES_VALUE}>All Grades</SelectItem>
-                  {GRADE_OPTIONS.map((g) => (
-                    <SelectItem key={g} value={g}>{g}</SelectItem>
-                  ))}
-                  {!isAdmin && <SelectItem value={user?.assignedClass || user?.grade || 'Grade 1'}>{user?.assignedClass || user?.grade || 'Grade 1'}</SelectItem>}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Stream Selector */}
-            <div className="w-full">
-              <select
-                value={selectedStream}
-                onChange={(e) => isAdmin && setSelectedStream(e.target.value)}
-                disabled={!isAdmin}
-                className={`w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-2xl text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-purple-500 cursor-pointer ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}
-              >
-                <option value={ALL_STREAMS_VALUE}>All Streams</option>
-                {availableStreams.map((streamName) => (
-                  <option key={streamName} value={streamName}>
-                    {streamName}
-                  </option>
-                ))}
-                {!isAdmin && <option value={user?.assignedStream || user?.stream || 'East'}>{user?.assignedStream || user?.stream || 'East'}</option>}
-              </select>
-            </div>
+                        <div className="w-full">
+                          <Select
+                            value={selectedGrade}
+                            onValueChange={(val) => isAdmin && setSelectedGrade(val)}
+                            disabled={!isAdmin || isClassLocked}
+                          >
+                            <SelectTrigger className={`w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-2xl text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-purple-500 cursor-pointer ${!isAdmin || isClassLocked ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}>
+                              <SelectValue placeholder="All Grades" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={ALL_GRADES_VALUE}>All Grades</SelectItem>
+                              {lockedGradeOptions.map((g) => (
+                                <SelectItem key={g} value={g}>{g}</SelectItem>
+                              ))}
+                              {!isAdmin && !isClassLocked && <SelectItem value={user?.assignedClass || user?.grade || 'Grade 1'}>{user?.assignedClass || user?.grade || 'Grade 1'}</SelectItem>}
+                            </SelectContent>
+                          </Select>
+                        </div>
+            
+                        {/* Stream Selector */}
+                        <div className="w-full">
+                          <select
+                            value={selectedStream}
+                            onChange={(e) => isAdmin && setSelectedStream(e.target.value)}
+                            disabled={!isAdmin || isClassLocked}
+                            className={`w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-2xl text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-purple-500 cursor-pointer ${!isAdmin || isClassLocked ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}
+                          >
+                            <option value={ALL_STREAMS_VALUE}>All Streams</option>
+                            {lockedStreamOptions.map((streamName) => (
+                              <option key={streamName} value={streamName}>
+                                {streamName}
+                              </option>
+                            ))}
+                            {!isAdmin && !isClassLocked && <option value={user?.assignedStream || user?.stream || 'East'}>{user?.assignedStream || user?.stream || 'East'}</option>}
+                          </select>
+                        </div>
 
             {/* Assessment Selector */}
             <div className="w-full sm:col-span-2 lg:col-span-2">
