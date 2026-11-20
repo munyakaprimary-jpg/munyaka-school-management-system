@@ -544,8 +544,10 @@ export const PENDING_SYNC_KEY = 'munyaka_pending_sync';
 
 export interface PendingSyncItem {
   id: string;
-  type: 'learner' | 'staff' | 'attendance' | 'payment' | 'message';
+  type: 'learner' | 'staff' | 'attendance' | 'payment' | 'message' | 'assessment' | 'fees' | 'library';
   action: 'create' | 'update' | 'delete';
+  title?: string;
+  subtitle?: string;
   payload: Record<string, any>;
   createdAt: string;
 }

@@ -174,12 +174,15 @@ export default function AddLearnerModal({
         window.dispatchEvent(new CustomEvent('munyaka:learners-updated', { detail: updatedList }));
         window.dispatchEvent(new Event('storage'));
   
-        // Sync queue action depends on whether we created or updated
         const syncAction = merged ? 'update' : 'create';
+        const lName = `${firstName} ${lastName}`.trim();
+        const lAdm = admissionNumber.trim();
         addPendingSyncItem({
           id: newLearner.id,
           type: 'learner',
           action: syncAction,
+          title: `${syncAction === 'update' ? 'Learner Update' : 'New Learner'}: ${lName} (ADM ${lAdm})`,
+          subtitle: `${grade || ''} ${stream || ''}`.trim() || 'General Directory',
           payload: newLearner,
         });
   
