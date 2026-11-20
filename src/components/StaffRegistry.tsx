@@ -692,13 +692,18 @@ export default function StaffRegistry() {
     try {
       const staffDocId = String(staffRecord.id || '');
       if (staffDocId && db) {
-        const finalAssignedClass = category === 'Class Teacher' && homeroomGrade && homeroomStream ? `${homeroomGrade} ${homeroomStream}` : '';
+        const finalAssignedClass = category === 'Class Teacher' && homeroomGrade && homeroomStream ? `${homeroomGrade} ${homeroomStream}` : (assignedClasses[0] || '');
+        const primaryGrade = category === 'Class Teacher' ? homeroomGrade : (assignedClasses[0] || '');
+        const primaryStream = category === 'Class Teacher' ? homeroomStream : (assignedStreams[0] || '');
+
         await setDoc(doc(db, 'staff', staffDocId), {
           ...staffRecord,
           assignedClass: finalAssignedClass,
-          homeroomGrade: category === 'Class Teacher' ? homeroomGrade : '',
-          homeroomStream: category === 'Class Teacher' ? homeroomStream : '',
-          isClassLocked: category === 'Class Teacher' ? isClassLocked : false,
+          assignedGrade: primaryGrade,
+          assignedStream: primaryStream,
+          homeroomGrade: category === 'Class Teacher' ? homeroomGrade : primaryGrade,
+          homeroomStream: category === 'Class Teacher' ? homeroomStream : primaryStream,
+          isClassLocked: true,
           updatedAt: new Date().toISOString()
         }, { merge: true });
       }

@@ -44,6 +44,7 @@ export function useTeacherScope(): TeacherScope {
     const email = String(user.email || '').toLowerCase();
     const userId = String(user.id || '');
     const tsc = String((user as any).identifier || (user as any).tscNumber || '');
+    const userName = String(user.name || '').toLowerCase();
 
     let unsubscribe = () => {};
     try {
@@ -52,20 +53,24 @@ export function useTeacherScope(): TeacherScope {
         let found: any = null;
         snapshot.forEach((d) => {
           const data = d.data();
-          const matchId = d.id === userId || data.id === userId || data.staffId === userId;
+          const matchId = d.id === userId || String(data.id || '') === userId || String(data.staffId || '') === userId || String(data.uid || '') === userId;
           const matchEmail = email && String(data.email || '').toLowerCase() === email;
-          const matchTsc = tsc && String(data.tscNumber || data.nationalId || data.identifier || '') === tsc;
-          if (matchId || matchEmail || matchTsc) {
+          const matchTsc = tsc && (String(data.tscNumber || '') === tsc || String(data.nationalId || '') === tsc || String(data.identifier || '') === tsc);
+          const matchName = userName && String(data.name || data.fullName || '').toLowerCase() === userName;
+
+          if (matchId || matchEmail || matchTsc || matchName) {
             found = { id: d.id, ...data };
           }
         });
 
         if (found) {
+          console.log("🔥 [TeacherScope] Live staff record update received from Firestore:", found);
           setLiveStaffDoc(found);
           try {
-            const raw = found.assignedGrade && found.assignedStream 
+            const raw = found.assignedGrade && found.assignedStream
               ? `${found.assignedGrade} ${found.assignedStream}`
-              : (found.assignedClass || (found.homeroomGrade && found.homeroomStream ? `${found.homeroomGrade} ${found.homeroomStream}` : ''));
+              : (found.assignedClass || (found.homeroomGrade && found.homeroomStream ? `${found.homeroomGrade} ${found.homeroomStream}` : (found.homeroomGrade || '')));
+            
             if (raw && raw !== 'No Class Assigned') {
               const curr = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
               curr.assignedClass = raw;
@@ -101,42 +106,43 @@ export function useTeacherScope(): TeacherScope {
   }, [user, staff, isAdmin, liveStaffDoc]);
 
   // Raw assigned class string
-  const rawAssignedClass = useMemo(() => {
-    if (isAdmin) return '';
-    if (selectedOverride) return selectedOverride;
+const rawAssignedClass = useMemo(() => {
+  if (isAdmin) return '';
+  if (selectedOverride) return selectedOverride;
 
-    const sources = [
-      liveStaffDoc?.assignedGrade && liveStaffDoc?.assignedStream ? `${liveStaffDoc.assignedGrade} ${liveStaffDoc.assignedStream}` : null,
-      liveStaffDoc?.assignedClass,
-      liveStaffDoc?.homeroomGrade && liveStaffDoc?.homeroomStream ? `${liveStaffDoc.homeroomGrade} ${liveStaffDoc.homeroomStream}` : null,
-      (user as any)?.assignedClass,
-      (user as any)?.gradeStream,
-      (user as any)?.assignedGrade,
-      matchedStaff?.assignedGrade && matchedStaff?.assignedStream ? `${matchedStaff.assignedGrade} ${matchedStaff.assignedStream}` : null,
-      matchedStaff?.assignedClass,
-      matchedStaff?.homeroomGrade && matchedStaff?.homeroomStream ? `${matchedStaff.homeroomGrade} ${matchedStaff.homeroomStream}` : null,
-      Array.isArray(matchedStaff?.assignedClasses) && matchedStaff.assignedClasses[0] ? matchedStaff.assignedClasses[0] : null,
-      Array.isArray((user as any)?.assignedClasses) && (user as any).assignedClasses[0] ? (user as any).assignedClasses[0] : null,
-    ].filter(Boolean) as string[];
+  const sources = [
+    liveStaffDoc?.assignedGrade && liveStaffDoc?.assignedStream ? `${liveStaffDoc.assignedGrade} ${liveStaffDoc.assignedStream}` : null,
+    liveStaffDoc?.assignedClass,
+    liveStaffDoc?.homeroomGrade && liveStaffDoc?.homeroomStream ? `${liveStaffDoc.homeroomGrade} ${liveStaffDoc.homeroomStream}` : null,
+    liveStaffDoc?.homeroomGrade,
+    (user as any)?.assignedClass,
+    (user as any)?.gradeStream,
+    (user as any)?.assignedGrade,
+    matchedStaff?.assignedGrade && matchedStaff?.assignedStream ? `${matchedStaff.assignedGrade} ${matchedStaff.assignedStream}` : null,
+    matchedStaff?.assignedClass,
+    matchedStaff?.homeroomGrade && matchedStaff?.homeroomStream ? `${matchedStaff.homeroomGrade} ${matchedStaff.homeroomStream}` : null,
+    matchedStaff?.homeroomGrade,
+    Array.isArray(matchedStaff?.assignedClasses) && matchedStaff.assignedClasses[0] ? matchedStaff.assignedClasses[0] : null,
+    Array.isArray((user as any)?.assignedClasses) && (user as any).assignedClasses[0] ? (user as any).assignedClasses[0] : null,
+  ].filter(Boolean) as string[];
 
-    // Also check munyaka_current_user in localStorage and validate live doc updates
-    try {
-      const localCurr = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
-      if (liveStaffDoc) {
-        const liveRaw = liveStaffDoc.assignedGrade && liveStaffDoc.assignedStream
-          ? `${liveStaffDoc.assignedGrade} ${liveStaffDoc.assignedStream}`
-          : (liveStaffDoc.assignedClass || (liveStaffDoc.homeroomGrade && liveStaffDoc.homeroomStream ? `${liveStaffDoc.homeroomGrade} ${liveStaffDoc.homeroomStream}` : ''));
-        if (liveRaw && liveRaw !== 'No Class Assigned') {
-          sources.unshift(liveRaw);
-        }
-      } else if (localCurr.assignedClass && localCurr.assignedClass !== 'No Class Assigned') {
-        sources.unshift(localCurr.assignedClass);
+  try {
+    const localCurr = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+    if (liveStaffDoc) {
+      const liveRaw = liveStaffDoc.assignedGrade && liveStaffDoc.assignedStream
+        ? `${liveStaffDoc.assignedGrade} ${liveStaffDoc.assignedStream}`
+        : (liveStaffDoc.assignedClass || (liveStaffDoc.homeroomGrade && liveStaffDoc.homeroomStream ? `${liveStaffDoc.homeroomGrade} ${liveStaffDoc.homeroomStream}` : liveStaffDoc.homeroomGrade));
+      if (liveRaw && liveRaw !== 'No Class Assigned') {
+        sources.unshift(liveRaw);
       }
-    } catch {}
+    } else if (localCurr.assignedClass && localCurr.assignedClass !== 'No Class Assigned') {
+      sources.unshift(localCurr.assignedClass);
+    }
+  } catch {}
 
-    const valid = sources.find(s => s && s !== 'No Class Assigned' && s !== 'All Grades' && s !== 'all');
-    return valid || (sources.length > 0 ? sources[0] : 'Grade 4 Yellow');
-  }, [user, matchedStaff, liveStaffDoc, isAdmin, selectedOverride]);
+  const valid = sources.find(s => s && s !== 'No Class Assigned' && s !== 'All Grades' && s !== 'all');
+  return valid || (sources.length > 0 ? sources[0] : 'Grade 4 Yellow');
+}, [user, matchedStaff, liveStaffDoc, isAdmin, selectedOverride]);
 
   // Normalized grade and stream
   const { grade, stream, fullClass } = useMemo(() => {
