@@ -72,6 +72,7 @@ const getStoredLearnersList = (): Learner[] => {
 
 export default function LearnersDirectory() {
   const { user } = useAuth();
+  const { filterLearners, isLocked: isTeacherLocked, activeClass, getAllowedGradeOptions, getAllowedStreamOptions } = useClassLock();
   const [learners, setLearners] = useState<Learner[]>(() => {
     return getStoredLearnersList();
   });
@@ -82,26 +83,8 @@ export default function LearnersDirectory() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Strict class lock for teachers (class_teacher / subject_teacher)
-  const teacherBoundClass = useMemo(() => {
-    try {
-      const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
-      const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-      const staffList = centralDb.staff || centralDb.teachers || [];
-      const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '');
-      const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase();
-      const matchedStaffRecord = staffList.find((st: any) => {
-        const stId = String(st.id || st.staffId || st.tscNo || '');
-        const stEmail = String(st.email || '').toLowerCase();
-        return (userId && stId === userId) || (userEmail && stEmail === userEmail);
-      }) || {};
-      return getTeacherBoundClass(currentUserObj, matchedStaffRecord);
-    } catch {
-      return null;
-    }
-  }, [user]);
-
-  const isTeacherLocked = Boolean(teacherBoundClass);
-  const boundClassParsed = useMemo(() => parseBoundClass(teacherBoundClass), [teacherBoundClass]);
+  const teacherBoundClass = activeClass.isLocked ? `${activeClass.grade} ${activeClass.stream}` : '';
+  const boundClassParsed = activeClass;
 
   // Auto-apply class lock or query params on mount
   useEffect(() => {
