@@ -67,24 +67,26 @@ export default function ICTPortalDashboard() {
       </div>
 
       {/* Main Navigation Tabs */}
-      <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-6">
-        <TabsList className="bg-slate-900/90 border border-slate-800 p-1.5 rounded-2xl flex flex-wrap gap-2">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition-all">
-            <BarChart3 className="w-4 h-4 mr-2" /> Overview & Metrics
-          </TabsTrigger>
-          <TabsTrigger value="hardware" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition-all">
-            <Laptop className="w-4 h-4 mr-2" /> Lab & Devices
-          </TabsTrigger>
-          <TabsTrigger value="skills" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition-all">
-            <Sparkles className="w-4 h-4 mr-2" /> Digital Skills
-          </TabsTrigger>
-          <TabsTrigger value="competencies" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition-all">
-            <BookOpen className="w-4 h-4 mr-2" /> Practical Competencies
-          </TabsTrigger>
-          <TabsTrigger value="sync" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white rounded-xl px-4 py-2 text-xs md:text-sm font-semibold transition-all">
-            <Database className="w-4 h-4 mr-2" /> Offline Sync & Reports
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-8">
+        <div className="w-full overflow-x-auto pb-2">
+          <TabsList className="bg-slate-900/90 border border-slate-800 p-2 rounded-2xl inline-flex flex-nowrap whitespace-nowrap gap-2 min-w-full sm:min-w-0">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs md:text-sm font-semibold transition-all shrink-0 cursor-pointer">
+              <BarChart3 className="w-4 h-4 mr-2" /> Overview & Metrics
+            </TabsTrigger>
+            <TabsTrigger value="hardware" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs md:text-sm font-semibold transition-all shrink-0 cursor-pointer">
+              <Laptop className="w-4 h-4 mr-2" /> Lab & Devices
+            </TabsTrigger>
+            <TabsTrigger value="skills" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs md:text-sm font-semibold transition-all shrink-0 cursor-pointer">
+              <Sparkles className="w-4 h-4 mr-2" /> Digital Skills
+            </TabsTrigger>
+            <TabsTrigger value="competencies" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs md:text-sm font-semibold transition-all shrink-0 cursor-pointer">
+              <BookOpen className="w-4 h-4 mr-2" /> Practical Competencies
+            </TabsTrigger>
+            <TabsTrigger value="sync" className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs md:text-sm font-semibold transition-all shrink-0 cursor-pointer">
+              <Database className="w-4 h-4 mr-2" /> Offline Sync & Reports
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Tab 1: Overview */}
         <TabsContent value="overview" className="space-y-6">
