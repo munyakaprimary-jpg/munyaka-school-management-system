@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import ICTLabManagement from '@/components/ICTLabManagement';
 import DigitalSkillsAssessment from '@/pages/DigitalSkillsAssessment';
 import PracticalCompetencies from '@/pages/PracticalCompetencies';
+import { SCHOOL_HEADER_LINES, getSchoolHeaderCsv } from '@/utils/schoolHeader';
 import { toast } from 'sonner';
 
 export default function ICTPortalDashboard() {
@@ -341,7 +342,8 @@ export default function ICTPortalDashboard() {
                     const competencies = competencyList;
 
                     let csvContent = "\uFEFF"; // UTF-8 BOM
-                    csvContent += "MUNYAKA CENTRAL SCHOOL - ICT DEPARTMENT & DIGITAL LAB REPORT\n";
+                    csvContent += getSchoolHeaderCsv();
+                    csvContent += "ICT DEPARTMENT & DIGITAL LAB REPORT\n";
                     csvContent += `Generated At,${new Date().toLocaleString()}\n`;
                     csvContent += `Total Assets,${assets.length}\n`;
                     csvContent += `Total Graded Competencies,${competencies.length}\n\n`;
