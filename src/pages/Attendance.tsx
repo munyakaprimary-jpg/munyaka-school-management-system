@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users, CheckCircle2, XCircle, Clock, AlertCircle, Save, Calendar,
   Filter, Search, RefreshCw, ShieldCheck, Unlock, Lock, CheckSquare,
@@ -13,7 +13,6 @@ import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { getStoredLearners } from '@/utils/learnersStore';
 import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
-import { parseBoundClass, getTeacherBoundClass } from '@/utils/classLockUtils';
 
 interface Learner {
   id?: string;
@@ -50,110 +49,63 @@ export default function Attendance() {
     return localStorage.getItem('manual_afternoon_lock') === 'true';
   });
 
+  // Auto-initialize grade & stream from URL query params or teacher class lock
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const qGrade = params.get('grade');
+      const qStream = params.get('stream');
+      if (qGrade) {
+        setSelectedGrade(qGrade.startsWith('Grade') ? qGrade : `Grade ${qGrade}`);
+      }
+      if (qStream) {
+        setSelectedStream(qStream);
+      }
+    } catch {}
+
+    try {
+      const lockKeyPrefix = 'munyaka_teacher_class_lock_';
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(lockKeyPrefix)) {
+          const val = localStorage.getItem(key);
+          if (val && val !== 'No Class Assigned') {
+            const parts = val.trim().split(/\s+/);
+            if (parts.length >= 2) {
+              const stream = parts[parts.length - 1];
+              const grade = parts.slice(0, parts.length - 1).join(' ');
+              setSelectedGrade(grade.startsWith('Grade') ? grade : `Grade ${grade}`);
+              setSelectedStream(stream);
+            }
+          }
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Configurable Cutoff Time Settings (From and To ranges)
+  const [morningFromTime, setMorningFromTime] = useState<string>(() => {
+    return localStorage.getItem('attendance_morning_from') || '08:00';
+  });
+  const [morningCutoffTime, setMorningCutoffTime] = useState<string>(() => {
+    return localStorage.getItem('attendance_morning_cutoff') || '09:40';
+  });
+  const [afternoonFromTime, setAfternoonFromTime] = useState<string>(() => {
+    return localStorage.getItem('attendance_afternoon_from') || '14:00';
+  });
+  const [afternoonCutoffTime, setAfternoonCutoffTime] = useState<string>(() => {
+    return localStorage.getItem('attendance_afternoon_cutoff') || '17:00';
+  });
+  
+  const [attendanceMap, setAttendanceMap] = useState<Record<string, { morning: string; afternoon: string; remarks: string }>>({});
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
+  const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
+
   // Time Lock & Role check helper
   const { user } = useAuth();
   const roleStr = String((user as any)?.role || '');
   const isAdmin = roleStr === 'admin' || roleStr === 'head_teacher' || roleStr === 'owner' || user?.email?.includes('admin');
-
-  // Teacher Class Lock (class_teacher / subject_teacher bound to an assigned class)
-  const teacherBoundClass = useMemo(() => {
-    try {
-      const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
-      const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-      const staffList = centralDb.staff || centralDb.teachers || [];
-      const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '');
-      const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase();
-      const matchedStaffRecord = staffList.find((st: any) => {
-        const stId = String(st.id || st.staffId || st.tscNo || '');
-        const stEmail = String(st.email || '').toLowerCase();
-        return (userId && stId === userId) || (userEmail && stEmail === userEmail);
-      }) || {};
-      return getTeacherBoundClass(user, matchedStaffRecord);
-    } catch {
-      return null;
-    }
-  }, [user]);
-
-  const isTeacherLocked = Boolean(teacherBoundClass);
-  const boundClassParsed = useMemo(() => parseBoundClass(teacherBoundClass), [teacherBoundClass]);
-  const assignedGrade = isTeacherLocked && boundClassParsed.grade ? `Grade ${boundClassParsed.grade}` : '';
-  const assignedStream = isTeacherLocked && boundClassParsed.stream ? boundClassParsed.stream : '';
-
-  // Locked teacher: only the assigned grade/stream may be selected.
-  const isClassLocked = isTeacherLocked && Boolean(assignedGrade);
-
-  const filteredGrades = useMemo(() => {
-    if (!isClassLocked) return grades;
-    const assignedGradeNorm = assignedGrade.trim().toLowerCase();
-    const assignedGradeClean = assignedGrade.replace(/^Grade\s+/i, '').trim().toLowerCase();
-    const matched = grades.filter((g) => {
-      const gNorm = g.trim().toLowerCase();
-      const gClean = g.replace(/^Grade\s+/i, '').trim().toLowerCase();
-      return gNorm === assignedGradeNorm || gClean === assignedGradeClean;
-    });
-    // Fallback: if no exact grade option matched, include the assigned grade itself.
-    if (matched.length === 0) {
-      matched.push(assignedGrade);
-    }
-    return matched;
-  }, [grades, isClassLocked, assignedGrade]);
-
-  const filteredStreams = useMemo(() => {
-    if (!isClassLocked) return streams;
-    const assignedStreamNorm = assignedStream.trim().toLowerCase();
-    const matched = streams.filter((s) => String(s).trim().toLowerCase() === assignedStreamNorm);
-    if (matched.length === 0) {
-      matched.push(assignedStream);
-    }
-    return matched;
-  }, [streams, isClassLocked, assignedStream]);
-
-  // Auto-initialize grade & stream from URL query params or teacher class lock
-      useEffect(() => {
-        try {
-          const params = new URLSearchParams(window.location.search);
-          const qGrade = params.get('grade');
-          const qStream = params.get('stream');
-          if (qGrade) {
-            setSelectedGrade(qGrade.startsWith('Grade') ? qGrade : `Grade ${qGrade}`);
-          }
-          if (qStream) {
-            setSelectedStream(qStream);
-          }
-        } catch {}
-
-        // If teacher is locked to a class, force the assigned grade/stream
-        if (isClassLocked && assignedGrade) {
-          setSelectedGrade(assignedGrade);
-          if (assignedStream) {
-            setSelectedStream(assignedStream);
-          }
-        }
-      }, [isClassLocked, assignedGrade, assignedStream]);
-  
-    // Configurable Cutoff Time Settings (From and To ranges)
-    const [morningFromTime, setMorningFromTime] = useState<string>(() => {
-      return localStorage.getItem('attendance_morning_from') || '08:00';
-    });
-    const [morningCutoffTime, setMorningCutoffTime] = useState<string>(() => {
-      return localStorage.getItem('attendance_morning_cutoff') || '09:40';
-    });
-    const [afternoonFromTime, setAfternoonFromTime] = useState<string>(() => {
-      return localStorage.getItem('attendance_afternoon_from') || '14:00';
-    });
-    const [afternoonCutoffTime, setAfternoonCutoffTime] = useState<string>(() => {
-      return localStorage.getItem('attendance_afternoon_cutoff') || '17:00';
-    });
-  
-    const [attendanceMap, setAttendanceMap] = useState<Record<string, { morning: string; afternoon: string; remarks: string }>>({});
-    const [isSaving, setIsSaving] = useState<boolean>(false);
-    const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
-    const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
-  
-    // Time Lock & Role check helper
-        const { user } = useAuth();
-        const roleStr = String((user as any)?.role || '');
-        const isAdmin = roleStr === 'admin' || roleStr === 'head_teacher' || roleStr === 'owner' || user?.email?.includes('admin');
 
   // Helper function to convert "HH:MM" string to minutes from midnight
   const timeToMinutes = (timeStr: string): number => {
@@ -911,34 +863,34 @@ export default function Attendance() {
           {/* Filter Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-200/60">
             <div>
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Grade / Class</label>
-                          <Select value={selectedGrade} onValueChange={setSelectedGrade} disabled={isClassLocked}>
-                            <SelectTrigger className={`bg-white border-slate-200 h-9 text-xs ${isClassLocked ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}>
-                              <SelectValue placeholder="Select Grade" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Grades</SelectItem>
-                              {filteredGrades.map(g => (
-                                <SelectItem key={g} value={g}>{g}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-            
-                        <div>
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Stream</label>
-                          <Select value={selectedStream} onValueChange={setSelectedStream} disabled={isClassLocked}>
-                            <SelectTrigger className={`bg-white border-slate-200 h-9 text-xs ${isClassLocked ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}>
-                              <SelectValue placeholder="Select Stream" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Streams</SelectItem>
-                              {filteredStreams.map(s => (
-                                <SelectItem key={s} value={s}>{s}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Grade / Class</label>
+              <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                <SelectTrigger className="bg-white border-slate-200 h-9 text-xs">
+                  <SelectValue placeholder="Select Grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Grades</SelectItem>
+                  {grades.map(g => (
+                    <SelectItem key={g} value={g}>{g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Stream</label>
+              <Select value={selectedStream} onValueChange={setSelectedStream}>
+                <SelectTrigger className="bg-white border-slate-200 h-9 text-xs">
+                  <SelectValue placeholder="Select Stream" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Streams</SelectItem>
+                  {streams.map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div>
               <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Active Session</label>
