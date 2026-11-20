@@ -628,8 +628,8 @@ export default function StaffRegistry() {
       toast.error("Official TSC Number is required for teaching staff");
       return;
     }
-    if (!isTeachingStaff && !nationalId.trim()) {
-      toast.error("Kenyan National ID number is required for support/non-teaching staff");
+    if (!isTeachingStaff && !nationalId.trim() && !phone.trim()) {
+      toast.error("National ID or Phone number is required for support/non-teaching staff");
       return;
     }
 
@@ -656,22 +656,24 @@ export default function StaffRegistry() {
       assignedRole: rbacRoleKey,
       email: fullEmail,
       phone: phone.trim() || '+254 712 345 678',
-      tscNumber: isTeachingStaff ? tscNumber.trim() : undefined,
-      nationalId: !isTeachingStaff ? nationalId.trim() : undefined,
+      tscNumber: tscNumber.trim() || '', // Keep tscNumber intact (empty string for non-teaching)
+      nationalId: nationalId.trim(),
       status,
       subjects: isTeachingStaff ? selectedSubjects : [],
       assignedClasses: isTeachingStaff ? assignedClasses : [],
       assignedStreams: isTeachingStaff ? assignedStreams : [],
       homeroomGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
-            homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
-            isClassLocked: category === 'Class Teacher' ? isClassLocked : false,
-            createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString(),
-      // Auth fields
-      password: password, // Store plain for admin visibility (in production, only hash)
+      homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
+      isClassLocked: category === 'Class Teacher' ? isClassLocked : false,
+      createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString(),
+      // Auth fields - ALWAYS generated for both teaching and non-teaching staff
+      staffId: editingStaff?.staffId || `MUN-${Math.floor(1000 + Math.random() * 9000)}`,
+      password: password || generateRandomCode(),
       passwordHash: passwordHash,
       lastPasswordChange: new Date().toISOString(),
       loginEnabled: status === 'Active',
-      accessCode: editingStaff?.accessCode || generateRandomCode()
+      accessCode: editingStaff?.accessCode || generateRandomCode(),
+      portalPassword: editingStaff?.portalPassword || editingStaff?.accessCode || password || generateRandomCode()
     };
 
     let updatedList: StaffMember[];
