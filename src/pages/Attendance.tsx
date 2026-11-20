@@ -150,6 +150,10 @@ export default function Attendance() {
     const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
     const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
   
+    // Time Lock & Role check helper
+        const { user } = useAuth();
+        const roleStr = String((user as any)?.role || '');
+        const isAdmin = roleStr === 'admin' || roleStr === 'head_teacher' || roleStr === 'owner' || user?.email?.includes('admin');
 
   // Helper function to convert "HH:MM" string to minutes from midnight
   const timeToMinutes = (timeStr: string): number => {
