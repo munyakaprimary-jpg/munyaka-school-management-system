@@ -75,9 +75,13 @@ export function StaffAttendanceRegister() {
       }
 
       // Filter by selected grade and stream if available, or fallback to mock learners if empty
-      let filteredRoster = roster.filter((l) => {
-        const matchesGrade = String(l.grade).toLowerCase().includes(selectedGrade.toLowerCase());
-        const matchesStream = !selectedStream || !l.stream || l.stream.toLowerCase() === selectedStream.toLowerCase();
+      let filteredRoster = filterLearners(roster).filter((l) => {
+        const lGrade = String(l.grade || l.gradeLevel || l.class || '').trim().toLowerCase();
+        const lStream = String(l.stream || '').trim().toLowerCase();
+        const sGrade = selectedGrade.trim().toLowerCase();
+        const sStream = selectedStream.trim().toLowerCase();
+        const matchesGrade = !sGrade || lGrade === sGrade || lGrade.includes(sGrade) || sGrade.includes(lGrade);
+        const matchesStream = !sStream || lStream === sStream || lStream.includes(sStream) || sStream.includes(lStream);
         return matchesGrade && matchesStream;
       });
 
@@ -245,17 +249,23 @@ export function StaffAttendanceRegister() {
                 !isAdmin ? "bg-gray-100 text-gray-700 cursor-not-allowed border-gray-200" : "border-gray-200 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               }`}
             >
-              <option value="PP1">PP1</option>
-              <option value="PP2">PP2</option>
-              <option value="Grade 1">Grade 1</option>
-              <option value="Grade 2">Grade 2</option>
-              <option value="Grade 3">Grade 3</option>
-              <option value="Grade 4">Grade 4</option>
-              <option value="Grade 5">Grade 5</option>
-              <option value="Grade 6">Grade 6</option>
-              <option value="Grade 7">Grade 7</option>
-              <option value="Grade 8">Grade 8</option>
-              <option value={assignedGrade}>{assignedGrade}</option>
+              {isAdmin ? (
+                <>
+                  <option value="PP1">PP1</option>
+                  <option value="PP2">PP2</option>
+                  <option value="Grade 1">Grade 1</option>
+                  <option value="Grade 2">Grade 2</option>
+                  <option value="Grade 3">Grade 3</option>
+                  <option value="Grade 4">Grade 4</option>
+                  <option value="Grade 5">Grade 5</option>
+                  <option value="Grade 6">Grade 6</option>
+                  <option value="Grade 7">Grade 7</option>
+                  <option value="Grade 8">Grade 8</option>
+                  <option value="Grade 9">Grade 9</option>
+                </>
+              ) : (
+                <option value={selectedGrade}>{selectedGrade}</option>
+              )}
             </select>
           </div>
 
@@ -271,11 +281,22 @@ export function StaffAttendanceRegister() {
                 !isAdmin ? "bg-gray-100 text-gray-700 cursor-not-allowed border-gray-200" : "border-gray-200 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               }`}
             >
-              <option value="East">East</option>
-              <option value="West">West</option>
-              <option value="Green">Green</option>
-              <option value="Blue">Blue</option>
-              <option value={assignedStream}>{assignedStream}</option>
+              {isAdmin ? (
+                <>
+                  <option value="East">East</option>
+                  <option value="West">West</option>
+                  <option value="North">North</option>
+                  <option value="South">South</option>
+                  <option value="Green">Green</option>
+                  <option value="Blue">Blue</option>
+                  <option value="Yellow">Yellow</option>
+                  <option value="Jupiter">Jupiter</option>
+                  <option value="Mars">Mars</option>
+                  <option value="Venus">Venus</option>
+                </>
+              ) : (
+                <option value={selectedStream}>{selectedStream}</option>
+              )}
             </select>
           </div>
 
