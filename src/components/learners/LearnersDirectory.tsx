@@ -417,7 +417,6 @@ export default function LearnersDirectory() {
               </button>
             </>
           )}
-        </div>
       </div>
 
       {/* Filters & Search Toolbar */}
