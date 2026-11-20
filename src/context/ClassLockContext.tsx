@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { parseBoundClass, ParsedClass } from '@/utils/classLockUtils';
 import { useAuth } from '@/context/AuthContext';
 import { useSchoolStore } from '@/store/useSchoolStore';
+import { db } from '@/config/firebase';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 
 interface ClassLockContextType {
   activeClass: ParsedClass;
@@ -21,6 +23,7 @@ export const ClassLockProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const { user } = useAuth();
   const { staff } = useSchoolStore();
   const [selectedClassOverride, setSelectedClassOverride] = useState<string | null>(null);
+  const [liveStaffRecord, setLiveStaffRecord] = useState<any>(null);
 
   const isAdmin = useMemo(() => {
     if (!user) return false;
@@ -29,33 +32,94 @@ export const ClassLockProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return role === 'admin' || role === 'owner' || role === 'super_admin' || rbac === 'admin' || rbac === 'owner' || rbac === 'super_admin';
   }, [user]);
 
-  // Find staff record if teacher
+  // Subscribe to live staff record changes in Firestore when teacher logs in
+  useEffect(() => {
+    if (!user || isAdmin) {
+      setLiveStaffRecord(null);
+      return;
+    }
+
+    const email = String(user.email || '').toLowerCase();
+    const userId = String(user.id || '');
+    const tsc = String((user as any).identifier || '');
+
+    let unsubscribe = () => {};
+
+    try {
+      const staffRef = collection(db, 'staff');
+      // Listen to staff collection changes
+      unsubscribe = onSnapshot(staffRef, (snapshot) => {
+        let found: any = null;
+        snapshot.forEach((d) => {
+          const data = d.id === userId || d.data().id === userId || d.data().staffId === userId || String(d.data().email || '').toLowerCase() === email || (tsc && String(d.data().tscNumber || d.data().nationalId || '') === tsc);
+          if (data) {
+            found = { id: d.id, ...d.data() };
+          }
+        });
+
+        if (found) {
+          setLiveStaffRecord(found);
+          // Also update munyaka_current_user and localStorage immediately
+          try {
+            const rawClass = found.assignedGrade && found.assignedStream
+              ? `${found.assignedGrade} ${found.assignedStream}`
+              : (found.assignedClass || found.homeroomGrade ? `${found.homeroomGrade} ${found.homeroomStream || ''}`.trim() : '');
+            
+            if (rawClass) {
+              const curr = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+              curr.assignedClass = rawClass;
+              curr.assignedGrade = found.assignedGrade || found.homeroomGrade || curr.assignedGrade;
+              curr.assignedStream = found.assignedStream || found.homeroomStream || curr.assignedStream;
+              localStorage.setItem('munyaka_current_user', JSON.stringify(curr));
+            }
+          } catch (e) {
+            console.error("Error updating local storage on staff snapshot", e);
+          }
+        }
+      }, (err) => {
+        console.warn("Staff live sync snapshot warning:", err);
+      });
+    } catch (e) {
+      console.warn("Failed to subscribe to live staff record", e);
+    }
+
+    return () => {
+      unsubscribe();
+    };
+  }, [user, isAdmin]);
+
+  // Find staff record if teacher (fallback to store if live not loaded yet)
   const matchedStaff = useMemo(() => {
     if (!user || isAdmin) return null;
-    return staff.find(s => 
+    if (liveStaffRecord) return liveStaffRecord;
+    return staff.find(s =>
       String(s.email || '').toLowerCase() === String(user.email || '').toLowerCase() ||
       String(s.id || '').toLowerCase() === String(user.id || '').toLowerCase() ||
       String(s.staffId || '').toLowerCase() === String(user.staff_id || '').toLowerCase()
     );
-  }, [user, staff, isAdmin]);
+  }, [user, staff, isAdmin, liveStaffRecord]);
 
   const rawAssignedClass = useMemo(() => {
     if (isAdmin) return '';
     if (selectedClassOverride) return selectedClassOverride;
 
     const sources = [
+      liveStaffRecord?.assignedGrade && liveStaffRecord?.assignedStream ? `${liveStaffRecord.assignedGrade} ${liveStaffRecord.assignedStream}` : null,
+      liveStaffRecord?.assignedClass,
+      liveStaffRecord?.homeroomGrade && liveStaffRecord?.homeroomStream ? `${liveStaffRecord.homeroomGrade} ${liveStaffRecord.homeroomStream}` : null,
       (user as any)?.assignedClass,
       (user as any)?.gradeStream,
       (user as any)?.assignedGrade,
       matchedStaff?.assignedGrade && matchedStaff?.assignedStream ? `${matchedStaff.assignedGrade} ${matchedStaff.assignedStream}` : null,
       matchedStaff?.assignedClass,
+      matchedStaff?.homeroomGrade && matchedStaff?.homeroomStream ? `${matchedStaff.homeroomGrade} ${matchedStaff.homeroomStream}` : null,
       Array.isArray(matchedStaff?.assignedClasses) && matchedStaff.assignedClasses[0] ? matchedStaff.assignedClasses[0] : null,
       Array.isArray((user as any)?.assignedClasses) && (user as any).assignedClasses[0] ? (user as any).assignedClasses[0] : null,
     ].filter(Boolean) as string[];
 
     const valid = sources.find(s => s && s !== 'No Class Assigned' && s !== 'All Grades' && s !== 'all');
     return valid || (sources.length > 0 ? sources[0] : 'Grade 4 Yellow');
-  }, [user, matchedStaff, isAdmin, selectedClassOverride]);
+  }, [user, matchedStaff, liveStaffRecord, isAdmin, selectedClassOverride]);
 
   const activeClass = useMemo(() => {
     if (isAdmin) {
