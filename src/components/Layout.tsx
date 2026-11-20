@@ -276,11 +276,7 @@ export const SyncButton: React.FC = () => {
     <>
       <button
         onClick={() => {
-          if (pendingCount > 0) {
-            setShowSyncModal(true);
-          } else {
-            handleSync();
-          }
+          setShowSyncModal(true);
         }}
         disabled={isSyncing}
         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-white font-bold text-sm shadow-md transition-all cursor-pointer ${
