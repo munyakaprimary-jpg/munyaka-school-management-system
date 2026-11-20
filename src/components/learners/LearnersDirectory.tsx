@@ -102,27 +102,6 @@ export default function LearnersDirectory() {
   const isTeacherLocked = Boolean(teacherBoundClass);
   const boundClassParsed = useMemo(() => parseBoundClass(teacherBoundClass), [teacherBoundClass]);
 
-  // Check if current user is an admin (headteacher, deputy, admin, principal, director, secretary, etc.)
-  const isAdminUser = useMemo(() => {
-    try {
-      const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
-      const role = String(user?.role || currentUserObj?.role || '').toLowerCase();
-      const title = String(currentUserObj?.title || currentUserObj?.category || '').toLowerCase();
-      const adminRoles = ['admin', 'headteacher', 'head_teacher', 'deputy', 'principal', 'director', 'administrator', 'secretary'];
-      return adminRoles.some(ar => role.includes(ar) || title.includes(ar));
-    } catch {
-      return false;
-    }
-  }, [user]);
-
-  // Base learners filtered by teacher assignment if not admin
-  const effectiveLearners = useMemo(() => {
-    if (isAdminUser || !isTeacherLocked || !teacherBoundClass) {
-      return learners;
-    }
-    return learners.filter(l => matchesBoundClass(l, teacherBoundClass));
-  }, [learners, isAdminUser, isTeacherLocked, teacherBoundClass]);
-
   // Auto-apply class lock or query params on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -134,13 +113,13 @@ export default function LearnersDirectory() {
       if (qStream) {
         setSelectedStream(qStream);
       }
-    } else if (isTeacherLocked && !isAdminUser && boundClassParsed.grade) {
-      setSelectedGrade(boundClassParsed.grade.startsWith('Grade') ? boundClassParsed.grade : `Grade ${boundClassParsed.grade}`);
+    } else if (isTeacherLocked && boundClassParsed.grade) {
+      setSelectedGrade(`Grade ${boundClassParsed.grade}`);
       if (boundClassParsed.stream) {
         setSelectedStream(boundClassParsed.stream);
       }
     }
-  }, [isTeacherLocked, isAdminUser, boundClassParsed.grade, boundClassParsed.stream]);
+  }, [isTeacherLocked, boundClassParsed.grade, boundClassParsed.stream]);
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -277,8 +256,7 @@ export default function LearnersDirectory() {
 
   // Filtered learners
   const filteredLearners = useMemo(() => {
-    const baseList = effectiveLearners;
-    return baseList.filter(l => {
+    return learners.filter(l => {
       const fullName = (l.fullName || l.name || `${l.firstName || ''} ${l.lastName || ''}`).toLowerCase();
       const adm = (l.admissionNumber || l.admissionNo || l.admNo || '').toLowerCase();
       const assess = (l.assessmentNumber || l.assessmentNo || l.birthCertNo || '').toLowerCase();
@@ -287,14 +265,14 @@ export default function LearnersDirectory() {
       const matchesSearch = !query || fullName.includes(query) || adm.includes(query) || assess.includes(query);
       
       const gradeVal = l.grade || l.gradeLevel || '';
-      const matchesGrade = selectedGrade === 'all' || gradeVal === selectedGrade || gradeVal.toLowerCase() === selectedGrade.toLowerCase();
-      const matchesStream = selectedStream === 'all' || l.stream === selectedStream || String(l.stream).toLowerCase() === String(selectedStream).toLowerCase();
+      const matchesGrade = selectedGrade === 'all' || gradeVal === selectedGrade;
+      const matchesStream = selectedStream === 'all' || l.stream === selectedStream;
       const genderVal = (l.gender || '').toLowerCase();
       const matchesGender = selectedGender === 'all' || genderVal === selectedGender.toLowerCase();
 
       return matchesSearch && matchesGrade && matchesStream && matchesGender;
     });
-  }, [effectiveLearners, searchQuery, selectedGrade, selectedStream, selectedGender]);
+  }, [learners, searchQuery, selectedGrade, selectedStream, selectedGender]);
 
   // Handle Selection
   const toggleSelectAll = () => {
@@ -378,12 +356,7 @@ export default function LearnersDirectory() {
             Learners Directory
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manage student records, admissions, assessments, and profiles. ({effectiveLearners.length} total)
-            {isTeacherLocked && !isAdminUser && teacherBoundClass && (
-              <span className="ml-2 inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-                <Lock className="w-3 h-3" /> Locked to {teacherBoundClass}
-              </span>
-            )}
+            Manage student records, admissions, assessments, and profiles. ({learners.length} total)
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -395,28 +368,25 @@ export default function LearnersDirectory() {
             <FileDown className="w-4 h-4 text-slate-500" />
             Download List
           </button>
-          {(!isTeacherLocked || isAdminUser) && (
-            <>
-              <button
-                onClick={() => setIsTransferInModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl shadow-md shadow-amber-200 dark:shadow-none transition-all text-sm"
-                title="Transfer In Incoming Learner"
-              >
-                <ArrowRightLeft className="w-4 h-4" />
-                Transfer In Learner
-              </button>
-              <button
-                onClick={() => {
-                  setEditingLearner(null);
-                  setIsAddModalOpen(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md shadow-indigo-200 dark:shadow-none transition-all text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Register New Learner
-              </button>
-            </>
-          )}
+          <button
+            onClick={() => setIsTransferInModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl shadow-md shadow-amber-200 dark:shadow-none transition-all text-sm"
+            title="Transfer In Incoming Learner"
+          >
+            <ArrowRightLeft className="w-4 h-4" />
+            Transfer In Learner
+          </button>
+          <button
+            onClick={() => {
+              setEditingLearner(null);
+              setIsAddModalOpen(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md shadow-indigo-200 dark:shadow-none transition-all text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Register New Learner
+          </button>
+        </div>
       </div>
 
       {/* Filters & Search Toolbar */}
