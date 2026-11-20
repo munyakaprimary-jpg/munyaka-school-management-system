@@ -110,18 +110,17 @@ const rawAssignedClass = useMemo(() => {
   if (isAdmin) return '';
   if (selectedOverride) return selectedOverride;
 
+  const hGrade = liveStaffDoc?.homeroomGrade || liveStaffDoc?.assignedGrade || matchedStaff?.homeroomGrade || matchedStaff?.assignedGrade || '';
+  const hStream = liveStaffDoc?.homeroomStream || liveStaffDoc?.assignedStream || matchedStaff?.homeroomStream || matchedStaff?.assignedStream || '';
+  const combinedHomeroom = (hGrade && hStream) ? (hGrade.toLowerCase().includes(hStream.toLowerCase()) ? hGrade : `${hGrade} ${hStream}`) : (hGrade || '');
+
   const sources = [
-    liveStaffDoc?.assignedGrade && liveStaffDoc?.assignedStream ? `${liveStaffDoc.assignedGrade} ${liveStaffDoc.assignedStream}` : null,
+    combinedHomeroom,
     liveStaffDoc?.assignedClass,
-    liveStaffDoc?.homeroomGrade && liveStaffDoc?.homeroomStream ? `${liveStaffDoc.homeroomGrade} ${liveStaffDoc.homeroomStream}` : null,
-    liveStaffDoc?.homeroomGrade,
     (user as any)?.assignedClass,
     (user as any)?.gradeStream,
     (user as any)?.assignedGrade,
-    matchedStaff?.assignedGrade && matchedStaff?.assignedStream ? `${matchedStaff.assignedGrade} ${matchedStaff.assignedStream}` : null,
     matchedStaff?.assignedClass,
-    matchedStaff?.homeroomGrade && matchedStaff?.homeroomStream ? `${matchedStaff.homeroomGrade} ${matchedStaff.homeroomStream}` : null,
-    matchedStaff?.homeroomGrade,
     Array.isArray(matchedStaff?.assignedClasses) && matchedStaff.assignedClasses[0] ? matchedStaff.assignedClasses[0] : null,
     Array.isArray((user as any)?.assignedClasses) && (user as any).assignedClasses[0] ? (user as any).assignedClasses[0] : null,
   ].filter(Boolean) as string[];
@@ -172,7 +171,7 @@ const rawAssignedClass = useMemo(() => {
     return {
       grade: normGrade,
       stream: normStream,
-      fullClass: `${normGrade} ${normStream}`.trim()
+      fullClass: normStream && !normGrade.toLowerCase().includes(normStream.toLowerCase()) ? `${normGrade} ${normStream}`.trim() : normGrade
     };
   }, [isAdmin, rawAssignedClass]);
 

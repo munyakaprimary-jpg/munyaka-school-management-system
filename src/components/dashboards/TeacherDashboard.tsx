@@ -836,18 +836,28 @@ export default function TeacherDashboard() {
 
   // 1. Initialize selectedClassOverride and isClassLocked directly from matchedStaffRecord / Firestore without fallback to generic "Grade 1 Green"
   const [selectedClassOverride, setSelectedClassOverride] = React.useState<string | null>(() => {
+    const rG = String(matchedStaffRecord?.homeroomGrade || matchedStaffRecord?.assignedGrade || currentUserObj.homeroomGrade || currentUserObj.assignedGrade || '').trim();
+    const rS = String(matchedStaffRecord?.homeroomStream || matchedStaffRecord?.assignedStream || currentUserObj.homeroomStream || currentUserObj.assignedStream || '').trim();
+    const combinedHome = (rG && rS) ? (rG.toLowerCase().includes(rS.toLowerCase()) ? rG : `${rG} ${rS}`) : (rG || '');
+
     const staffRecClass = String(
       matchedStaffRecord?.assignedClass ||
       matchedStaffRecord?.lockedClass ||
-      (matchedStaffRecord?.homeroomGrade && matchedStaffRecord?.homeroomStream ? `${matchedStaffRecord.homeroomGrade} ${matchedStaffRecord.homeroomStream}` : '') ||
+      combinedHome ||
       currentUserObj.assignedClass ||
       currentUserObj.lockedClass ||
-      (currentUserObj.homeroomGrade && currentUserObj.homeroomStream ? `${currentUserObj.homeroomGrade} ${currentUserObj.homeroomStream}` : '') ||
       ''
     ).trim();
 
     if (staffRecClass && staffRecClass !== 'No Class Assigned') {
-      return staffRecClass.replace(/[()]/g, '').replace(/\s+/g, ' ').trim();
+      const clean = staffRecClass.replace(/[()]/g, '').replace(/\s+/g, ' ').trim();
+      const parts = clean.split(/\s+/);
+      if (parts.length >= 2) {
+        const s = parts[parts.length - 1];
+        const g = parts.slice(0, parts.length - 1).join(' ');
+        return `${g} ${s}`.trim();
+      }
+      return clean;
     }
 
     try {
@@ -899,13 +909,14 @@ export default function TeacherDashboard() {
             const rawAssignedClass = String(matchedDocData.assignedClass || '').trim();
             const rGrade = String(matchedDocData.homeroomGrade || matchedDocData.assignedGrade || '').trim();
             const rStream = String(matchedDocData.homeroomStream || matchedDocData.assignedStream || '').trim();
+            const combinedHomeroom = (rGrade && rStream) ? (rGrade.toLowerCase().includes(rStream.toLowerCase()) ? rGrade : `${rGrade} ${rStream}`) : (rGrade || '');
             const arrClass = Array.isArray(matchedDocData.assignedClasses) && matchedDocData.assignedClasses[0] ? String(matchedDocData.assignedClasses[0]) : '';
             
             let authoritativeClass = '';
             if (rawAssignedClass && rawAssignedClass !== 'No Class Assigned') {
               authoritativeClass = rawAssignedClass;
-            } else if (rGrade && rStream) {
-              authoritativeClass = `${rGrade} ${rStream}`;
+            } else if (combinedHomeroom) {
+              authoritativeClass = combinedHomeroom;
             } else if (arrClass) {
               authoritativeClass = arrClass;
             }
