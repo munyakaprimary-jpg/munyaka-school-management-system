@@ -175,14 +175,14 @@ export default function AddLearnerModal({
         window.dispatchEvent(new Event('storage'));
   
         const syncAction = merged ? 'update' : 'create';
-        const lName = `${firstName} ${lastName}`.trim();
+        const lName = fullNameVal || 'Learner';
         const lAdm = admissionNumber.trim();
         addPendingSyncItem({
           id: newLearner.id,
           type: 'learner',
           action: syncAction,
           title: `${syncAction === 'update' ? 'Learner Update' : 'New Learner'}: ${lName} (ADM ${lAdm})`,
-          subtitle: `${grade || ''} ${stream || ''}`.trim() || 'General Directory',
+          subtitle: `${selectedGrade || ''} ${selectedStream || ''}`.trim() || 'General Directory',
           payload: newLearner,
         });
   

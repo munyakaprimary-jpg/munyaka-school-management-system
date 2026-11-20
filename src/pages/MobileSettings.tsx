@@ -517,35 +517,83 @@ export default function MobileSettings() {
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                 Pending Items ({pendingSyncCount})
               </p>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {syncQueue.slice(-5).reverse().map((item) => (
-                  <div
-                    key={item.id}
-                    className={cn(
-                      "flex items-center justify-between p-3 rounded-xl text-sm",
-                      item.synced 
-                        ? "bg-slate-50 dark:bg-slate-800/50 text-slate-500" 
-                        : "bg-amber-50 dark:bg-amber-900/20 text-amber-700"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      {item.type === 'attendance' && <Activity className="w-4 h-4" />}
-                      {item.type === 'fee' && <HardDrive className="w-4 h-4" />}
-                      {item.type === 'student' && <Users className="w-4 h-4" />}
-                      <span className="capitalize font-medium">{item.type}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs">
-                        {new Date(item.createdAt).toLocaleDateString()}
-                      </span>
-                      {item.synced ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4 text-amber-500" />
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {syncQueue.slice(-8).reverse().map((item: any) => {
+                  const p = item.payload || {};
+                  const typeLabel = String(item.type || 'Record').toUpperCase();
+                  const actionLabel = String(item.action || 'create').toUpperCase();
+                  
+                  // Dynamic Human-Readable Title & Subtitle Fallbacks
+                  let displayTitle = item.title;
+                  let displaySubtitle = item.subtitle;
+
+                  if (!displayTitle) {
+                    if (item.type === 'staff') {
+                      const sName = p.fullName || p.name || 'Staff Member';
+                      const sTsc = p.tscNumber || p.nationalId || p.staffId || 'ID';
+                      displayTitle = `Staff Update: ${sName} (TSC ${sTsc})`;
+                      displaySubtitle = `Role: ${p.category || p.role || 'Staff'} • Class: ${p.assignedClass || p.homeroomGrade || 'Unassigned'}`;
+                    } else if (item.type === 'learner') {
+                      const lName = p.fullName || `${p.firstName || ''} ${p.lastName || ''}`.trim() || 'Learner';
+                      const adm = p.admissionNumber || p.admNo || p.admission_no || 'ADM';
+                      displayTitle = `Learner Record: ${lName} (ADM ${adm})`;
+                      displaySubtitle = `Grade: ${p.grade || p.currentGrade || 'Grade'} ${p.stream || ''}`.trim();
+                    } else if (item.type === 'attendance') {
+                      displayTitle = `Roll Call: Grade ${p.grade || ''} ${p.stream || ''}`.trim();
+                      displaySubtitle = `Date: ${p.attendanceDate || new Date().toLocaleDateString()} • Records: ${Object.keys(p.records || {}).length}`;
+                    } else if (item.type === 'payment' || item.type === 'fees') {
+                      displayTitle = `Fee Payment: ${p.studentName || p.learnerName || 'Student'}`;
+                      displaySubtitle = `KES ${Number(p.amount || 0).toLocaleString()} • Ref: ${p.receiptNumber || p.reference || 'Cash'}`;
+                    } else if (item.type === 'assessment' || item.type === 'marks') {
+                      displayTitle = `Exam Marks: Grade ${p.grade || ''} ${p.stream || ''} — ${p.subject || 'Subject'}`;
+                      displaySubtitle = `Exam Type: ${p.examType || 'Assessment'} • Marks Entered`;
+                    } else {
+                      displayTitle = `${typeLabel} (${actionLabel})`;
+                      displaySubtitle = item.id ? `ID: ${item.id}` : 'Local Change';
+                    }
+                  }
+
+                  const timeStr = item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "flex items-center justify-between p-3.5 rounded-2xl border text-sm transition-all",
+                        item.synced
+                          ? "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-500"
+                          : "bg-amber-50/80 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-200"
                       )}
+                    >
+                      <div className="space-y-0.5 pr-2">
+                        <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-2">
+                          <span className={cn("w-2 h-2 rounded-full", item.synced ? "bg-emerald-500" : "bg-amber-500 animate-pulse")}></span>
+                          {displayTitle}
+                          <span className="text-[9px] uppercase px-1.5 py-0.5 rounded font-extrabold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                            {actionLabel}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                          {displaySubtitle}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-[10px] text-slate-400 font-semibold">
+                          {timeStr}
+                        </span>
+                        {item.synced ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full">
+                            Synced
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-full">
+                            Pending
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
