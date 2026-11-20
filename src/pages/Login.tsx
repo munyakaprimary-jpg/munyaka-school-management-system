@@ -946,7 +946,7 @@ const Login: React.FC = () => {
                                     <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                                     <Input
                                       id="staff-password"
-                                      type="password"
+                                      type={showStaffPassword ? "text" : "password"}
                                       value={staffPassword}
                                       onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
                                       placeholder="Enter your password or access code"
@@ -955,8 +955,9 @@ const Login: React.FC = () => {
                                     />
                                     <button
                                       type="button"
-                                      onClick={() => setShowStaffPassword(!showStaffPassword)}
-                                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                                      onClick={() => setShowStaffPassword(prev => !prev)}
+                                      aria-label={showStaffPassword ? "Hide password or access code" : "Show password or access code"}
+                                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors cursor-pointer"
                                     >
                                       {showStaffPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
