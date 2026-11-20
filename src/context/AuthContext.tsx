@@ -507,7 +507,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         title: exactRole,
         identifier: (matchedStaff as any).tscNumber || (matchedStaff as any).nationalId || (matchedStaff as any).id,
         avatar: (matchedStaff as any).avatar || String((matchedStaff as any).name || (matchedStaff as any).fullName || 'ST').split(' ').map((n: string) => n[0] || '').join('').substring(0, 2).toUpperCase(),
-        assignedClass: parsedBound.isLocked ? `${parsedBound.grade} ${parsedBound.stream}` : (rawAssignedClass || 'Grade 4 Yellow'),
+        assignedClass: parsedBound.isLocked ? `${parsedBound.grade} ${parsedBound.stream}` : (rawAssignedClass || ''),
         assignedStream: parsedBound.stream || (matchedStaff as any).assignedStream || '',
         grade: parsedBound.grade || (matchedStaff as any).assignedGrade || '',
         stream: parsedBound.stream || (matchedStaff as any).assignedStream || '',

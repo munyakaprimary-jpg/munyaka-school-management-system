@@ -141,7 +141,7 @@ const rawAssignedClass = useMemo(() => {
   } catch {}
 
   const valid = sources.find(s => s && s !== 'No Class Assigned' && s !== 'All Grades' && s !== 'all');
-  return valid || (sources.length > 0 ? sources[0] : 'Grade 4 Yellow');
+  return valid || (sources.length > 0 ? sources[0] : '');
 }, [user, matchedStaff, liveStaffDoc, isAdmin, selectedOverride]);
 
   // Normalized grade and stream

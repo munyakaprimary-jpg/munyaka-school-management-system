@@ -103,7 +103,7 @@ export default function TeacherDashboard() {
     ];
   }, [gradesStreamsConfig]);
   const [selectedClassState, setSelectedClassState] = React.useState<string>(() => {
-    return currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || 'Grade 4 Blue';
+    return currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || '';
   });
   const selectedClass = selectedClassState;
   const setSelectedClass = setSelectedClassState;
@@ -1161,18 +1161,18 @@ export default function TeacherDashboard() {
         <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white border-slate-700 shadow-xl col-span-1 lg:col-span-1 flex flex-col justify-between">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] uppercase font-extrabold tracking-wider bg-teal-800 px-2 py-0.5 rounded text-teal-200">
-                {getFormattedRoleLabel(teacherRole)}
-              </span>
-              {isClassLocked ? (
-                <Badge variant="outline" className="bg-emerald-500/20 text-emerald-300 border-emerald-400 font-bold text-xs flex items-center gap-1">
-                  <Lock className="w-3 h-3 text-emerald-400" /> LOCKED
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-400 font-bold text-xs flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3 text-amber-400" /> UNBOUND
-                </Badge>
-              )}
+              <span className="text-[10px] uppercase font-extrabold tracking-wider bg-teal-800 px-2 py-0.5 rounded text-teal-250">
+                  {getFormattedRoleLabel(teacherRole)}
+                </span>
+                {isClassLocked ? (
+                  <Badge variant="outline" className="bg-emerald-500/20 text-emerald-300 border-emerald-400 font-bold text-xs flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-emerald-400" /> Locked Class: {fullClassTitle}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-400 font-bold text-xs flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 text-amber-400" /> Assigned Class: {fullClassTitle}
+                  </Badge>
+                )}
             </div>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-black text-white">Assigned Homeroom Lock</CardTitle>
