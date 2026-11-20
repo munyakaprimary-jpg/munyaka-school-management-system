@@ -136,6 +136,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Staff Directory', href: '/staff-registry', icon: UserCheck, allowedRoles: ['all'] },
     { name: 'Financials & Fees', href: '/fees', icon: Wallet, allowedRoles: ['all'] },
     { name: 'Learners', href: '/learners', icon: Users, allowedRoles: ['all'] },
+    { name: 'Report Cards', href: '/reports', icon: FileText, allowedRoles: ['all'] },
     { name: 'Teacher LAN Config', href: '/teacher-lan-config', icon: Wifi, allowedRoles: ['all'] },
     { name: 'Games Hub', href: '/games', icon: Gamepad2, allowedRoles: ['all'] },
     { name: 'Grades & Streams', href: '/grades', icon: Layers, allowedRoles: ['all'] },
