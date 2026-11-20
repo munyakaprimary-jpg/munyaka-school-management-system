@@ -829,6 +829,23 @@ export default function LearnersDirectory() {
     </div>
   );
 }
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200 dark:shadow-none transition-all"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Inline Form Modal for Adding / Editing Learner
 function LearnerFormModal({ learner, onClose, onSave }: { learner: Learner | null; onClose: () => void; onSave: (l: Learner) => void }) {
