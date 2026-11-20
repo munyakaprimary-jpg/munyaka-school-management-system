@@ -87,3 +87,23 @@ export const generateUniqueCohortAdmissionNumber = (
 export const generateCohortAdmissionNumber = (studentGrade: string, existingLearners: any[] = []): string => {
   return generateUniqueCohortAdmissionNumber(studentGrade, existingLearners).admissionNumber;
 };
+
+export const findAssessmentBirthCertDuplicate = (learners: any[], submittedAssess: string, excludeId?: string): any | null => {
+  const target = String(submittedAssess || '').trim().toLowerCase();
+  if (!target) return null;
+  for (const l of learners) {
+    if (!l) continue;
+    if (excludeId && String(l.id) === String(excludeId)) continue;
+    const assess = String(l.assessmentNumber || l.assessmentNo || l.birthCertNo || '').trim().toLowerCase();
+    if (assess && assess === target) {
+      return l;
+    }
+  }
+  return null;
+};
+
+export const formatAssessmentDuplicateError = (dup: any): string => {
+  const name = dup?.fullName || dup?.name || 'another learner';
+  const adm = dup?.admissionNumber || dup?.admissionNo || dup?.admNo || '';
+  return `Assessment / Birth Certificate number is already registered to ${name}${adm ? ` (${adm})` : ''}.`;
+};
