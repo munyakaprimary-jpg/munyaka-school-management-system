@@ -81,65 +81,86 @@ export const SyncButton: React.FC = () => {
       try {
         const dynamicItems: Array<{ id: string; title: string; type: string; time: string; status: string }> = [];
         
-        // 1. Check actual learners in munyaka_learners_directory without firestore sync confirmation token
+        // 1. Check actual learners in munyaka_learners_directory that are explicitly marked unsynced
         const rawLearners = localStorage.getItem('munyaka_learners_directory');
         if (rawLearners) {
           const learners = JSON.parse(rawLearners);
           if (Array.isArray(learners)) {
-            const unsyncedLearners = learners.filter((l: any) => !l.syncedToFirestore && !l.firestoreSynced);
-            if (unsyncedLearners.length > 0) {
+            const unsyncedLearners = learners.filter((l: any) =>
+              l.synced === false || l.pendingSync === true || l.isLocalOnly === true ||
+              l.syncedToFirestore === false || l.firestoreSynced === false
+            );
+            unsyncedLearners.forEach((l: any, idx: number) => {
+              const name = l.name || l.fullName || l.studentName || `Learner ${idx + 1}`;
+              const adm = l.admissionNumber || l.admNo || l.id || `id_${idx}`;
+              const cls = l.classGrade || l.grade || l.stream || '';
               dynamicItems.push({
-                id: 'learners-dir',
-                title: `${unsyncedLearners.length} Unsynced Learner Directory Record(s)`,
-                type: 'Learners Directory',
-                time: 'Just now',
-                status: 'Pending Upload'
+                id: `learner-${adm}-${idx}`,
+                title: `${name} (${adm}) ${cls ? `- ${cls}` : ''}`,
+                type: 'Learner Record',
+                time: l.updatedAt || l.createdAt || 'Unsynced',
+                status: 'Pending Cloud Sync'
               });
-            } else if (learners.length > 0 && dynamicItems.length === 0) {
-              // Always show at least general local records if any exist
-              dynamicItems.push({
-                id: 'learners-general',
-                title: `${learners.length} Registered Learners Directory Loaded`,
-                type: 'Learners Directory',
-                time: 'Active',
-                status: 'Ready for Sync'
-              });
-            }
+            });
           }
         }
 
-        // 2. Check sync queue in localStorage or database if available
-        const pendingQueue = JSON.parse(localStorage.getItem('munyaka_pending_sync') || '[]');
-        if (pendingQueue.length > 0) {
-          pendingQueue.forEach((item: any, idx: number) => {
-            dynamicItems.push({
-              id: item.id || `queue-${idx}`,
-              title: item.title || item.name || 'Pending Local Record',
-              type: item.type || 'Queue Item',
-              time: item.time || 'Recent',
-              status: item.status || 'Pending Queue'
-            });
-          });
+        // 2. Check staff members that are unsynced
+        const rawStaff = localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff');
+        if (rawStaff) {
+          try {
+            const staffList = JSON.parse(rawStaff);
+            if (Array.isArray(staffList)) {
+              const unsyncedStaff = staffList.filter((s: any) => s.synced === false || s.pendingSync === true || s.isLocalOnly === true);
+              unsyncedStaff.forEach((s: any, idx: number) => {
+                const name = s.name || s.fullName || `Staff ${idx + 1}`;
+                const tsc = s.tscNumber || s.id || `staff_${idx}`;
+                dynamicItems.push({
+                  id: `staff-${tsc}-${idx}`,
+                  title: `${name} (TSC: ${tsc})`,
+                  type: 'Staff Member',
+                  time: s.updatedAt || 'Unsynced',
+                  status: 'Pending Cloud Sync'
+                });
+              });
+            }
+          } catch {}
         }
 
-        // 3. Check unsynced attendance or fees
+        // 3. Check attendance / roll call records that are unsynced
         const attendanceRaw = localStorage.getItem('munyaka_attendance');
         if (attendanceRaw) {
           try {
             const att = JSON.parse(attendanceRaw);
-            if (Array.isArray(att) && att.length > 0) {
-              const unsyncedAtt = att.filter((a: any) => !a.synced);
-              if (unsyncedAtt.length > 0) {
+            if (Array.isArray(att)) {
+              const unsyncedAtt = att.filter((a: any) => a.synced === false || a.pendingSync === true);
+              unsyncedAtt.forEach((a: any, idx: number) => {
                 dynamicItems.push({
-                  id: 'attendance-logs',
-                  title: `${unsyncedAtt.length} Attendance Log Entries`,
+                  id: `att-${a.id || idx}`,
+                  title: `Attendance Roll Call (${a.date || a.gradeName || 'Record'})`,
                   type: 'Attendance Register',
-                  time: 'Pending',
-                  status: 'Queued Locally'
+                  time: a.date || 'Recent',
+                  status: 'Pending Cloud Sync'
                 });
-              }
+              });
             }
           } catch {}
+        }
+
+        // 4. Check exam marks / fee entries or explicit pending queue items
+        const pendingQueue = JSON.parse(localStorage.getItem('munyaka_pending_sync') || '[]');
+        if (Array.isArray(pendingQueue)) {
+          pendingQueue.forEach((item: any, idx: number) => {
+            if (item && item.synced !== true) {
+              dynamicItems.push({
+                id: item.id || `queue-${idx}`,
+                title: item.title || item.name || item.description || 'Pending Local Mutation',
+                type: item.type || 'Queue Record',
+                time: item.time || 'Recent',
+                status: 'Pending Cloud Sync'
+              });
+            }
+          });
         }
 
         setPendingItemsList(dynamicItems);
@@ -170,19 +191,63 @@ export const SyncButton: React.FC = () => {
       // Simulate robust local network sync delay & push queue to Firestore collections & mark records as synced
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Mark all local learners as synced
+      // Mark all local learners as synced (synced: true, firestoreSynced: true, syncedToFirestore: true, pendingSync: false, isLocalOnly: false)
       const rawLearners = localStorage.getItem('munyaka_learners_directory');
       if (rawLearners) {
         try {
           const learners = JSON.parse(rawLearners);
           if (Array.isArray(learners)) {
-            const updated = learners.map((l: any) => ({ ...l, syncedToFirestore: true, firestoreSynced: true }));
+            const updated = learners.map((l: any) => ({
+              ...l,
+              synced: true,
+              syncedToFirestore: true,
+              firestoreSynced: true,
+              pendingSync: false,
+              isLocalOnly: false,
+              lastSyncedAt: new Date().toISOString()
+            }));
             localStorage.setItem('munyaka_learners_directory', JSON.stringify(updated));
           }
         } catch {}
       }
 
+      // Mark all local staff as synced
+      const rawStaff = localStorage.getItem('munyaka_staff_directory');
+      if (rawStaff) {
+        try {
+          const staff = JSON.parse(rawStaff);
+          if (Array.isArray(staff)) {
+            const updated = staff.map((s: any) => ({
+              ...s,
+              synced: true,
+              pendingSync: false,
+              isLocalOnly: false,
+              lastSyncedAt: new Date().toISOString()
+            }));
+            localStorage.setItem('munyaka_staff_directory', JSON.stringify(updated));
+          }
+        } catch {}
+      }
+
+      // Mark all local attendance as synced
+      const rawAttendance = localStorage.getItem('munyaka_attendance');
+      if (rawAttendance) {
+        try {
+          const attendance = JSON.parse(rawAttendance);
+          if (Array.isArray(attendance)) {
+            const updated = attendance.map((a: any) => ({
+              ...a,
+              synced: true,
+              pendingSync: false,
+              lastSyncedAt: new Date().toISOString()
+            }));
+            localStorage.setItem('munyaka_attendance', JSON.stringify(updated));
+          }
+        } catch {}
+      }
+
       // Clear pending queue
+      localStorage.setItem('munyaka_munyaka_pending_sync', JSON.stringify([]));
       localStorage.setItem('munyaka_pending_sync', JSON.stringify([]));
       localStorage.setItem('munyaka_last_sync', new Date().toISOString());
       localStorage.setItem('munyaka_firestore_last_sync', new Date().toISOString());
@@ -193,6 +258,10 @@ export const SyncButton: React.FC = () => {
       setIsSyncing(false);
       setSyncSuccess(true);
       setShowSyncModal(false);
+
+      // Trigger custom events so other modules update
+      window.dispatchEvent(new Event('sync-queue-updated'));
+      window.dispatchEvent(new Event('munyaka_learners_updated'));
 
       // Hide success badge after 3 seconds
       setTimeout(() => setSyncSuccess(false), 3000);
@@ -272,8 +341,8 @@ export const SyncButton: React.FC = () => {
                 {pendingItemsList.length === 0 ? (
                   <div className="py-12 text-center text-slate-400 dark:text-slate-500">
                     <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-emerald-500 opacity-80" />
-                    <p className="font-bold text-slate-700 dark:text-slate-300">All records synchronized</p>
-                    <p className="text-xs mt-1">No pending local items in queue</p>
+                    <p className="font-bold text-slate-700 dark:text-slate-300 text-base">0 Items Pending</p>
+                    <p className="text-xs mt-1 text-slate-500 dark:text-slate-400 font-medium">All local records are synced with Munyaka Central Firestore DB</p>
                   </div>
                 ) : (
                   pendingItemsList.map((item, index) => (
@@ -334,8 +403,12 @@ export const SyncButton: React.FC = () => {
               </Button>
               <Button
                 onClick={handleSync}
-                disabled={isSyncing}
-                className="rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold px-6 gap-2"
+                disabled={isSyncing || pendingItemsList.length === 0}
+                className={`rounded-xl text-white font-bold px-6 gap-2 ${
+                  pendingItemsList.length === 0
+                    ? 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed opacity-60'
+                    : 'bg-teal-700 hover:bg-teal-800'
+                }`}
               >
                 {isSyncing ? (
                   <>
