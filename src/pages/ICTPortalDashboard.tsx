@@ -25,6 +25,69 @@ export default function ICTPortalDashboard() {
   const user = userStr ? JSON.parse(userStr) : { name: 'ICT Specialist', role: 'ict_teacher' };
   const teacherName = user.name || user.fullName || 'ICT Teacher';
 
+  // Calculate live metrics from storage / localStorage
+  const [assetList, setAssetList] = useState<any[]>(() => {
+    try {
+      const raw = localStorage.getItem('munyaka_ict_assets');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [competencyList, setCompetencyList] = useState<any[]>(() => {
+    try {
+      const raw = localStorage.getItem('munyaka_practical_competencies') || localStorage.getItem('munyaka_digital_skills');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Listen for storage changes
+  React.useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const rawAssets = localStorage.getItem('munyaka_ict_assets');
+        if (rawAssets) setAssetList(JSON.parse(rawAssets));
+
+        const rawComps = localStorage.getItem('munyaka_practical_competencies') || localStorage.getItem('munyaka_digital_skills');
+        if (rawComps) setCompetencyList(JSON.parse(rawComps));
+      } catch {}
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('munyaka_ict_assets', handleStorageChange);
+    window.addEventListener('munyaka_practical_competencies', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('munyaka_ict_assets', handleStorageChange);
+      window.removeEventListener('munyaka_practical_competencies', handleStorageChange);
+    };
+  }, []);
+
+  const totalAssetsCount = assetList.length;
+  const activeAssetsCount = assetList.filter((a: any) => {
+    const st = String(a.status || a.condition || 'active').toLowerCase();
+    return st.includes('active') || st.includes('good') || st.includes('working') || st.includes('operational');
+  }).length;
+  const servicingAssetsCount = totalAssetsCount - activeAssetsCount;
+
+  // Derive computer labs dynamically from asset location/lab fields or fallback to 0
+  const uniqueLabs = React.useMemo(() => {
+    const labsSet = new Set<string>();
+    assetList.forEach((a: any) => {
+      const labName = String(a.lab || a.location || a.room || '').trim();
+      if (labName) labsSet.add(labName);
+    });
+    return Array.from(labsSet);
+  }, [assetList]);
+
+  const computerLabsCount = uniqueLabs.length;
+  const labsSubtitle = uniqueLabs.length > 0 ? uniqueLabs.slice(0, 3).join(', ') : 'No labs registered';
+
+  const digitalSkillsGradedCount = competencyList.length;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 space-y-6">
       {/* Header Banner */}
@@ -96,8 +159,8 @@ export default function ICTPortalDashboard() {
               <CardContent className="p-6 flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total ICT Assets</p>
-                  <p className="text-3xl font-extrabold text-white">128</p>
-                  <p className="text-[11px] text-emerald-400 font-medium">114 Active, 14 Servicing</p>
+                  <p className="text-3xl font-extrabold text-white">{totalAssetsCount}</p>
+                  <p className="text-[11px] text-emerald-400 font-medium">{activeAssetsCount} Active, {servicingAssetsCount} Servicing</p>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
                   <Laptop className="w-7 h-7" />
@@ -109,8 +172,8 @@ export default function ICTPortalDashboard() {
               <CardContent className="p-6 flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Computer Labs</p>
-                  <p className="text-3xl font-extrabold text-white">3</p>
-                  <p className="text-[11px] text-cyan-400 font-medium">Lab 1, Lab 2, Mobile Cart</p>
+                  <p className="text-3xl font-extrabold text-white">{computerLabsCount}</p>
+                  <p className="text-[11px] text-cyan-400 font-medium truncate max-w-[160px]">{labsSubtitle}</p>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
                   <Monitor className="w-7 h-7" />
@@ -122,7 +185,7 @@ export default function ICTPortalDashboard() {
               <CardContent className="p-6 flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Digital Skills Graded</p>
-                  <p className="text-3xl font-extrabold text-white">340</p>
+                  <p className="text-3xl font-extrabold text-white">{digitalSkillsGradedCount}</p>
                   <p className="text-[11px] text-emerald-400 font-medium">Learners assessed this term</p>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
