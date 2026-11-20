@@ -13,7 +13,6 @@ import {
   Cloud,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useTeacherScope } from "@/hooks/useTeacherScope";
 import { CENTRAL_DB_KEY } from "@/components/AddMaterialModal";
 
 interface Learner {
@@ -33,9 +32,10 @@ interface AttendanceRecord {
 
 export function StaffAttendanceRegister() {
   const { user } = useAuth();
-  const { isLocked, isAdmin, grade: scopedGrade, stream: scopedStream, filterRecords } = useTeacherScope();
-  const assignedGrade = !isAdmin && scopedGrade ? scopedGrade : (!isAdmin ? (user?.assignedClass || user?.grade || 'Grade 9') : 'Grade 9');
-  const assignedStream = !isAdmin && scopedStream ? scopedStream : (!isAdmin ? (user?.assignedStream || user?.stream || 'Jupiter') : 'Jupiter');
+  const roleLower = String(user?.role || '').toLowerCase();
+  const isAdmin = roleLower === 'admin' || roleLower === 'owner' || roleLower === 'super_admin';
+  const assignedGrade = !isAdmin ? (user?.assignedClass || user?.grade || 'Grade 1') : 'Grade 1';
+  const assignedStream = !isAdmin ? (user?.assignedStream || user?.stream || 'East') : 'East';
 
   const [selectedGrade, setSelectedGrade] = useState<string>(assignedGrade);
   const [selectedStream, setSelectedStream] = useState<string>(assignedStream);
@@ -43,14 +43,14 @@ export function StaffAttendanceRegister() {
   // If teacher, enforce assigned grade and stream
   useEffect(() => {
     if (!isAdmin) {
-      if (scopedGrade) {
-        setSelectedGrade(scopedGrade);
+      if (user?.assignedClass || user?.grade) {
+        setSelectedGrade(user.assignedClass || user.grade || 'Grade 1');
       }
-      if (scopedStream) {
-        setSelectedStream(scopedStream);
+      if (user?.assignedStream || user?.stream) {
+        setSelectedStream(user.assignedStream || user.stream || 'East');
       }
     }
-  }, [user, isAdmin, scopedGrade, scopedStream]);
+  }, [user, isAdmin]);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [learners, setLearners] = useState<Learner[]>([]);
@@ -75,13 +75,9 @@ export function StaffAttendanceRegister() {
       }
 
       // Filter by selected grade and stream if available, or fallback to mock learners if empty
-      let filteredRoster = filterRecords(roster).filter((l: any) => {
-        const lGrade = String(l?.grade || l?.gradeLevel || l?.class || '').trim().toLowerCase();
-        const lStream = String(l?.stream || '').trim().toLowerCase();
-        const sGrade = selectedGrade.trim().toLowerCase();
-        const sStream = selectedStream.trim().toLowerCase();
-        const matchesGrade = !sGrade || lGrade === sGrade || lGrade.includes(sGrade) || sGrade.includes(lGrade);
-        const matchesStream = !sStream || lStream === sStream || lStream.includes(sStream) || sStream.includes(lStream);
+      let filteredRoster = roster.filter((l) => {
+        const matchesGrade = String(l.grade).toLowerCase().includes(selectedGrade.toLowerCase());
+        const matchesStream = !selectedStream || !l.stream || l.stream.toLowerCase() === selectedStream.toLowerCase();
         return matchesGrade && matchesStream;
       });
 
@@ -249,23 +245,17 @@ export function StaffAttendanceRegister() {
                 !isAdmin ? "bg-gray-100 text-gray-700 cursor-not-allowed border-gray-200" : "border-gray-200 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               }`}
             >
-              {isAdmin ? (
-                <>
-                  <option value="PP1">PP1</option>
-                  <option value="PP2">PP2</option>
-                  <option value="Grade 1">Grade 1</option>
-                  <option value="Grade 2">Grade 2</option>
-                  <option value="Grade 3">Grade 3</option>
-                  <option value="Grade 4">Grade 4</option>
-                  <option value="Grade 5">Grade 5</option>
-                  <option value="Grade 6">Grade 6</option>
-                  <option value="Grade 7">Grade 7</option>
-                  <option value="Grade 8">Grade 8</option>
-                  <option value="Grade 9">Grade 9</option>
-                </>
-              ) : (
-                <option value={selectedGrade}>{selectedGrade}</option>
-              )}
+              <option value="PP1">PP1</option>
+              <option value="PP2">PP2</option>
+              <option value="Grade 1">Grade 1</option>
+              <option value="Grade 2">Grade 2</option>
+              <option value="Grade 3">Grade 3</option>
+              <option value="Grade 4">Grade 4</option>
+              <option value="Grade 5">Grade 5</option>
+              <option value="Grade 6">Grade 6</option>
+              <option value="Grade 7">Grade 7</option>
+              <option value="Grade 8">Grade 8</option>
+              <option value={assignedGrade}>{assignedGrade}</option>
             </select>
           </div>
 
@@ -281,22 +271,11 @@ export function StaffAttendanceRegister() {
                 !isAdmin ? "bg-gray-100 text-gray-700 cursor-not-allowed border-gray-200" : "border-gray-200 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               }`}
             >
-              {isAdmin ? (
-                <>
-                  <option value="East">East</option>
-                  <option value="West">West</option>
-                  <option value="North">North</option>
-                  <option value="South">South</option>
-                  <option value="Green">Green</option>
-                  <option value="Blue">Blue</option>
-                  <option value="Yellow">Yellow</option>
-                  <option value="Jupiter">Jupiter</option>
-                  <option value="Mars">Mars</option>
-                  <option value="Venus">Venus</option>
-                </>
-              ) : (
-                <option value={selectedStream}>{selectedStream}</option>
-              )}
+              <option value="East">East</option>
+              <option value="West">West</option>
+              <option value="Green">Green</option>
+              <option value="Blue">Blue</option>
+              <option value={assignedStream}>{assignedStream}</option>
             </select>
           </div>
 

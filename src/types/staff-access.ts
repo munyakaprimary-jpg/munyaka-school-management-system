@@ -94,27 +94,13 @@ export interface StaffMember {
   assignedStreams?: string[];
   assignedGrade?: string;
   assignedStream?: string;
-  assignedClass?: string;
   homeroomGrade?: string;
   homeroomStream?: string;
-  isClassLocked?: boolean;
-  classLocked?: boolean;
-  isLocked?: boolean;
-  lockedClass?: boolean;
-  password?: string;
-  passwordHash?: string;
-  lastPasswordChange?: string;
-  loginEnabled?: boolean;
-  accessCode?: string;
-  createdAt?: string;
-  allocations?: any[];
   tempAccessCode?: string;
-  datePreRegistered?: string;
+  datePreRegistered: string;
   activatedAt?: string;
   lastLogin?: string;
   profileComplete?: boolean;
-  rawPayload?: any;
-  [key: string]: any;
 }
 
 export type PreRegisteredStaff = StaffMember;

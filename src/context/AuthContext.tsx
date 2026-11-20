@@ -15,7 +15,6 @@ import {
 import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 import { mapRoleLabelToRbacKey, getExactStaffRoleTitle } from '@/constants/roles';
 import { startHeartbeatService, stopHeartbeatService } from '@/services/deviceHeartbeat';
-import { parseBoundClass } from '@/utils/classLockUtils';
 import { auth } from '@/config/firebase';
 import { signOut } from 'firebase/auth';
 
@@ -491,12 +490,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const exactRole = getExactStaffRoleTitle(rawRole);
       const rbacKey = mapRoleLabelToRbacKey(exactRole);
 
-      const rawAssignedClass = (matchedStaff as any).assignedGrade && (matchedStaff as any).assignedStream
-        ? `${(matchedStaff as any).assignedGrade} ${(matchedStaff as any).assignedStream}`
-        : ((matchedStaff as any).assignedGrade || (matchedStaff as any).assignedClass || '');
-
-      const parsedBound = parseBoundClass(rawAssignedClass);
-
       const loggedUser: User = {
         id: (matchedStaff as any).id || 'staff-' + Date.now(),
         name: (matchedStaff as any).name || (matchedStaff as any).fullName || 'Staff Member',
@@ -507,11 +500,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         title: exactRole,
         identifier: (matchedStaff as any).tscNumber || (matchedStaff as any).nationalId || (matchedStaff as any).id,
         avatar: (matchedStaff as any).avatar || String((matchedStaff as any).name || (matchedStaff as any).fullName || 'ST').split(' ').map((n: string) => n[0] || '').join('').substring(0, 2).toUpperCase(),
-        assignedClass: parsedBound.isLocked ? `${parsedBound.grade} ${parsedBound.stream}` : (rawAssignedClass || ''),
-        assignedStream: parsedBound.stream || (matchedStaff as any).assignedStream || '',
-        grade: parsedBound.grade || (matchedStaff as any).assignedGrade || '',
-        stream: parsedBound.stream || (matchedStaff as any).assignedStream || '',
-        department: (matchedStaff as any).department || (matchedStaff as any).category || ''
+        assignedClass: (matchedStaff as any).assignedGrade || (matchedStaff as any).assignedClass || '',
+        assignedStream: (matchedStaff as any).assignedStream || (matchedStaff as any).assigned_stream || (matchedStaff as any).stream || '',
+        department: (matchedStaff as any).department || (matchedStaff as any).category || '',
+        staff_id: (matchedStaff as any).staffId || ''
       };
 
       setUser(loggedUser);

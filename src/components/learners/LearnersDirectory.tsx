@@ -10,7 +10,6 @@ import { getActiveAdminPassword } from '@/services/adminCredentials';
 import { findAssessmentBirthCertDuplicate, formatAssessmentDuplicateError } from '@/utils/learnerIdentity';
 import { matchesBoundClass, getTeacherBoundClass, parseBoundClass } from '@/utils/classLockUtils';
 import { useAuth } from '@/context/AuthContext';
-import { useClassLock } from '@/context/ClassLockContext';
 
 interface Learner {
   id: string;
@@ -72,7 +71,6 @@ const getStoredLearnersList = (): Learner[] => {
 
 export default function LearnersDirectory() {
   const { user } = useAuth();
-  const { filterLearners, isLocked: isTeacherLocked, activeClass, getAllowedGradeOptions, getAllowedStreamOptions } = useClassLock();
   const [learners, setLearners] = useState<Learner[]>(() => {
     return getStoredLearnersList();
   });
@@ -83,35 +81,36 @@ export default function LearnersDirectory() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Strict class lock for teachers (class_teacher / subject_teacher)
-  const teacherBoundClass = activeClass.isLocked ? `${activeClass.grade} ${activeClass.stream}` : '';
-  const boundClassParsed = activeClass;
+  const teacherBoundClass = useMemo(() => {
+    try {
+      const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+      const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+      const staffList = centralDb.staff || centralDb.teachers || [];
+      const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '');
+      const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase();
+      const matchedStaffRecord = staffList.find((st: any) => {
+        const stId = String(st.id || st.staffId || st.tscNo || '');
+        const stEmail = String(st.email || '').toLowerCase();
+        return (userId && stId === userId) || (userEmail && stEmail === userEmail);
+      }) || {};
+      return getTeacherBoundClass(currentUserObj, matchedStaffRecord);
+    } catch {
+      return null;
+    }
+  }, [user]);
 
-  // Auto-apply class lock or query params on mount
+  const isTeacherLocked = Boolean(teacherBoundClass);
+  const boundClassParsed = useMemo(() => parseBoundClass(teacherBoundClass), [teacherBoundClass]);
+
+  // Auto-apply class lock on mount
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const qGrade = params.get('grade');
-    const qStream = params.get('stream');
-
-    if (qGrade) {
-      setSelectedGrade(qGrade.startsWith('Grade') ? qGrade : `Grade ${qGrade}`);
-      if (qStream) {
-        setSelectedStream(qStream);
-      }
-    } else if (isTeacherLocked && boundClassParsed.grade) {
+    if (isTeacherLocked && boundClassParsed.grade) {
       setSelectedGrade(`Grade ${boundClassParsed.grade}`);
       if (boundClassParsed.stream) {
         setSelectedStream(boundClassParsed.stream);
       }
     }
   }, [isTeacherLocked, boundClassParsed.grade, boundClassParsed.stream]);
-
-  // Ensure active class lock forces state if locked
-  useEffect(() => {
-    if (isTeacherLocked) {
-      if (activeClass.grade) setSelectedGrade(activeClass.grade);
-      if (activeClass.stream) setSelectedStream(activeClass.stream);
-    }
-  }, [isTeacherLocked, activeClass]);
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -246,10 +245,9 @@ export default function LearnersDirectory() {
     return Array.from(set).sort();
   }, [learners]);
 
-  // Filtered learners using ClassLockContext & useClassLock
+  // Filtered learners
   const filteredLearners = useMemo(() => {
-    const scoped = filterLearners(learners);
-    return scoped.filter(l => {
+    return learners.filter(l => {
       const fullName = (l.fullName || l.name || `${l.firstName || ''} ${l.lastName || ''}`).toLowerCase();
       const adm = (l.admissionNumber || l.admissionNo || l.admNo || '').toLowerCase();
       const assess = (l.assessmentNumber || l.assessmentNo || l.birthCertNo || '').toLowerCase();
@@ -258,14 +256,14 @@ export default function LearnersDirectory() {
       const matchesSearch = !query || fullName.includes(query) || adm.includes(query) || assess.includes(query);
       
       const gradeVal = l.grade || l.gradeLevel || '';
-      const matchesGrade = selectedGrade === 'all' || gradeVal === selectedGrade || gradeVal.toLowerCase().includes(selectedGrade.toLowerCase());
-      const matchesStream = selectedStream === 'all' || l.stream === selectedStream || String(l.stream || '').toLowerCase() === selectedStream.toLowerCase();
+      const matchesGrade = selectedGrade === 'all' || gradeVal === selectedGrade;
+      const matchesStream = selectedStream === 'all' || l.stream === selectedStream;
       const genderVal = (l.gender || '').toLowerCase();
       const matchesGender = selectedGender === 'all' || genderVal === selectedGender.toLowerCase();
 
       return matchesSearch && matchesGrade && matchesStream && matchesGender;
     });
-  }, [learners, searchQuery, selectedGrade, selectedStream, selectedGender, filterLearners]);
+  }, [learners, searchQuery, selectedGrade, selectedStream, selectedGender]);
 
   // Handle Selection
   const toggleSelectAll = () => {
@@ -410,41 +408,27 @@ export default function LearnersDirectory() {
             {/* Grade Filter */}
             <select
               value={selectedGrade}
-              onChange={(e) => !isTeacherLocked && setSelectedGrade(e.target.value)}
-              disabled={isTeacherLocked}
+              onChange={(e) => setSelectedGrade(e.target.value)}
               aria-label="Filter by Grade"
-              className={`px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${isTeacherLocked ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : ''}`}
+              className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              {isTeacherLocked ? (
-                <option value={selectedGrade}>{selectedGrade} (Locked)</option>
-              ) : (
-                <>
-                  <option value="all">All Grades</option>
-                  {gradesList.map(g => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </>
-              )}
+              <option value="all">All Grades</option>
+              {gradesList.map(g => (
+                <option key={g} value={g}>{g}</option>
+              ))}
             </select>
 
             {/* Stream Filter */}
             <select
               value={selectedStream}
-              onChange={(e) => !isTeacherLocked && setSelectedStream(e.target.value)}
-              disabled={isTeacherLocked}
+              onChange={(e) => setSelectedStream(e.target.value)}
               aria-label="Filter by Stream"
-              className={`px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${isTeacherLocked ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : ''}`}
+              className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              {isTeacherLocked ? (
-                <option value={selectedStream}>{selectedStream} (Locked)</option>
-              ) : (
-                <>
-                  <option value="all">All Streams</option>
-                  {streamsList.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </>
-              )}
+              <option value="all">All Streams</option>
+              {streamsList.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
             </select>
 
             {/* Gender Filter */}

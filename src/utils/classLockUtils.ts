@@ -8,74 +8,83 @@
 export interface ParsedClass {
   grade: string;
   stream: string;
-  displayGrade?: string;
-  displayStream?: string;
-  isLocked: boolean;
 }
 
 /**
- * Parses a class string like "Grade 4 Yellow", "Grade 4 (Yellow)", or "Grade 4"
- * into a normalized { grade, stream, displayGrade, displayStream, isLocked } object.
- * Strips parentheses, normalizes whitespace and case.
+ * Parses a class string like "Grade 8 Jupiter", "Grade 8 (Jupiter)", or "Grade 8"
+ * into a normalized { grade, stream } object.
+ * - Case-insensitive
+ * - Ignores parentheses
+ * - Strips "Grade" keyword
  */
 export function parseBoundClass(boundClass: string | null | undefined): ParsedClass {
-  if (!boundClass || boundClass === 'No Class Assigned' || boundClass === 'All Grades' || boundClass === 'all') {
-    return { grade: '', stream: '', displayGrade: '', displayStream: '', isLocked: false };
-  }
+  if (!boundClass) return { grade: '', stream: '' };
 
   const raw = String(boundClass).trim();
-  if (!raw) return { grade: '', stream: '', displayGrade: '', displayStream: '', isLocked: false };
+  if (!raw) return { grade: '', stream: '' };
 
   // Remove parentheses and their contents if they contain the stream
   let cleaned = raw.replace(/\([^)]*\)/g, '').trim();
+  // If parentheses contained the stream, extract it
   const parenMatch = raw.match(/\(([^)]+)\)/);
   const parenStream = parenMatch ? parenMatch[1].trim() : '';
 
   const parts = cleaned.split(/\s+/);
-  let gradePart = '';
-  let streamPart = '';
+  let grade = '';
+  let stream = '';
 
   if (parts.length >= 2) {
-    streamPart = parts[parts.length - 1];
-    gradePart = parts.slice(0, parts.length - 1).join(' ');
+    stream = parts[parts.length - 1];
+    grade = parts.slice(0, parts.length - 1).join(' ');
   } else {
-    gradePart = raw;
+    grade = raw;
   }
 
-  const finalStream = streamPart || parenStream;
-
-  // Normalized strings for comparison (e.g. "Grade 4" -> "Grade 4", "Yellow" -> "Yellow")
-  const normGrade = gradePart.toLowerCase().includes('grade') ? gradePart : `Grade ${gradePart}`.trim();
-  const normStream = finalStream;
+  // Normalize grade: strip "Grade" keyword, keep numbers/letters
+  const normalizedGrade = grade.replace(/grade/gi, '').replace(/[^a-zA-Z0-9]/g, '').trim();
+  const normalizedStream = (stream || parenStream).replace(/[^a-zA-Z0-9]/g, '').trim();
 
   return {
-    grade: normGrade,
-    stream: normStream,
-    displayGrade: normGrade,
-    displayStream: normStream,
-    isLocked: true
+    grade: normalizedGrade,
+    stream: normalizedStream
   };
 }
 
 /**
- * Checks if a learner record matches a bound class string or normalized filter.
+ * Checks if a learner record matches a bound class string.
+ * Matches against learner's grade, gradeLevel, class, and stream fields.
+ * Case-insensitive, ignores parentheses and extra whitespace.
  */
 export function matchesBoundClass(learner: any, boundClass: string | null | undefined): boolean {
-  if (!boundClass) return true;
-  const target = parseBoundClass(boundClass);
-  if (!target.isLocked) return true;
+  if (!boundClass) return true; // No lock = see all
   if (!learner) return false;
 
-  const learnerGrade = String(learner?.grade || learner?.gradeLevel || learner?.class || learner?.currentGrade || '').trim();
-  const learnerStream = String(learner?.stream || '').trim();
+  const target = parseBoundClass(boundClass);
+  if (!target.grade && !target.stream) return true;
 
-  const targetGradeNum = target.grade.replace(/grade/gi, '').trim().toLowerCase();
-  const learnerGradeNum = learnerGrade.replace(/grade/gi, '').trim().toLowerCase();
-  const gradeMatches = !targetGradeNum || learnerGradeNum === targetGradeNum || learnerGrade.toLowerCase().includes(target.grade.toLowerCase());
+  // Gather candidate grade strings from the learner record
+  const learnerGradeRaw = String(
+    learner?.grade || learner?.gradeLevel || learner?.class || learner?.currentGrade || ''
+  ).trim();
+  const learnerStreamRaw = String(learner?.stream || '').trim();
 
-  const targetStreamLower = target.stream.toLowerCase();
-  const learnerStreamLower = learnerStream.toLowerCase();
-  const streamMatches = !targetStreamLower || learnerStreamLower === targetStreamLower || learnerStreamLower.includes(targetStreamLower) || targetStreamLower.includes(learnerStreamLower);
+  // Parse learner's class similarly
+  const learnerParsed = parseBoundClass(
+    learnerGradeRaw + (learnerStreamRaw ? ' ' + learnerStreamRaw : '')
+  );
+
+  // Grade matching: exact or substring inclusion
+  const gradeMatches = !target.grade ||
+    learnerParsed.grade === target.grade ||
+    learnerParsed.grade.includes(target.grade) ||
+    target.grade.includes(learnerParsed.grade);
+
+  // Stream matching: exact or substring inclusion (if target stream is specified)
+  const streamMatches = !target.stream ||
+    !learnerParsed.stream ||
+    learnerParsed.stream === target.stream ||
+    learnerParsed.stream.includes(target.stream) ||
+    target.stream.includes(learnerParsed.stream);
 
   return gradeMatches && streamMatches;
 }

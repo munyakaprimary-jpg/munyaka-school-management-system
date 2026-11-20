@@ -112,66 +112,12 @@ export const SyncButton: React.FC = () => {
         const pendingQueue = JSON.parse(localStorage.getItem('munyaka_pending_sync') || '[]');
         if (pendingQueue.length > 0) {
           pendingQueue.forEach((item: any, idx: number) => {
-            const p = item.payload || item.data || {};
-            const t = String(item.type || '').toLowerCase();
-            const a = String(item.action || 'update').toLowerCase();
-
-            let title = item.title;
-            let subtitle = item.subtitle;
-
-            if (!title) {
-              if (t === 'staff') {
-                const name = p.name || p.fullName || 'Staff Member';
-                const tsc = p.tscNumber ? `(TSC ${p.tscNumber})` : (p.nationalId ? `(ID ${p.nationalId})` : '');
-                const roleLabel = p.category || p.rbacRole || 'Staff';
-                title = `${a === 'create' ? 'New Staff' : (a === 'delete' ? 'Delete Staff' : 'Staff Update')}: ${name} ${tsc}`.trim();
-                subtitle = `${roleLabel}${p.homeroomGrade ? ` • Homeroom: ${p.homeroomGrade} ${p.homeroomStream || ''}` : (p.assignedClass ? ` • Class: ${p.assignedClass}` : '')}${p.isClassLocked || p.classLocked ? ' • Class Lock: Locked' : ''}`;
-              } else if (t === 'learners' || t === 'learner') {
-                const name = p.name || p.fullName || p.learnerName || 'Learner';
-                const adm = p.admissionNo || p.admissionNumber || p.admNo ? `(ADM ${p.admissionNo || p.admissionNumber || p.admNo})` : '';
-                const cls = p.grade || p.class || p.stream ? `• ${p.grade || p.class || ''} ${p.stream || ''}`.trim() : '';
-                title = `${a === 'create' ? 'New Learner' : (a === 'delete' ? 'Delete Learner' : 'Learner Update')}: ${name} ${adm}`.trim();
-                subtitle = `${cls || p.guardianName ? `Guardian: ${p.guardianName || 'N/A'}` : 'Learner profile record'}`;
-              } else if (t === 'rollcall' || t === 'attendance' || t === 'staff_attendance') {
-                const cls = p.grade || p.class || p.className || 'Class';
-                const strm = p.stream || p.streamName || '';
-                const count = p.presentCount || p.count || p.total || p.attendees?.length || '';
-                title = `Roll Call / Attendance: ${cls} ${strm}`.trim();
-                subtitle = `${count ? `${count} Present` : 'Attendance marked'} • ${p.date || new Date().toLocaleDateString()}`;
-              } else if (t === 'assessments' || t === 'marks' || t === 'exam') {
-                const cls = p.grade || p.class || '';
-                const subj = p.subject || p.learningArea || 'Subject';
-                title = `Exam Marks: ${cls} — ${subj}`;
-                subtitle = `${p.examType || p.term || 'Assessment'} • ${p.marksCount || p.entries?.length || 'Scores'} Entered`;
-              } else if (t === 'fees' || t === 'payment') {
-                const name = p.learnerName || p.studentName || p.name || 'Student';
-                const amt = p.amount ? `Ksh ${Number(p.amount).toLocaleString()}` : '';
-                title = `Fee Payment: ${name} ${amt}`;
-                subtitle = `${p.reference || p.receiptNo || 'Payment record'} • ${p.date || new Date().toLocaleDateString()}`;
-              } else {
-                title = `${item.action ? item.action.toUpperCase() : 'UPDATE'} ${item.type || 'Record'}`;
-                subtitle = p.name || p.title || p.fullName || JSON.stringify(p).slice(0, 45);
-              }
-            }
-
-            // Format relative time
-            let timeStr = 'Just now';
-            if (item.createdAt) {
-              const diffMs = Date.now() - new Date(item.createdAt).getTime();
-              const diffMins = Math.floor(diffMs / 60000);
-              const diffHours = Math.floor(diffMins / 60);
-              if (diffMins < 1) timeStr = 'Just now';
-              else if (diffMins < 60) timeStr = `${diffMins} mins ago`;
-              else if (diffHours < 24) timeStr = `${diffHours} hours ago`;
-              else timeStr = new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            }
-
             dynamicItems.push({
               id: item.id || `queue-${idx}`,
-              title: title,
-              type: subtitle ? `${item.type || 'Record'} • ${subtitle}` : (item.type || 'Queue Item'),
-              time: timeStr,
-              status: item.synced ? 'Synced' : 'Pending Queue'
+              title: item.title || item.name || 'Pending Local Record',
+              type: item.type || 'Queue Item',
+              time: item.time || 'Recent',
+              status: item.status || 'Pending Queue'
             });
           });
         }

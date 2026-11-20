@@ -60,8 +60,9 @@ const ALL_SET_EXAMS_KEY = "all_set_exams";
 const MARKED_SUBMISSIONS_KEY = "marked_student_submissions";
 
 // ─── Filter option lists ───────────────────────────────────────────────────────
-import { useClassLock } from "@/context/ClassLockContext";
-
+// Standard Kenyan CBC grade list (PP1, PP2, Grade 1..9). The selector compares
+// these values against each Assessment's `classLevel` field, so any extra
+// custom values supplied by admins are still passed through as-is.
 const GRADE_OPTIONS: string[] = [
   "PP1",
   "PP2",
@@ -295,11 +296,9 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   preselectedAssessmentId,
 }) => {
   const { user } = useAuth();
-  const { isLocked, activeClass, isAdmin: isClassLockAdmin } = useClassLock();
-  const roleLower = String(user?.role || '').toLowerCase();
-  const isAdmin = isClassLockAdmin || roleLower === 'admin' || roleLower === 'owner' || roleLower === 'super_admin';
-  const assignedGrade = !isAdmin && activeClass.grade ? activeClass.grade : (!isAdmin ? (user?.assignedClass || user?.grade || 'Grade 4') : ALL_GRADES_VALUE);
-  const assignedStream = !isAdmin && activeClass.stream ? activeClass.stream : (!isAdmin ? (user?.assignedStream || user?.stream || 'Yellow') : ALL_STREAMS_VALUE);
+  const isAdmin = String(user?.role || '').toLowerCase() === 'admin' || String(user?.role || '').toLowerCase() === 'owner' || String(user?.role || '').toLowerCase() === 'super_admin';
+  const assignedGrade = !isAdmin ? (user?.assignedClass || user?.grade || 'Grade 1') : ALL_GRADES_VALUE;
+  const assignedStream = !isAdmin ? (user?.assignedStream || user?.stream || ALL_STREAMS_VALUE) : ALL_STREAMS_VALUE;
 
   const csvExport = useFileDownload();
 
@@ -342,14 +341,14 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   // Enforce grade & stream lock for teachers
   useEffect(() => {
     if (!isAdmin) {
-      if (activeClass.grade) {
-        setSelectedGrade(activeClass.grade);
+      if (user?.assignedClass || user?.grade) {
+        setSelectedGrade(user.assignedClass || user.grade || assignedGrade);
       }
-      if (activeClass.stream) {
-        setSelectedStream(activeClass.stream);
+      if (user?.assignedStream || user?.stream) {
+        setSelectedStream(user.assignedStream || user.stream || assignedStream);
       }
     }
-  }, [isAdmin, activeClass]);
+  }, [user, isAdmin, assignedGrade, assignedStream]);
 
   // ── Auto-reset: when grade or stream changes, select the first matching exam
   //    (but preserve "all" if the user had explicitly chosen it and it's still valid).
@@ -1084,23 +1083,18 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
             <div className="w-full">
               <Select
                 value={selectedGrade}
-                onValueChange={(val) => !isLocked && setSelectedGrade(val)}
-                disabled={isLocked}
+                onValueChange={(val) => isAdmin && setSelectedGrade(val)}
+                disabled={!isAdmin}
               >
-                <SelectTrigger className={`w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-2xl text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-purple-500 cursor-pointer ${isLocked ? 'bg-slate-100 text-slate-700 cursor-not-allowed opacity-80' : ''}`}>
-                  <SelectValue placeholder={selectedGrade || "Grade 4"} />
+                <SelectTrigger className={`w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-2xl text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-purple-500 cursor-pointer ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}>
+                  <SelectValue placeholder="All Grades" />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLocked ? (
-                    <SelectItem value={selectedGrade}>{selectedGrade} (Locked)</SelectItem>
-                  ) : (
-                    <>
-                      <SelectItem value={ALL_GRADES_VALUE}>All Grades</SelectItem>
-                      {GRADE_OPTIONS.map((g) => (
-                        <SelectItem key={g} value={g}>{g}</SelectItem>
-                      ))}
-                    </>
-                  )}
+                  <SelectItem value={ALL_GRADES_VALUE}>All Grades</SelectItem>
+                  {GRADE_OPTIONS.map((g) => (
+                    <SelectItem key={g} value={g}>{g}</SelectItem>
+                  ))}
+                  {!isAdmin && <SelectItem value={user?.assignedClass || user?.grade || 'Grade 1'}>{user?.assignedClass || user?.grade || 'Grade 1'}</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
@@ -1109,22 +1103,17 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
             <div className="w-full">
               <select
                 value={selectedStream}
-                onChange={(e) => !isLocked && setSelectedStream(e.target.value)}
-                disabled={isLocked}
-                className={`w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-2xl text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-purple-500 cursor-pointer ${isLocked ? 'bg-slate-100 text-slate-700 cursor-not-allowed opacity-80' : ''}`}
+                onChange={(e) => isAdmin && setSelectedStream(e.target.value)}
+                disabled={!isAdmin}
+                className={`w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-2xl text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-purple-500 cursor-pointer ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}
               >
-                {isLocked ? (
-                  <option value={selectedStream}>{selectedStream} (Locked)</option>
-                ) : (
-                  <>
-                    <option value={ALL_STREAMS_VALUE}>All Streams</option>
-                    {availableStreams.map((streamName) => (
-                      <option key={streamName} value={streamName}>
-                        {streamName}
-                      </option>
-                    ))}
-                  </>
-                )}
+                <option value={ALL_STREAMS_VALUE}>All Streams</option>
+                {availableStreams.map((streamName) => (
+                  <option key={streamName} value={streamName}>
+                    {streamName}
+                  </option>
+                ))}
+                {!isAdmin && <option value={user?.assignedStream || user?.stream || 'East'}>{user?.assignedStream || user?.stream || 'East'}</option>}
               </select>
             </div>
 

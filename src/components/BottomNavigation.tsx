@@ -47,29 +47,6 @@ export const BottomNavigation = () => {
   const location = useLocation();
   const { user } = useAuth();
 
-  const getNavPath = (path: string) => {
-    try {
-      const lockKeyPrefix = 'munyaka_teacher_class_lock_';
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(lockKeyPrefix)) {
-          const val = localStorage.getItem(key);
-          if (val && val !== 'No Class Assigned') {
-            const parts = val.trim().split(/\s+/);
-            if (parts.length >= 2) {
-              const stream = parts[parts.length - 1];
-              const grade = parts.slice(0, parts.length - 1).join(' ');
-              if (path === '/attendance' || path === '/learners' || path === '/assessments') {
-                return `${path}?grade=${encodeURIComponent(grade)}&stream=${encodeURIComponent(stream)}`;
-              }
-            }
-          }
-        }
-      }
-    } catch {}
-    return path;
-  };
-
   const filteredItems = useMemo(() => {
     if (!user) return [];
     return NAV_ITEMS.filter(item => item.roles.includes(user.role as UserRole));
@@ -82,12 +59,11 @@ export const BottomNavigation = () => {
       {!isEmpty ? (
         <div className="flex items-stretch justify-start gap-1 px-1 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
           {filteredItems.map((item) => {
-            const targetPath = getNavPath(item.path);
             const isActive = location.pathname === item.path;
             return (
               <Link
                 key={item.path}
-                to={targetPath}
+                to={item.path}
                 className={cn(
                   "flex flex-col items-center justify-center py-2 px-2 rounded-2xl min-h-[52px] min-w-[64px] shrink-0 snap-start touch-active transition-all duration-200 ease-out",
                   isActive

@@ -544,14 +544,9 @@ export const PENDING_SYNC_KEY = 'munyaka_pending_sync';
 
 export interface PendingSyncItem {
   id: string;
-  type: string;
-  action: string;
-  payload?: any;
-  data?: any;
-  title?: string;
-  subtitle?: string;
-  recordId?: string;
-  synced?: boolean;
+  type: 'learner' | 'staff' | 'attendance' | 'payment' | 'message';
+  action: 'create' | 'update' | 'delete';
+  payload: Record<string, any>;
   createdAt: string;
 }
 
@@ -561,55 +556,8 @@ export function getPendingSyncItems(): PendingSyncItem[] {
 
 export function addPendingSyncItem(item: Omit<PendingSyncItem, 'createdAt'>): PendingSyncItem {
   const queue = getPendingSyncItems();
-  
-  let title = item.title;
-  let subtitle = item.subtitle;
-  const p = item.payload || item.data || {};
-  const t = String(item.type || '').toLowerCase();
-  const a = String(item.action || 'update').toLowerCase();
-
-  if (!title) {
-    if (t === 'staff') {
-      const name = p.name || p.fullName || 'Staff Member';
-      const tsc = p.tscNumber ? `(TSC ${p.tscNumber})` : (p.nationalId ? `(ID ${p.nationalId})` : '');
-      const roleLabel = p.category || p.rbacRole || 'Staff';
-      title = `${a === 'create' ? 'New Staff' : (a === 'delete' ? 'Delete Staff' : 'Staff Update')}: ${name} ${tsc}`.trim();
-      subtitle = `${roleLabel}${p.homeroomGrade ? ` • Homeroom: ${p.homeroomGrade} ${p.homeroomStream || ''}` : (p.assignedClass ? ` • Class: ${p.assignedClass}` : '')}${p.isClassLocked || p.classLocked ? ' • Class Lock: Locked' : ''}`;
-    } else if (t === 'learners' || t === 'learner') {
-      const name = p.name || p.fullName || p.learnerName || 'Learner';
-      const adm = p.admissionNo || p.admissionNumber || p.admNo ? `(ADM ${p.admissionNo || p.admissionNumber || p.admNo})` : '';
-      const cls = p.grade || p.class || p.stream ? `• ${p.grade || p.class || ''} ${p.stream || ''}`.trim() : '';
-      title = `${a === 'create' ? 'New Learner' : (a === 'delete' ? 'Delete Learner' : 'Learner Update')}: ${name} ${adm}`.trim();
-      subtitle = `${cls || p.guardianName ? `Guardian: ${p.guardianName || 'N/A'}` : 'Learner profile record'}`;
-    } else if (t === 'rollcall' || t === 'attendance' || t === 'staff_attendance') {
-      const cls = p.grade || p.class || p.className || 'Class';
-      const strm = p.stream || p.streamName || '';
-      const count = p.presentCount || p.count || p.total || p.attendees?.length || '';
-      title = `Roll Call / Attendance: ${cls} ${strm}`.trim();
-      subtitle = `${count ? `${count} Present` : 'Attendance marked'} • ${p.date || new Date().toLocaleDateString()}`;
-    } else if (t === 'assessments' || t === 'marks' || t === 'exam') {
-      const cls = p.grade || p.class || '';
-      const subj = p.subject || p.learningArea || 'Subject';
-      title = `Exam Marks: ${cls} — ${subj}`;
-      subtitle = `${p.examType || p.term || 'Assessment'} • ${p.marksCount || p.entries?.length || 'Scores'} Entered`;
-    } else if (t === 'fees' || t === 'payment') {
-      const name = p.learnerName || p.studentName || p.name || 'Student';
-      const amt = p.amount ? `Ksh ${Number(p.amount).toLocaleString()}` : '';
-      title = `Fee Payment: ${name} ${amt}`;
-      subtitle = `${p.reference || p.receiptNo || 'Payment record'} • ${p.date || new Date().toLocaleDateString()}`;
-    } else {
-      title = `${item.action.toUpperCase()} ${item.type}`;
-      subtitle = p.name || p.title || JSON.stringify(p).slice(0, 40);
-    }
-  }
-
-  const next: PendingSyncItem = {
-    ...item,
-    title,
-    subtitle,
-    recordId: item.recordId || p.id || p.staffId || p.admissionNo || '',
-    createdAt: new Date().toISOString()
-  };
+  const next: PendingSyncItem = { ...item, createdAt: new Date().toISOString() };
+  // Replace existing entry for the same id if present, otherwise append.
   const idx = queue.findIndex((q) => q.id === next.id);
   if (idx !== -1) {
     queue[idx] = next;

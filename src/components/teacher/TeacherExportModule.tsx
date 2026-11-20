@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Download, ShieldCheck, Calendar as CalendarIcon, BookOpen } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useClassLock } from '@/context/ClassLockContext';
 import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
 import { showSuccess, showError } from '@/utils/toast';
 import TeacherSyncQrGenerator from '@/components/teacher/TeacherSyncQrGenerator';
@@ -15,25 +14,45 @@ const SCHOOL_CENTRE_CODE = '26534178';
 
 export const TeacherExportModule: React.FC = () => {
   const { user } = useAuth();
-  const { activeClass, isAdmin } = useClassLock();
 
   const config = useMemo(() => readGradesAndStreams(), []);
   const grades = config.grades;
   const streams = useMemo(() => config.streams, [config]);
 
-  const initialGradePart = !isAdmin && activeClass.grade ? activeClass.grade : 'Grade 4';
-  const initialStreamPart = !isAdmin && activeClass.stream ? activeClass.stream : 'Yellow';
+  // Read current teacher assigned class from localStorage or user context
+  const getInitialAssignedClass = () => {
+    try {
+      const curr = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+      return curr.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || '';
+    } catch {
+      return (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || '';
+    }
+  };
+
+  const initialClassStr = getInitialAssignedClass();
+  const initialGradePart = useMemo(() => {
+    if (!initialClassStr || initialClassStr === 'No Class Assigned') return grades[0] || 'Grade 1';
+    const parts = initialClassStr.trim().split(' ');
+    if (parts.length >= 2) {
+      const possibleGrade = parts.slice(0, parts.length - 1).join(' ');
+      if (grades.includes(possibleGrade)) return possibleGrade;
+    }
+    return grades[0] || 'Grade 1';
+  }, [initialClassStr, grades]);
+
+  const initialStreamPart = useMemo(() => {
+    if (!initialClassStr || initialClassStr === 'No Class Assigned') return streams[0] || 'Green';
+    const parts = initialClassStr.trim().split(' ');
+    if (parts.length >= 2) {
+      const possibleStream = parts[parts.length - 1];
+      const available = getStreamsForGrade(initialGradePart, config);
+      if (available.includes(possibleStream)) return possibleStream;
+    }
+    return streams[0] || 'Green';
+  }, [initialClassStr, initialGradePart, config, streams]);
 
   const [selectedGrade, setSelectedGrade] = useState<string>(initialGradePart);
   const [selectedStream, setSelectedStream] = useState<string>(initialStreamPart);
-
-  // Keep synced if class lock changes
-  useEffect(() => {
-    if (!isAdmin) {
-      if (activeClass.grade) setSelectedGrade(activeClass.grade);
-      if (activeClass.stream) setSelectedStream(activeClass.stream);
-    }
-  }, [isAdmin, activeClass]);
 
   // Optional Date Picker for Missed Syncs (defaults to today YYYY-MM-DD)
   const todayLocalString = useMemo(() => {

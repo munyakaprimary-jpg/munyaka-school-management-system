@@ -170,18 +170,11 @@ export default function StaffRegistry() {
   const [assignedStreams, setAssignedStreams] = useState<string[]>([]);
   const [homeroomGrade, setHomeroomGrade] = useState('Grade 7');
   const [homeroomStream, setHomeroomStream] = useState('');
-  const [isClassLocked, setIsClassLocked] = useState(true);
+  const [isClassLocked, setIsClassLocked] = useState(false);
   const [allocations, setAllocations] = useState<StaffAllocationRecord[]>([]);
   const [activeSubjectForAllocation, setActiveSubjectForAllocation] = useState<string | null>(null);
 
-  // When homeroomGrade or homeroomStream changes for Class Teacher, default isClassLocked to true unless explicitly toggled by admin
-  const handleHomeroomGradeChange = (val: string) => {
-    setHomeroomGrade(val);
-  };
-
-  const handleHomeroomStreamChange = (val: string) => {
-    setHomeroomStream(val);
-  };
+  // Grades and streams configuration hook
   const { grades: availableSchoolClasses, getStreamsForGrade, streams: allGlobalStreams } = useGradesAndStreams();
 
   // Get relevant streams based on selected grades
@@ -400,20 +393,9 @@ export default function StaffRegistry() {
     });
 
     setAssignedStreams(sanitizedStreams);
-    const resolvedHomeroomGrade = staff.homeroomGrade || (staff as any).assignedGrade || loadedClasses[0] || 'Grade 7';
-    const resolvedHomeroomStream = staff.homeroomStream || (staff as any).assignedStream || (sanitizedStreams[0] || '');
-    setHomeroomGrade(resolvedHomeroomGrade);
-    setHomeroomStream(resolvedHomeroomStream);
-
-    // Read all possible lock keys in order: isClassLocked, classLocked, isLocked, rawPayload.isClassLocked
-    const resolvedLockState = Boolean(
-      staff.isClassLocked ??
-      (staff as any).classLocked ??
-      (staff as any).isLocked ??
-      (staff as any).rawPayload?.isClassLocked ??
-      (resolvedHomeroomGrade && resolvedHomeroomStream ? true : false)
-    );
-    setIsClassLocked(resolvedLockState);
+    setHomeroomGrade(staff.homeroomGrade || loadedClasses[0] || 'Grade 7');
+    setHomeroomStream(staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : (sanitizedStreams[0] || ''));
+    setIsClassLocked(staff.isClassLocked === true);
     
     let loadedAllocs: StaffAllocationRecord[] = [];
     if (Array.isArray(staff.allocations) && staff.allocations.length > 0) {
@@ -662,10 +644,6 @@ export default function StaffRegistry() {
     // Hash password for storage
     const passwordHash = await hashPassword(password);
     
-    const resolvedLockValue = category === 'Class Teacher'
-      ? (homeroomGrade && homeroomStream ? Boolean(isClassLocked) : false)
-      : false;
-
     const staffRecord: StaffMember = {
       id: generatedMunId,
       name: fullName.trim(),
@@ -682,72 +660,49 @@ export default function StaffRegistry() {
       nationalId: !isTeachingStaff ? nationalId.trim() : undefined,
       status,
       subjects: isTeachingStaff ? selectedSubjects : [],
-      assignedClasses: category === 'Class Teacher' && homeroomGrade && homeroomStream ? [`${homeroomGrade} ${homeroomStream}`] : (isTeachingStaff ? assignedClasses : []),
-      assignedStreams: category === 'Class Teacher' && homeroomStream ? [homeroomStream] : (isTeachingStaff ? assignedStreams : []),
+      assignedClasses: isTeachingStaff ? assignedClasses : [],
+      assignedStreams: isTeachingStaff ? assignedStreams : [],
       homeroomGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
-      homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
-      assignedClass: category === 'Class Teacher' && homeroomGrade && homeroomStream ? `${homeroomGrade} ${homeroomStream}`.trim() : undefined,
-      assignedGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
-      assignedStream: category === 'Class Teacher' ? homeroomStream : undefined,
-      isClassLocked: resolvedLockValue,
-      classLocked: resolvedLockValue,
-      isLocked: resolvedLockValue,
-      createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString(),
+            homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
+            isClassLocked: category === 'Class Teacher' ? isClassLocked : false,
+            createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString(),
       // Auth fields
       password: password, // Store plain for admin visibility (in production, only hash)
       passwordHash: passwordHash,
       lastPasswordChange: new Date().toISOString(),
       loginEnabled: status === 'Active',
       accessCode: editingStaff?.accessCode || generateRandomCode()
-    } as any;
-
-    // Sync to Firestore staff collection atomically and update localStorage
-    try {
-      const staffDocId = String(staffRecord.id || '');
-      if (staffDocId && db) {
-        const finalAssignedClass = category === 'Class Teacher' && homeroomGrade && homeroomStream ? `${homeroomGrade} ${homeroomStream}`.trim() : (assignedClasses[0] || '');
-        const primaryGrade = category === 'Class Teacher' ? homeroomGrade : (assignedClasses[0] || '');
-        const primaryStream = category === 'Class Teacher' ? homeroomStream : (assignedStreams[0] || '');
-
-        const atomPayload = {
-          ...staffRecord,
-          assignedClass: finalAssignedClass,
-          assignedGrade: primaryGrade,
-          assignedStream: primaryStream,
-          homeroomGrade: primaryGrade,
-          homeroomStream: primaryStream,
-          isClassLocked: resolvedLockValue,
-          classLocked: resolvedLockValue,
-          isLocked: resolvedLockValue,
-          updatedAt: new Date().toISOString()
-        };
-
-        await setDoc(doc(db, 'staff', staffDocId), atomPayload, { merge: true });
-
-        // Update staffRecord with atomic fields before saving to localStorage
-        (staffRecord as any).assignedClass = finalAssignedClass;
-        (staffRecord as any).assignedGrade = primaryGrade;
-        (staffRecord as any).assignedStream = primaryStream;
-        staffRecord.homeroomGrade = primaryGrade;
-        staffRecord.homeroomStream = primaryStream;
-        staffRecord.isClassLocked = resolvedLockValue;
-        (staffRecord as any).classLocked = resolvedLockValue;
-        (staffRecord as any).isLocked = resolvedLockValue;
-      }
-    } catch (e) {
-      console.warn('Failed to sync staff assignment to Firestore:', e);
-    }
+    };
 
     let updatedList: StaffMember[];
     if (editingStaff) {
       updatedList = staffList.map(s => s.id === editingStaff.id ? staffRecord : s);
-      toast.success("Staff profile and class assignments updated successfully");
+      toast.success("Staff profile updated successfully");
     } else {
       updatedList = [staffRecord, ...staffList];
-      toast.success("Staff member registered successfully with auth profile");
+      toast.success("Staff member registered successfully with auto-generated auth profile");
     }
 
+    // No separate user accounts table - staff IS the user account
+    // The staff record itself contains all authentication data
+
     saveStaffToStorage(updatedList);
+
+    // Sync to Firestore staff collection
+    try {
+      const staffDocId = String(staffRecord.id || '');
+      if (staffDocId && db) {
+        await setDoc(doc(db, 'staff', staffDocId), {
+          ...staffRecord,
+          homeroomGrade: category === 'Class Teacher' ? homeroomGrade : '',
+          homeroomStream: category === 'Class Teacher' ? homeroomStream : '',
+          isClassLocked: category === 'Class Teacher' ? isClassLocked : false,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
+    } catch (e) {
+      console.warn('Failed to sync staff class lock to Firestore:', e);
+    }
 
     addPendingSyncItem({
       id: staffRecord.id,
@@ -1149,71 +1104,71 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3 max-w-[180px]">
-                        {(() => {
-                          const isLocked = staff.isClassLocked === true || (staff as any).classLocked === true || (staff as any).lockedClass === true;
-                          const hasAssignment = (staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream)) ||
-                            (categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0) || (staff as any).assignedClass));
-
-                          if (!hasAssignment) {
-                            return <span className="text-slate-400 text-xs">—</span>;
-                          }
-
-                          return (
-                            <div className="flex flex-col gap-1.5 max-w-[220px]">
-                              {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs" title={`${typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} ${typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}`}>
-                                    <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                                    {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
-                                  </span>
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${isLocked ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`} title={isLocked ? 'Locked — Teacher cannot change class assignment' : 'Unlocked — Teacher can select their class'}>
-                                    {isLocked ? (
-                                      <>
-                                        <Lock className="w-3 h-3 text-emerald-600" /> Locked
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Unlock className="w-3 h-3 text-amber-600" /> Unlocked
-                                      </>
-                                    )}
-                                  </span>
-                                </div>
-                              ) : categoryIsTeaching(staff.category) && ((staff as any).assignedClass || (staff.assignedClasses && staff.assignedClasses.length > 0)) ? (
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-800 border border-indigo-200 shadow-xs" title={(staff as any).assignedClass || staff.assignedClasses?.[0]}>
-                                    {(staff as any).assignedClass || staff.assignedClasses?.[0]}
-                                  </span>
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${isLocked ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`} title={isLocked ? 'Locked — Teacher cannot change class assignment' : 'Unlocked — Teacher can select their class'}>
-                                    {isLocked ? (
-                                      <>
-                                        <Lock className="w-3 h-3 text-emerald-600" /> Locked
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Unlock className="w-3 h-3 text-amber-600" /> Unlocked
-                                      </>
-                                    )}
-                                  </span>
-                                </div>
-                              ) : null}
-
-                              {staff.assignedClasses && staff.assignedClasses.length > 1 && (
-                                <div className="flex flex-wrap gap-1">
-                                  {staff.assignedClasses.slice(1, 3).map((cls, cIdx) => (
-                                    <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
-                                      {typeof cls === 'string' ? cls : JSON.stringify(cls)}
+                        {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
+                              <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
+                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
+                            </span>
+                          </div>
+                        ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
+                          <div className="flex flex-col gap-1.5 max-w-[220px]">
+                            {staff.assignedClasses && staff.assignedClasses.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
+                                  let formattedCls = '';
+                                  if (typeof cls === 'string') {
+                                    formattedCls = cls;
+                                  } else if (cls && typeof cls === 'object') {
+                                    const item = cls as any;
+                                    formattedCls = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                    if (!formattedCls) formattedCls = JSON.stringify(item);
+                                  } else {
+                                    formattedCls = String(cls);
+                                  }
+                                  return (
+                                    <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100 break-words hyphens-auto" title={formattedCls}>
+                                      {formattedCls}
                                     </span>
-                                  ))}
-                                  {staff.assignedClasses.length > 3 && (
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                      +{staff.assignedClasses.length - 3}
+                                  );
+                                })}
+                                {staff.assignedClasses.length > 3 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                    +{staff.assignedClasses.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {staff.assignedStreams && staff.assignedStreams.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
+                                  let formattedStrm = '';
+                                  if (typeof strm === 'string') {
+                                    formattedStrm = strm;
+                                  } else if (strm && typeof strm === 'object') {
+                                    const item = strm as any;
+                                    formattedStrm = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                    if (!formattedStrm) formattedStrm = JSON.stringify(item);
+                                  } else {
+                                    formattedStrm = String(strm);
+                                  }
+                                  return (
+                                    <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100 break-words hyphens-auto" title={formattedStrm}>
+                                      {formattedStrm}
                                     </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
+                                  );
+                                })}
+                                {staff.assignedStreams.length > 3 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                    +{staff.assignedStreams.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
                       </td>
 
                       <td className="py-3.5 px-3 text-center whitespace-nowrap">
@@ -1317,7 +1272,7 @@ export default function StaffRegistry() {
                                         <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Grade</label>
                                         <select
                                           value={homeroomGrade}
-                                          onChange={(e) => handleHomeroomGradeChange(e.target.value)}
+                                          onChange={(e) => setHomeroomGrade(e.target.value)}
                                           className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                                         >
                                           {availableSchoolClasses.map((cls) => (
@@ -1329,7 +1284,7 @@ export default function StaffRegistry() {
                                         <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Stream</label>
                                         <select
                                           value={homeroomStream}
-                                          onChange={(e) => handleHomeroomStreamChange(e.target.value)}
+                                          onChange={(e) => setHomeroomStream(e.target.value)}
                                           className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                                         >
                                           {availableSchoolStreams.map((strm) => (

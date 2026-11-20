@@ -10,8 +10,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import { ClassLockProvider } from "./context/ClassLockContext";
-import { TeacherScopeProvider } from "./context/TeacherScopeContext";
 import { NotificationProvider } from "@/components/ui/notification-provider";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
@@ -544,10 +542,8 @@ const App = () => {
                     <Sonner />
                     <GlobalExportListener />
                     <SchoolProvider>
-                      <TeacherScopeProvider>
-                        <ClassLockProvider>
-                          <LearnerProvider>
-                          <CorruptedLearnerPurgeGuard />
+                      <LearnerProvider>
+                        <CorruptedLearnerPurgeGuard />
                       <Routes>
                         {/* Public Routes */}
                       <Route path="/login" element={<Login />} />
@@ -636,9 +632,7 @@ const App = () => {
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Routes>
                     </LearnerProvider>
-                  </ClassLockProvider>
-                </TeacherScopeProvider>
-              </SchoolProvider>
+                  </SchoolProvider>
                   </TooltipProvider>
                 </ThemeProvider>
                   );

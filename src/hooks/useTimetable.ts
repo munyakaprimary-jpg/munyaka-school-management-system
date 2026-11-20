@@ -183,7 +183,7 @@ export function useTimetable() {
     if (list.length === 0) {
       return [
         { id: 'Grade 4 Green', name: 'Grade 4 Green' },
-        { id: 'Grade 4 Blue', name: 'Grade 4 Blue' },
+        { id: 'Grade 4 Yellow', name: 'Grade 4 Yellow' },
         { id: 'Grade 5 Red', name: 'Grade 5 Red' },
         { id: 'Grade 6 Blue', name: 'Grade 6 Blue' },
         { id: 'Grade 7 Mercury', name: 'Grade 7 Mercury' },

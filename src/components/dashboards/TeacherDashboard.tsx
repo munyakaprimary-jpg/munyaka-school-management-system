@@ -103,7 +103,7 @@ export default function TeacherDashboard() {
     ];
   }, [gradesStreamsConfig]);
   const [selectedClassState, setSelectedClassState] = React.useState<string>(() => {
-    return currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || '';
+    return currUserObj.assignedClass || (user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade || 'Grade 4 Blue';
   });
   const selectedClass = selectedClassState;
   const setSelectedClass = setSelectedClassState;
@@ -806,23 +806,14 @@ export default function TeacherDashboard() {
     try {
       const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
       const staffList = centralDb.staff || centralDb.teachers || [];
-      const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '').trim();
-      const userTsc = String((user as any)?.tscNumber || (user as any)?.tscNumber || currentUserObj.tscNumber || (user as any)?.tscNo || '').trim();
-      const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase().trim();
-      const userNameKey = String(teacherName || user?.name || currentUserObj.fullName || '').toLowerCase().trim();
-
+      const userId = String(user?.id || currentUserObj.id || currentUserObj.email || '');
+      const userEmail = String(user?.email || currentUserObj.email || '').toLowerCase();
+      const userNameKey = String(teacherName).toLowerCase();
       return staffList.find((st: any) => {
-        const stId = String(st.id || st.staffId || st.uid || st.canonicalId || '').trim();
-        const stTsc = String(st.tscNumber || st.tscNo || '').trim();
-        const stEmail = String(st.email || '').toLowerCase().trim();
-        const stName = String(st.name || st.fullName || st.username || '').toLowerCase().trim();
-
-        return (
-          (userId && (stId === userId)) ||
-          (userTsc && (stTsc === userTsc)) ||
-          (userEmail && (stEmail === userEmail)) ||
-          (userNameKey && (stName.includes(userNameKey) || userNameKey.includes(stName)))
-        );
+        const stId = String(st.id || st.staffId || st.tscNo || '');
+        const stEmail = String(st.email || '').toLowerCase();
+        const stName = String(st.name || st.fullName || st.username || '').toLowerCase();
+        return (userId && stId === userId) || (userEmail && stEmail === userEmail) || (userNameKey && stName.includes(userNameKey));
       }) || {};
     } catch {
       return {};
@@ -834,131 +825,74 @@ export default function TeacherDashboard() {
     ? assignedClassesRaw[0]
     : String(matchedStaffRecord?.assignedGrade || matchedStaffRecord?.grade || (user as any)?.assignedClass || (user as any)?.gradeStream || currentUserObj.assignedClass || currentUserObj.gradeStream || '');
 
-  // 1. Initialize selectedClassOverride and isClassLocked directly from matchedStaffRecord / Firestore without fallback to generic "Grade 1 Green"
+  // 1. Initialize selectedClassOverride and isClassLocked from Firestore staff collection first, falling back to localStorage
   const [selectedClassOverride, setSelectedClassOverride] = React.useState<string | null>(() => {
-    const rG = String(matchedStaffRecord?.homeroomGrade || matchedStaffRecord?.assignedGrade || currentUserObj.homeroomGrade || currentUserObj.assignedGrade || '').trim();
-    const rS = String(matchedStaffRecord?.homeroomStream || matchedStaffRecord?.assignedStream || currentUserObj.homeroomStream || currentUserObj.assignedStream || '').trim();
-    const combinedHome = (rG && rS) ? (rG.toLowerCase().includes(rS.toLowerCase()) ? rG : `${rG} ${rS}`) : (rG || '');
-
-    const staffRecClass = String(
-      matchedStaffRecord?.assignedClass ||
-      matchedStaffRecord?.lockedClass ||
-      combinedHome ||
-      currentUserObj.assignedClass ||
-      currentUserObj.lockedClass ||
-      ''
-    ).trim();
-
-    if (staffRecClass && staffRecClass !== 'No Class Assigned') {
-      const clean = staffRecClass.replace(/[()]/g, '').replace(/\s+/g, ' ').trim();
-      const parts = clean.split(/\s+/);
-      if (parts.length >= 2) {
-        const s = parts[parts.length - 1];
-        const g = parts.slice(0, parts.length - 1).join(' ');
-        return `${g} ${s}`.trim();
-      }
-      return clean;
-    }
-
     try {
       const storedLock = localStorage.getItem(lockStorageKey);
-      if (storedLock && storedLock !== 'Grade 1 Green' && storedLock !== 'No Class Assigned') {
-        return storedLock;
-      }
+      if (storedLock) return storedLock;
     } catch {}
+
+    // 2. Only auto-bind & lock from explicit staff profile fields
+    const explicitAssignment =
+      matchedStaffRecord?.lockedClass ||
+      currentUserObj.lockedClass ||
+      matchedStaffRecord?.assignedClass ||
+      currentUserObj.assignedClass ||
+      (matchedStaffRecord?.homeroomGrade && matchedStaffRecord?.homeroomStream ? `${matchedStaffRecord.homeroomGrade} ${matchedStaffRecord.homeroomStream}` : '') ||
+      (currentUserObj.homeroomGrade && currentUserObj.homeroomStream ? `${currentUserObj.homeroomGrade} ${currentUserObj.homeroomStream}` : '') ||
+      (Array.isArray(matchedStaffRecord?.assignedClasses) && matchedStaffRecord.assignedClasses[0] ? matchedStaffRecord.assignedClasses[0] : '') ||
+      (Array.isArray(currentUserObj.assignedClasses) && currentUserObj.assignedClasses[0] ? currentUserObj.assignedClasses[0] : '') ||
+      '';
+
+    // Ignore generic placeholder "Grade 1 Blue" unless explicitly present in their record
+    if (explicitAssignment && explicitAssignment !== 'Grade 1 Blue') {
+      return explicitAssignment;
+    }
 
     return null;
   });
 
-  // Fetch authoritative assignment and lock status from Firestore staff collection on mount AND real-time onSnapshot listener (Firestore ALWAYS takes priority over localStorage)
+  // Fetch latest staff record from Firestore on mount to sync lock status and assignment instantly
   React.useEffect(() => {
-    if (!db) return;
-    let unsubscribe: (() => void) | undefined;
-
-    const setupStaffSnapshotListener = async () => {
+    const fetchFirestoreStaffLock = async () => {
       try {
-        const { collection, doc, onSnapshot, getDoc, getDocs, query, where } = await import('firebase/firestore');
-        const staffDocId = String(matchedStaffRecord?.id || currentUserObj.id || user?.id || '').trim();
-        const staffTsc = String(matchedStaffRecord?.tscNumber || currentUserObj.tscNumber || (user as any)?.tscNo || '').trim();
-        const staffEmail = String(matchedStaffRecord?.email || currentUserObj.email || user?.email || '').toLowerCase().trim();
-
-        // Listen to collection and match live by tscNumber, doc.id, id, uid, email, or name
-        unsubscribe = onSnapshot(collection(db, 'staff'), (snapshot) => {
-          let matchedDocData: any = null;
-
-          snapshot.forEach((docSnap) => {
+        const staffDocId = String(matchedStaffRecord?.id || currentUserObj.id || user?.id || '');
+        if (staffDocId && db) {
+          const docRef = doc(db, 'staff', staffDocId);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
             const data = docSnap.data();
-            const dId = String(docSnap.id || '').trim();
-            const dStaffId = String(data.id || data.staffId || data.uid || '').trim();
-            const dTsc = String(data.tscNumber || data.tscNo || '').trim();
-            const dEmail = String(data.email || '').toLowerCase().trim();
-            const dName = String(data.name || data.fullName || '').toLowerCase().trim();
-            const activeNameKey = String(teacherName || user?.name || currentUserObj.fullName || '').toLowerCase().trim();
-
-            if (
-              (staffDocId && (dId === staffDocId || dStaffId === staffDocId)) ||
-              (staffTsc && dTsc === staffTsc) ||
-              (staffEmail && dEmail === staffEmail) ||
-              (activeNameKey && dName.includes(activeNameKey))
-            ) {
-              matchedDocData = data;
-            }
-          });
-
-          if (matchedDocData) {
-            const rawAssignedClass = String(matchedDocData.assignedClass || '').trim();
-            const rGrade = String(matchedDocData.homeroomGrade || matchedDocData.assignedGrade || '').trim();
-            const rStream = String(matchedDocData.homeroomStream || matchedDocData.assignedStream || '').trim();
-            const combinedHomeroom = (rGrade && rStream) ? (rGrade.toLowerCase().includes(rStream.toLowerCase()) ? rGrade : `${rGrade} ${rStream}`) : (rGrade || '');
-            const arrClass = Array.isArray(matchedDocData.assignedClasses) && matchedDocData.assignedClasses[0] ? String(matchedDocData.assignedClasses[0]) : '';
+            const fsGrade = String(data.homeroomGrade || '').trim();
+            const fsStream = String(data.homeroomStream || '').trim();
+            const fsIsLocked = Boolean(data.isClassLocked);
             
-            let authoritativeClass = '';
-            if (rawAssignedClass && rawAssignedClass !== 'No Class Assigned') {
-              authoritativeClass = rawAssignedClass;
-            } else if (combinedHomeroom) {
-              authoritativeClass = combinedHomeroom;
-            } else if (arrClass) {
-              authoritativeClass = arrClass;
+            let targetClass = '';
+            if (fsGrade && fsStream) {
+              targetClass = `${fsGrade} ${fsStream}`;
+            } else if (data.assignedClass) {
+              targetClass = String(data.assignedClass);
             }
 
-            if (authoritativeClass) {
-              authoritativeClass = authoritativeClass.replace(/[()]/g, '').replace(/\s+/g, ' ').trim();
-            }
-
-            // Class lock status: true if classLocked / isClassLocked is true OR if homeroom grade+stream is set
-            const isLocked = matchedDocData.isClassLocked === true || matchedDocData.classLocked === true || Boolean(rGrade && rStream);
-
-            if (authoritativeClass && authoritativeClass !== 'Grade 1 Green' && authoritativeClass !== 'Grade 1 Blue') {
-              setSelectedClassOverride(authoritativeClass);
-              setSelectedClass(authoritativeClass);
+            if (fsIsLocked && targetClass) {
+              setSelectedClassOverride(targetClass);
+              setSelectedClass(targetClass);
               try {
-                localStorage.setItem(lockStorageKey, authoritativeClass);
-                // Also update cached staff array in localStorage immediately
-                const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-                if (Array.isArray(centralDb.staff)) {
-                  centralDb.staff = centralDb.staff.map((st: any) => {
-                    const stId = String(st.id || st.tscNumber || '');
-                    if (stId === staffDocId || stId === staffTsc || stId === staffEmail) {
-                      return { ...st, ...matchedDocData };
-                    }
-                    return st;
-                  });
-                  localStorage.setItem('munyaka_central_db', JSON.stringify(centralDb));
-                }
+                localStorage.setItem(lockStorageKey, targetClass);
+              } catch {}
+            } else if (!fsIsLocked) {
+              // If admin unlocked class, clear override
+              setSelectedClassOverride(null);
+              try {
+                localStorage.removeItem(lockStorageKey);
               } catch {}
             }
           }
-        });
+        }
       } catch (e) {
-        console.warn('Failed to setup authoritative staff snapshot listener:', e);
+        console.warn('Failed to fetch staff lock from Firestore:', e);
       }
     };
-
-    setupStaffSnapshotListener();
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    fetchFirestoreStaffLock();
   }, [matchedStaffRecord?.id, currentUserObj.id, user?.id]);
 
   // If no explicit class is assigned in Firestore/profile, keep empty so teacher selects
@@ -1138,14 +1072,14 @@ export default function TeacherDashboard() {
         </div>
         <div className="flex flex-wrap items-center gap-3 relative z-10">
           <Button
-            onClick={() => navigate(`/attendance?grade=${encodeURIComponent(gradePart)}&stream=${encodeURIComponent(streamPart)}`)}
+            onClick={() => navigate('/attendance')}
             className="bg-white text-indigo-700 hover:bg-blue-50 font-bold rounded-xl shadow-sm"
           >
             <ClipboardCheck className="w-4 h-4 mr-2 text-indigo-600" />
             Mark Attendance ({fullClassTitle})
           </Button>
           <Button
-            onClick={() => navigate(`/assessments?grade=${encodeURIComponent(gradePart)}&stream=${encodeURIComponent(streamPart)}`)}
+            onClick={() => navigate('/assessments')}
             className="bg-indigo-600 text-white hover:bg-indigo-500 font-bold rounded-xl border border-indigo-400 shadow-sm"
           >
             <FileSpreadsheet className="w-4 h-4 mr-2 text-white" />
@@ -1172,18 +1106,18 @@ export default function TeacherDashboard() {
         <Card className="bg-gradient-to-br from-slate-900 to-slate-800 text-white border-slate-700 shadow-xl col-span-1 lg:col-span-1 flex flex-col justify-between">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] uppercase font-extrabold tracking-wider bg-teal-800 px-2 py-0.5 rounded text-teal-250">
-                  {getFormattedRoleLabel(teacherRole)}
-                </span>
-                {isClassLocked ? (
-                  <Badge variant="outline" className="bg-emerald-500/20 text-emerald-300 border-emerald-400 font-bold text-xs flex items-center gap-1">
-                    <Lock className="w-3 h-3 text-emerald-400" /> Locked Class: {fullClassTitle}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-400 font-bold text-xs flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3 text-amber-400" /> Assigned Class: {fullClassTitle}
-                  </Badge>
-                )}
+              <span className="text-[10px] uppercase font-extrabold tracking-wider bg-teal-800 px-2 py-0.5 rounded text-teal-200">
+                {getFormattedRoleLabel(teacherRole)}
+              </span>
+              {isClassLocked ? (
+                <Badge variant="outline" className="bg-emerald-500/20 text-emerald-300 border-emerald-400 font-bold text-xs flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-emerald-400" /> LOCKED
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-400 font-bold text-xs flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 text-amber-400" /> UNBOUND
+                </Badge>
+              )}
             </div>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-black text-white">Assigned Homeroom Lock</CardTitle>
@@ -1245,7 +1179,7 @@ export default function TeacherDashboard() {
               variant="outline"
               size="sm"
               className="w-full font-bold border-blue-200 text-blue-700 hover:bg-blue-50 rounded-xl"
-              onClick={() => navigate(`/learners?grade=${encodeURIComponent(gradePart)}&stream=${encodeURIComponent(streamPart)}`)}
+              onClick={() => navigate('/learners')}
             >
               View Class Learners <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
@@ -1271,7 +1205,7 @@ export default function TeacherDashboard() {
               variant="outline"
               size="sm"
               className="w-full font-bold border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-xl"
-              onClick={() => navigate(`/attendance?grade=${encodeURIComponent(gradePart)}&stream=${encodeURIComponent(streamPart)}`)}
+              onClick={() => navigate('/attendance')}
             >
               Mark Roll Call <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
