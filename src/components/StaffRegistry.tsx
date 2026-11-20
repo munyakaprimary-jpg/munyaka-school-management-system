@@ -727,6 +727,7 @@ export default function StaffRegistry() {
       console.warn('Failed to sync staff assignment to Firestore:', e);
     }
 
+    let updatedList: StaffMember[];
     if (editingStaff) {
       updatedList = staffList.map(s => s.id === editingStaff.id ? staffRecord : s);
       toast.success("Staff profile and class assignments updated successfully");
