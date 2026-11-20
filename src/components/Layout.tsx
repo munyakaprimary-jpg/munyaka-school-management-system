@@ -75,6 +75,35 @@ export const SyncButton: React.FC = () => {
   const [showSyncModal, setShowSyncModal] = useState<boolean>(false);
   const [pendingItemsList, setPendingItemsList] = useState<Array<{ id: string; title: string; type: string; time: string; status: string }>>([]);
 
+  // Check if current user is admin / owner / developer (and NOT a teacher)
+  const isAdminUser = useMemo(() => {
+    try {
+      const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+      const currentRole = String(
+        currentUserObj.role || currentUserObj.systemRole || currentUserObj.accountType || localStorage.getItem('munyaka_current_auth_role') || ''
+      ).toLowerCase().trim();
+
+      const teacherRoles = ['class_teacher', 'subject_teacher', 'teacher', 'staff', 'librarian'];
+      if (teacherRoles.some(tr => currentRole.includes(tr))) {
+        return false;
+      }
+
+      const adminRoles = ['admin', 'super_admin', 'school_admin', 'administrator', 'owner', 'developer', 'superadmin'];
+      if (adminRoles.some(ar => currentRole === ar || currentRole.includes(ar))) {
+        return true;
+      }
+
+      const portalMode = localStorage.getItem('munyaka_portal_mode') || localStorage.getItem('munyaka_active_portal');
+      if (portalMode === 'admin' || portalMode === 'owner') {
+        return true;
+      }
+
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
   // Check for pending local items on mount or storage changes
   useEffect(() => {
     const checkPendingItems = () => {
@@ -271,6 +300,10 @@ export const SyncButton: React.FC = () => {
       alert('Sync failed. Please check your local network connection.');
     }
   };
+
+  if (!isAdminUser) {
+    return null;
+  }
 
   return (
     <>
