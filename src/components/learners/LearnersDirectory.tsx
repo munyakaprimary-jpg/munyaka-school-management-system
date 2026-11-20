@@ -112,10 +112,38 @@ export default function LearnersDirectory() {
     }
   }, [isTeacherLocked, boundClassParsed.grade, boundClassParsed.stream]);
 
-  // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isTransferInModalOpen, setIsTransferInModalOpen] = useState(false);
   const [editingLearner, setEditingLearner] = useState<Learner | null>(null);
+
+  // Check if current user is admin / owner / superadmin
+  const isAdminOrOwner = useMemo(() => {
+    try {
+      const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+      const currentRole = String(
+        user?.role || currentUserObj.role || currentUserObj.systemRole || localStorage.getItem('munyaka_current_auth_role') || ''
+      ).toLowerCase().trim();
+      
+      const adminRoles = ['admin', 'super_admin', 'school_admin', 'owner', 'developer', 'superadmin'];
+      if (adminRoles.includes(currentRole)) return true;
+
+      // Also check if portalMode or auth indicates admin
+      const portalMode = localStorage.getItem('munyaka_portal_mode') || localStorage.getItem('munyaka_active_portal');
+      if (portalMode === 'admin' || portalMode === 'owner') return true;
+
+      return false;
+    } catch {
+      return false;
+    }
+  }, [user]);
+
+  const handleOpenTransferIn = () => {
+    if (!isAdminOrOwner) {
+      showError('Only School Administrators and Owners can transfer in learners.');
+      return;
+    }
+    setIsTransferInModalOpen(true);
+  };
 
   // Delete state & Admin Password modal state
   const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([]);
@@ -359,14 +387,16 @@ export default function LearnersDirectory() {
             <FileDown className="w-4 h-4 text-slate-500" />
             Download List
           </button>
-          <button
-            onClick={() => setIsTransferInModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl shadow-md shadow-amber-200 dark:shadow-none transition-all text-sm"
-            title="Transfer In Incoming Learner"
-          >
-            <ArrowRightLeft className="w-4 h-4" />
-            Transfer In Learner
-          </button>
+          {isAdminOrOwner && (
+            <button
+              onClick={handleOpenTransferIn}
+              className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl shadow-md shadow-amber-200 dark:shadow-none transition-all text-sm"
+              title="Transfer In Incoming Learner"
+            >
+              <ArrowRightLeft className="w-4 h-4" />
+              Transfer In Learner
+            </button>
+          )}
           <button
             onClick={() => {
               setEditingLearner(null);
