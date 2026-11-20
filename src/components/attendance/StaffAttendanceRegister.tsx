@@ -13,7 +13,7 @@ import {
   Cloud,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useClassLock } from "@/context/ClassLockContext";
+import { useTeacherScope } from "@/hooks/useTeacherScope";
 import { CENTRAL_DB_KEY } from "@/components/AddMaterialModal";
 
 interface Learner {
@@ -33,9 +33,9 @@ interface AttendanceRecord {
 
 export function StaffAttendanceRegister() {
   const { user } = useAuth();
-  const { isLocked, activeClass, isAdmin, filterLearners } = useClassLock();
-  const assignedGrade = !isAdmin && activeClass.grade ? activeClass.grade : (!isAdmin ? (user?.assignedClass || user?.grade || 'Grade 4') : 'Grade 4');
-  const assignedStream = !isAdmin && activeClass.stream ? activeClass.stream : (!isAdmin ? (user?.assignedStream || user?.stream || 'Yellow') : 'Yellow');
+  const { isLocked, isAdmin, grade: scopedGrade, stream: scopedStream, filterRecords } = useTeacherScope();
+  const assignedGrade = !isAdmin && scopedGrade ? scopedGrade : (!isAdmin ? (user?.assignedClass || user?.grade || 'Grade 9') : 'Grade 9');
+  const assignedStream = !isAdmin && scopedStream ? scopedStream : (!isAdmin ? (user?.assignedStream || user?.stream || 'Jupiter') : 'Jupiter');
 
   const [selectedGrade, setSelectedGrade] = useState<string>(assignedGrade);
   const [selectedStream, setSelectedStream] = useState<string>(assignedStream);
@@ -43,14 +43,14 @@ export function StaffAttendanceRegister() {
   // If teacher, enforce assigned grade and stream
   useEffect(() => {
     if (!isAdmin) {
-      if (activeClass.grade) {
-        setSelectedGrade(activeClass.grade);
+      if (scopedGrade) {
+        setSelectedGrade(scopedGrade);
       }
-      if (activeClass.stream) {
-        setSelectedStream(activeClass.stream);
+      if (scopedStream) {
+        setSelectedStream(scopedStream);
       }
     }
-  }, [user, isAdmin, activeClass]);
+  }, [user, isAdmin, scopedGrade, scopedStream]);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [learners, setLearners] = useState<Learner[]>([]);
@@ -75,7 +75,7 @@ export function StaffAttendanceRegister() {
       }
 
       // Filter by selected grade and stream if available, or fallback to mock learners if empty
-      let filteredRoster = filterLearners(roster).filter((l: any) => {
+      let filteredRoster = filterRecords(roster).filter((l: any) => {
         const lGrade = String(l.grade || l.gradeLevel || l.class || '').trim().toLowerCase();
         const lStream = String(l.stream || '').trim().toLowerCase();
         const sGrade = selectedGrade.trim().toLowerCase();

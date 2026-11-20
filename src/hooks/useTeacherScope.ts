@@ -119,6 +119,14 @@ export function useTeacherScope(): TeacherScope {
       Array.isArray((user as any)?.assignedClasses) && (user as any).assignedClasses[0] ? (user as any).assignedClasses[0] : null,
     ].filter(Boolean) as string[];
 
+    // Also check munyaka_current_user in localStorage
+    try {
+      const localCurr = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+      if (localCurr.assignedClass && localCurr.assignedClass !== 'No Class Assigned') {
+        sources.unshift(localCurr.assignedClass);
+      }
+    } catch {}
+
     const valid = sources.find(s => s && s !== 'No Class Assigned' && s !== 'All Grades' && s !== 'all');
     return valid || (sources.length > 0 ? sources[0] : 'Grade 4 Yellow');
   }, [user, matchedStaff, liveStaffDoc, isAdmin, selectedOverride]);
