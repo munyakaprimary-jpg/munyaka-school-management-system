@@ -106,7 +106,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   };
 
   const activeRole = getActiveUserRole();
-  const isStaffOnly = String(activeRole).toUpperCase() === 'STAFF' || String(activeRole).toLowerCase() === 'teacher' || String(activeRole).toLowerCase() === 'class_teacher' || String(activeRole).toLowerCase() === 'subject_teacher';
+  const isAdminOrOwner = String(activeRole).toLowerCase().includes('admin') ||
+                         String(activeRole).toLowerCase().includes('owner') ||
+                         String(activeRole).toLowerCase().includes('head') ||
+                         String(activeRole).toLowerCase().includes('principal') ||
+                         String(activeRole).toLowerCase().includes('developer') ||
+                         user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'owner';
+
+  const isStaffOnly = !isAdminOrOwner && (String(activeRole).toUpperCase() === 'STAFF' || String(activeRole).toLowerCase() === 'teacher' || String(activeRole).toLowerCase() === 'class_teacher' || String(activeRole).toLowerCase() === 'subject_teacher');
 
   const displayName = currentStaff.name || currentStaff.fullName || user?.name || (user as any)?.username || 'Staff Member';
   const profileName = displayName;
