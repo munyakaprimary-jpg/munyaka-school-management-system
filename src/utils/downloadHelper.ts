@@ -7,25 +7,26 @@ import { Browser } from '@capacitor/browser';
 import { Directory, Encoding } from '@capacitor/filesystem';
 
 export const SCHOOL_HEADERS = [
-  "MUNYAKA PRIMARY & JUNIOR SCHOOL",
-  "P.O. BOX 45-30100, ELDORET",
-  "EMAIL: info@munyakaschool.ac.ke | TEL: 0712345678",
-  "CBC COMPETENCY-BASED CURRICULUM ASSESSMENT REPORT",
+  "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+  "P.O BOX 5239-30100 ELDORET",
+  "MOTTO: KNOWLEDGE IS POWER",
   ""
 ];
 
 export const MUNYAKA_HEADERS = Object.assign(
   [...SCHOOL_HEADERS],
   {
-    schoolLine1: "MUNYAKA PRIMARY AND JUNIOR",
-    schoolLine2: "P.O. BOX 5239, ELDORET",
-    schoolLine3: "MOTTO: Knowledge Is Power"
+    schoolLine1: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+    schoolLine2: "P.O BOX 5239-30100 ELDORET",
+    schoolLine3: "MOTTO: KNOWLEDGE IS POWER"
   }
 );
 
 export function generateCSVHeader(title: string, subtitle?: string): string[] {
   return [
-    "MUNYAKA PRIMARY & JUNIOR SCHOOL",
+    "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+    "P.O BOX 5239-30100 ELDORET",
+    "MOTTO: KNOWLEDGE IS POWER",
     title,
     subtitle || `Generated: ${new Date().toLocaleString()}`,
     "",
