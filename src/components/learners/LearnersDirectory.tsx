@@ -782,67 +782,6 @@ export default function LearnersDirectory() {
           </div>
         </div>
       )}
-
-      {/* Transfer In Learner Modal */}
-      {isTransferInModalOpen && (
-        <TransferInModal
-          onClose={() => setIsTransferInModalOpen(false)}
-          onSuccess={(transferredLearner) => {
-            const updated = [transferredLearner, ...learners];
-            setLearners(updated);
-            try {
-              localStorage.setItem('munyaka_learners', JSON.stringify(updated));
-            } catch (e) {
-              console.error(e);
-            }
-            setIsTransferInModalOpen(false);
-          }}
-        />
-      )}
-
-      {/* Add / Edit Learner Modal */}
-      {isAddModalOpen && (
-        <LearnerFormModal
-          learner={editingLearner}
-          onClose={() => {
-            setIsAddModalOpen(false);
-            setEditingLearner(null);
-          }}
-          onSave={(savedLearner) => {
-            let updated: Learner[];
-            if (editingLearner) {
-              updated = learners.map(l => (l.id === savedLearner.id ? savedLearner : l));
-            } else {
-              updated = [savedLearner, ...learners];
-            }
-            setLearners(updated);
-            try {
-              localStorage.setItem('munyaka_learners', JSON.stringify(updated));
-            } catch (e) {
-              console.error(e);
-            }
-            setIsAddModalOpen(false);
-            setEditingLearner(null);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-200 dark:shadow-none transition-all"
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
