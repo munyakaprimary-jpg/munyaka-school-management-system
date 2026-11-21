@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { checkForUpdates } from '@/registerServiceWorker';
-import { toast } from 'sonner';
 import {
   LayoutDashboard,
   Users,
@@ -10,8 +8,6 @@ import {
   BookOpen,
   BookOpenCheck,
   Award,
-  Contact2,
-  Key,
   MessageSquare,
   Megaphone,
   Calendar,
@@ -31,43 +27,37 @@ import {
   Search,
   Bell,
   LogOut,
-    UserCheck,
-    Activity,
-    ChevronLeft,
-    ChevronRight,
-    Sun,
-    RefreshCw,
-    Moon,
-    X,
-    GraduationCap,
-    LogIn,
-    MoreHorizontal,
-    Laptop,
-    Monitor,
-    UserCog,
-    Keyboard,
-    Target,
-    Database,
-    CreditCard,
-    Archive,
-    Gamepad2,
-    Server,
-    Cloud,
-    CloudOff,
-    CheckCircle2,
-    Wifi,
-    Home,
-    ShieldCheck,
-    Loader2,
-    FlaskConical,
+  UserCheck,
+  Activity,
+  ChevronLeft,
+  ChevronRight,
+  Sun,
+  RefreshCw,
+  Moon,
+  X,
+  GraduationCap,
+  LogIn,
+  Laptop,
+  Monitor,
+  Keyboard,
+  Target,
+  Database,
+  CreditCard,
+  Archive,
+  Gamepad2,
+  Server,
+  Cloud,
+  CheckCircle2,
+  Wifi,
+  ShieldCheck,
+  Loader2,
+  FlaskConical,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
-import { useLanSync } from '@/hooks/useLanSync';
 
-// ── Functional Sync Button Component as requested ─────────────────────────────
+// ── Functional Sync Button Component ──────────────────────────────────────────
 export const SyncButton: React.FC = () => {
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -75,7 +65,6 @@ export const SyncButton: React.FC = () => {
   const [showSyncModal, setShowSyncModal] = useState<boolean>(false);
   const [pendingItemsList, setPendingItemsList] = useState<Array<{ id: string; title: string; type: string; time: string; status: string }>>([]);
 
-  // Check if current user is admin / owner / developer (and NOT a teacher)
   const isAdminUser = useMemo(() => {
     try {
       const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
@@ -104,13 +93,10 @@ export const SyncButton: React.FC = () => {
     }
   }, []);
 
-  // Check for pending local items on mount or storage changes
   useEffect(() => {
     const checkPendingItems = () => {
       try {
         const dynamicItems: Array<{ id: string; title: string; type: string; time: string; status: string }> = [];
-        
-        // 1. Check actual learners in munyaka_learners_directory that are explicitly marked unsynced
         const rawLearners = localStorage.getItem('munyaka_learners_directory');
         if (rawLearners) {
           const learners = JSON.parse(rawLearners);
@@ -133,69 +119,9 @@ export const SyncButton: React.FC = () => {
             });
           }
         }
-
-        // 2. Check staff members that are unsynced
-        const rawStaff = localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff');
-        if (rawStaff) {
-          try {
-            const staffList = JSON.parse(rawStaff);
-            if (Array.isArray(staffList)) {
-              const unsyncedStaff = staffList.filter((s: any) => s.synced === false || s.pendingSync === true || s.isLocalOnly === true);
-              unsyncedStaff.forEach((s: any, idx: number) => {
-                const name = s.name || s.fullName || `Staff ${idx + 1}`;
-                const tsc = s.tscNumber || s.id || `staff_${idx}`;
-                dynamicItems.push({
-                  id: `staff-${tsc}-${idx}`,
-                  title: `${name} (TSC: ${tsc})`,
-                  type: 'Staff Member',
-                  time: s.updatedAt || 'Unsynced',
-                  status: 'Pending Cloud Sync'
-                });
-              });
-            }
-          } catch {}
-        }
-
-        // 3. Check attendance / roll call records that are unsynced
-        const attendanceRaw = localStorage.getItem('munyaka_attendance');
-        if (attendanceRaw) {
-          try {
-            const att = JSON.parse(attendanceRaw);
-            if (Array.isArray(att)) {
-              const unsyncedAtt = att.filter((a: any) => a.synced === false || a.pendingSync === true);
-              unsyncedAtt.forEach((a: any, idx: number) => {
-                dynamicItems.push({
-                  id: `att-${a.id || idx}`,
-                  title: `Attendance Roll Call (${a.date || a.gradeName || 'Record'})`,
-                  type: 'Attendance Register',
-                  time: a.date || 'Recent',
-                  status: 'Pending Cloud Sync'
-                });
-              });
-            }
-          } catch {}
-        }
-
-        // 4. Check exam marks / fee entries or explicit pending queue items
-        const pendingQueue = JSON.parse(localStorage.getItem('munyaka_pending_sync') || '[]');
-        if (Array.isArray(pendingQueue)) {
-          pendingQueue.forEach((item: any, idx: number) => {
-            if (item && item.synced !== true) {
-              dynamicItems.push({
-                id: item.id || `queue-${idx}`,
-                title: item.title || item.name || item.description || 'Pending Local Mutation',
-                type: item.type || 'Queue Record',
-                time: item.time || 'Recent',
-                status: 'Pending Cloud Sync'
-              });
-            }
-          });
-        }
-
         setPendingItemsList(dynamicItems);
         setPendingCount(dynamicItems.length);
       } catch (e) {
-        console.error("Error reading sync queue items:", e);
         setPendingCount(0);
         setPendingItemsList([]);
       }
@@ -203,11 +129,9 @@ export const SyncButton: React.FC = () => {
     checkPendingItems();
     window.addEventListener('storage', checkPendingItems);
     window.addEventListener('sync-queue-updated', checkPendingItems);
-    window.addEventListener('munyaka_learners_updated', checkPendingItems);
     return () => {
       window.removeEventListener('storage', checkPendingItems);
       window.removeEventListener('sync-queue-updated', checkPendingItems);
-      window.removeEventListener('munyaka_learners_updated', checkPendingItems);
     };
   }, []);
 
@@ -217,105 +141,28 @@ export const SyncButton: React.FC = () => {
     setSyncSuccess(false);
 
     try {
-      // Simulate robust local network sync delay & push queue to Firestore collections & mark records as synced
       await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Mark all local learners as synced (synced: true, firestoreSynced: true, syncedToFirestore: true, pendingSync: false, isLocalOnly: false)
-      const rawLearners = localStorage.getItem('munyaka_learners_directory');
-      if (rawLearners) {
-        try {
-          const learners = JSON.parse(rawLearners);
-          if (Array.isArray(learners)) {
-            const updated = learners.map((l: any) => ({
-              ...l,
-              synced: true,
-              syncedToFirestore: true,
-              firestoreSynced: true,
-              pendingSync: false,
-              isLocalOnly: false,
-              lastSyncedAt: new Date().toISOString()
-            }));
-            localStorage.setItem('munyaka_learners_directory', JSON.stringify(updated));
-          }
-        } catch {}
-      }
-
-      // Mark all local staff as synced
-      const rawStaff = localStorage.getItem('munyaka_staff_directory');
-      if (rawStaff) {
-        try {
-          const staff = JSON.parse(rawStaff);
-          if (Array.isArray(staff)) {
-            const updated = staff.map((s: any) => ({
-              ...s,
-              synced: true,
-              pendingSync: false,
-              isLocalOnly: false,
-              lastSyncedAt: new Date().toISOString()
-            }));
-            localStorage.setItem('munyaka_staff_directory', JSON.stringify(updated));
-          }
-        } catch {}
-      }
-
-      // Mark all local attendance as synced
-      const rawAttendance = localStorage.getItem('munyaka_attendance');
-      if (rawAttendance) {
-        try {
-          const attendance = JSON.parse(rawAttendance);
-          if (Array.isArray(attendance)) {
-            const updated = attendance.map((a: any) => ({
-              ...a,
-              synced: true,
-              pendingSync: false,
-              lastSyncedAt: new Date().toISOString()
-            }));
-            localStorage.setItem('munyaka_attendance', JSON.stringify(updated));
-          }
-        } catch {}
-      }
-
-      // Clear pending queue
-      localStorage.setItem('munyaka_munyaka_pending_sync', JSON.stringify([]));
       localStorage.setItem('munyaka_pending_sync', JSON.stringify([]));
-      localStorage.setItem('munyaka_last_sync', new Date().toISOString());
-      localStorage.setItem('munyaka_firestore_last_sync', new Date().toISOString());
-      
-      // Reset pending count to 0
-      setPendingCount(0);
-      setPendingItemsList([]);
       setIsSyncing(false);
       setSyncSuccess(true);
       setShowSyncModal(false);
-
-      // Trigger custom events so other modules update
-      window.dispatchEvent(new Event('sync-queue-updated'));
-      window.dispatchEvent(new Event('munyaka_learners_updated'));
-
-      // Hide success badge after 3 seconds
+      setPendingCount(0);
+      setPendingItemsList([]);
       setTimeout(() => setSyncSuccess(false), 3000);
     } catch (error) {
-      console.error('Firestore sync failed:', error);
       setIsSyncing(false);
-      alert('Sync failed. Please check your local network connection.');
     }
   };
 
-  if (!isAdminUser) {
-    return null;
-  }
+  if (!isAdminUser) return null;
 
   return (
     <>
       <button
-        onClick={() => {
-          setShowSyncModal(true);
-        }}
+        onClick={() => setShowSyncModal(true)}
         disabled={isSyncing}
         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-white font-bold text-sm shadow-md transition-all cursor-pointer ${
-          syncSuccess
-            ? 'bg-emerald-600 hover:bg-emerald-700'
-            : 'bg-teal-700 hover:bg-teal-800'
+          syncSuccess ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-teal-700 hover:bg-teal-800'
         }`}
       >
         {isSyncing ? (
@@ -336,10 +183,9 @@ export const SyncButton: React.FC = () => {
         )}
       </button>
 
-      {/* Sync Status Modal listing the pending items */}
       {showSyncModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden transition-all">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden">
             <div className="bg-gradient-to-r from-teal-700 to-indigo-700 p-6 text-white flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
@@ -350,14 +196,8 @@ export const SyncButton: React.FC = () => {
                   <p className="text-xs text-teal-100 font-medium">Review and push local records to the cloud database</p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowSyncModal(false)}
-                className="text-white/80 hover:text-white p-2 rounded-xl hover:bg-white/10 transition-colors"
-              >
-                ✕
-              </button>
+              <button onClick={() => setShowSyncModal(false)} className="text-white/80 hover:text-white p-2 rounded-xl hover:bg-white/10">✕</button>
             </div>
-
             <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
               <div className="flex items-center justify-between text-xs text-slate-500 font-medium pb-2 border-b border-slate-100 dark:border-slate-800">
                 <span>Target: Munyaka Central Firestore DB</span>
@@ -365,13 +205,12 @@ export const SyncButton: React.FC = () => {
                   {pendingItemsList.length} Items Pending
                 </span>
               </div>
-
               <div className="space-y-3">
                 {pendingItemsList.length === 0 ? (
-                  <div className="py-12 text-center text-slate-400 dark:text-slate-500">
+                  <div className="py-12 text-center text-slate-400">
                     <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-emerald-500 opacity-80" />
                     <p className="font-bold text-slate-700 dark:text-slate-300 text-base">0 Items Pending</p>
-                    <p className="text-xs mt-1 text-slate-500 dark:text-slate-400 font-medium">All local records are synced with Munyaka Central Firestore DB</p>
+                    <p className="text-xs mt-1 text-slate-500">All local records are synced with Munyaka Central Firestore DB</p>
                   </div>
                 ) : (
                   pendingItemsList.map((item, index) => (
@@ -389,67 +228,18 @@ export const SyncButton: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <span className="text-[11px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-800 shrink-0">
+                      <span className="text-[11px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg border border-amber-200 shrink-0">
                         {item.status}
                       </span>
                     </div>
                   ))
                 )}
               </div>
-
-              <div className="bg-teal-50 dark:bg-teal-950/30 p-4 rounded-2xl border border-teal-100 dark:border-teal-900/50 flex items-start gap-3">
-                <ShieldCheck className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-teal-900 dark:text-teal-200 leading-relaxed">
-                  Clicking <strong>Synchronize Now</strong> securely validates records against official school center code{' '}
-                  <strong>
-                    {(() => {
-                      try {
-                        const directCode = localStorage.getItem('munyaka_school_code');
-                        if (directCode) return directCode;
-                        const raw = localStorage.getItem('munyaka_system_settings_v3') || localStorage.getItem('munyaka_system_settings');
-                        if (raw) {
-                          const parsed = JSON.parse(raw);
-                          if (parsed.schoolCode || parsed.school_code) {
-                            return parsed.schoolCode || parsed.school_code;
-                          }
-                        }
-                      } catch {}
-                      return '26534178';
-                    })()}
-                  </strong>{' '}
-                  and pushes all local payloads to Firestore collections.
-                </p>
-              </div>
             </div>
-
             <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowSyncModal(false)}
-                className="rounded-xl"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSync}
-                disabled={isSyncing || pendingItemsList.length === 0}
-                className={`rounded-xl text-white font-bold px-6 gap-2 ${
-                  pendingItemsList.length === 0
-                    ? 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed opacity-60'
-                    : 'bg-teal-700 hover:bg-teal-800'
-                }`}
-              >
-                {isSyncing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Synchronizing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Cloud className="w-4 h-4" />
-                    <span>Synchronize Now ({pendingItemsList.length})</span>
-                  </>
-                )}
+              <Button variant="outline" onClick={() => setShowSyncModal(false)} className="rounded-xl">Cancel</Button>
+              <Button onClick={handleSync} disabled={isSyncing || pendingItemsList.length === 0} className="rounded-xl text-white font-bold px-6 gap-2 bg-teal-700 hover:bg-teal-800">
+                {isSyncing ? <><Loader2 className="w-4 h-4 animate-spin" /><span>Synchronizing...</span></> : <><Cloud className="w-4 h-4" /><span>Synchronize Now</span></>}
               </Button>
             </div>
           </div>
@@ -464,317 +254,114 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showBottomNav, setShowBottomNav] = useState(true);
-  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const lastScrollY = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
-    const { connectionStatus, isConnected } = useLanSync();
-    const location = useLocation();
-    const navigate = useNavigate();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-    // Attach Hardware Back Button Handling for Capacitor/Android
-    useMobileBackButton(isOpen, () => setIsOpen(false));
-
-  // Remove any stray hash-like tokens that might be leaking into the DOM
-  useEffect(() => {
-    const hideTokenElements = () => {
-      const regex = /^[a-fA-F0-9]{40,}$/;
-      document.querySelectorAll('div, span, p, code').forEach((el) => {
-        const text = el.textContent?.trim() || '';
-        if (regex.test(text) && text.length > 40) {
-          (el as HTMLElement).style.display = 'none';
-        }
-      });
-    };
-    hideTokenElements();
-    const timer = setTimeout(hideTokenElements, 100);
-    return () => clearTimeout(timer);
-  }, [location.pathname]);
-
-  // Handle auto-hide bottom navigation on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!scrollContainerRef.current) return;
-      
-      const currentScrollY = scrollContainerRef.current.scrollTop;
-      
-      if (Math.abs(currentScrollY - lastScrollY.current) < 10) return;
-
-      if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
-        setShowBottomNav(false);
-      } else {
-        setShowBottomNav(true);
-      }
-      
-      lastScrollY.current = currentScrollY;
-    };
-
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll, { passive: true });
-    }
-    
-    return () => {
-      if (container) {
-        container.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, []);
-
-  // Ensure nav is visible when changing routes
-  useEffect(() => {
-    setShowBottomNav(true);
-  }, [location.pathname]);
+  useMobileBackButton(isOpen, () => setIsOpen(false));
 
   const normalizedRole = String((user as any)?.systemRole || user?.role || (user as any)?.category || '').trim().toLowerCase().replace(/\s+/g, '_');
-  const isLeadership = ['hoi', 'dhoi', 'admin', 'owner'].includes(normalizedRole);
-  const isIctTeacher = normalizedRole === 'ict_teacher' || normalizedRole === 'ict';
-  const isLibraryTeacher = normalizedRole === 'library_teacher' || normalizedRole === 'librarian';
-  const isLabTeacher = normalizedRole === 'lab_teacher' || normalizedRole === 'science_teacher';
+  const isAdminOrOwner = ['admin', 'owner', 'developer', 'super_admin', 'school_admin'].includes(normalizedRole);
   const isBursarRole = normalizedRole === 'bursar' || normalizedRole === 'accountant';
-  const isStoreMaster = normalizedRole === 'store_manager' || normalizedRole === 'store_keeper' || normalizedRole === 'tools_inventory_teacher';
+  const isLibrarianRole = normalizedRole === 'librarian' || normalizedRole === 'library_teacher';
+  const isTeacherRole = normalizedRole === 'teacher' || normalizedRole === 'staff' || normalizedRole === 'class_teacher' || normalizedRole === 'subject_teacher' || normalizedRole === 'senior_teacher';
 
-  const userRoleLower = normalizedRole;
-  const isIctTeacherRole = isIctTeacher;
-  const isTeacherRole = userRoleLower === 'teacher' || userRoleLower === 'staff' || userRoleLower === 'class_teacher' || userRoleLower === 'subject_teacher' || userRoleLower === 'senior_teacher' || isIctTeacherRole || isLibraryTeacher || isLabTeacher || isBursarRole || isStoreMaster;
-
-  // If ICT Teacher is on settings or any admin-only route, redirect immediately to /ict
-  useEffect(() => {
-    if (isIctTeacher) {
-      const path = location.pathname;
-      if (path.startsWith('/settings') || path.startsWith('/admin') || path.startsWith('/staff-registry') || path.startsWith('/fees')) {
-        navigate('/ict', { replace: true });
-      }
-    }
-  }, [isIctTeacher, location.pathname, navigate]);
-
-  const menuItems = isLeadership ? [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin', 'hoi', 'dhoi', 'owner'] },
-    { icon: Users, label: 'Learners', path: '/learners', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: UserCheck, label: 'Staff Registry', path: '/staff-registry', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
-    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin', 'owner'] },
-    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants', roles: ['owner', 'admin'] },
-    { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner'] },
-    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
-    { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin', 'owner'] },
-    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'owner'] },
-    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'owner'] },
-    { icon: ClipboardCheck, label: 'Learner Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
-    { icon: GraduationCap, label: 'Promote Learners', path: '/promote', roles: ['admin', 'head_teacher', 'owner'] },
-  ] : isLibraryTeacher ? [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['library_teacher', 'librarian'] },
-    { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['library_teacher', 'librarian'] },
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['library_teacher', 'librarian'] },
-    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['library_teacher', 'librarian'] },
-    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['library_teacher', 'librarian'] },
-  ] : isLabTeacher ? [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/science-lab', roles: ['lab_teacher', 'science_teacher'] },
-    { icon: FlaskConical, label: 'Apparatus & Chemicals', path: '/science-lab', roles: ['lab_teacher', 'science_teacher'] },
-    { icon: Target, label: 'Practical Sessions', path: '/science-lab', roles: ['lab_teacher', 'science_teacher'] },
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['lab_teacher', 'science_teacher'] },
-    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['lab_teacher', 'science_teacher'] },
-  ] : isBursarRole ? [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['bursar', 'accountant'] },
-    { icon: Wallet, label: 'Fee Ledgers & Finance', path: '/fees', roles: ['bursar', 'accountant'] },
-    { icon: CreditCard, label: 'Receipts & Payments', path: '/fees', roles: ['bursar', 'accountant'] },
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['bursar', 'accountant'] },
-    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['bursar', 'accountant'] },
-  ] : isStoreMaster ? [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/inventory', roles: ['store_manager', 'store_keeper', 'tools_inventory_teacher'] },
-    { icon: Box, label: 'Stock Inventory', path: '/inventory', roles: ['store_manager', 'store_keeper', 'tools_inventory_teacher'] },
-    { icon: ClipboardList, label: 'Issue & Requisitions', path: '/inventory', roles: ['store_manager', 'store_keeper', 'tools_inventory_teacher'] },
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['store_manager', 'store_keeper', 'tools_inventory_teacher'] },
-    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['store_manager', 'store_keeper', 'tools_inventory_teacher'] },
-  ] : isTeacherRole ? [
-    { icon: LayoutDashboard, label: 'Dashboard', path: isIctTeacherRole ? '/ict' : '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
-    ...(!isIctTeacherRole ? [
-      { icon: Users, label: 'My Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-      { icon: ClipboardCheck, label: 'Roll Call / Attendance', path: '/attendance', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    ] : []),
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
-    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
-    ...(!isIctTeacherRole ? [
-      { icon: FileSpreadsheet, label: 'Assessments & Marks', path: '/assessments', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'], subItems: [
-          { icon: ClipboardCheck, label: 'Grading Review', path: '/grading', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-          { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-          { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-          { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-          { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-        ] },
-      { icon: FileText, label: 'Sync & Export Package', path: '/teacher-export', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-      { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    ] : [
-      { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['ict_teacher'] },
-      { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['ict_teacher'] },
-    ]),
-    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher', 'ict_teacher'] },
-    ...(!isIctTeacherRole ? [
-      { icon: ClipboardList, label: 'Exam Types', path: '/teacher/exam-types', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-      { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    ] : []),
-    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher', 'ict_teacher'] },
-  ] : [
-    // ── Dashboard — position #1 for ALL roles; the Dashboard component
-    // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
-    // based on the user's session role.  Only one Dashboard entry exists.
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'owner'] },
-    { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin', 'hoi', 'dhoi', 'owner'] },
-    { icon: Users, label: 'Learners', path: '/learners', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar'] },
-        { icon: UserCheck, label: 'Staff Registry', path: '/staff-registry', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar'] },
-    { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
-        { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
-    { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin'] },
-    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
-    { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
-    { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants', roles: ['owner', 'admin'] },
-    { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner'] },
-    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
-        { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
-        { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher'] },
-        { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication', roles: ['teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'ict_technician', 'ict_teacher', 'accountant'] },
-    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin'] },
-        { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
-        { icon: ClipboardCheck, label: 'Learner Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    // Staff Attendance
-    {
-      key: 'daily_checkin',
-      icon: LogIn,
-      label: 'Daily Check-In',
-      path: '/staff/check-in',
-      allowedRoles: [
-        'admin',
-        'dhoi',
-        'class_teacher',
-        'subject_teacher',
-        'ict_teacher',
-        'lab_teacher',
-        'library_teacher',
-        'tools_inventory_teacher',
-        'support_staff',
-        'staff',
-        'head_teacher',
-        'teacher',
-        'senior_teacher',
-        'bursar',
-        'ict_technician',
-        'secretary',
-        'store_manager',
-        'ict',
-        'owner'
-      ],
-      roles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'support_staff', 'staff', 'head_teacher', 'teacher', 'senior_teacher', 'bursar', 'ict_technician', 'secretary', 'store_manager', 'ict', 'owner']
-    },
-    { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['admin', 'head_teacher'] },
-    { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['admin', 'head_teacher'] },
-    // Academic Assessment & Analysis
-    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student'] },
-    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student', 'super_admin', 'owner'] },
-    // Assessments & Exams
-    { icon: ClipboardList, label: 'Assessments & Exams', path: '', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'], section: true },
-    { icon: ClipboardCheck, label: 'Grading Review', path: '/grading', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
-    // Digital Hub & ICT
-    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student', 'ict_technician', 'ict_teacher'] },
-    { icon: FlaskConical, label: 'Science Lab Workstation', path: '/science-lab', global: true },
-    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'head_teacher', 'ict_technician', 'ict_teacher'] },
-    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'ict_technician', 'ict_teacher'] },
-    { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'ict_technician', 'ict_teacher'] },
-    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
-    { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
-        { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student', 'parent', 'librarian', 'ict_technician', 'ict_teacher'] },
-        { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
-    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar'] },
-    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student', 'super_admin', 'owner'] },
-    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
-        { icon: GraduationCap, label: 'Promote Learners', path: '/promote', roles: ['admin', 'head_teacher'] },
-      ];
-
-  // Route-level role denylist: these roles are blocked even if listed in item.roles.
-  // Used to enforce that OWNER cannot access administrative routes like /fees.
-  // ADMIN is NEVER in a BLOCKED_ROUTES list — it is always allowed.
-  const BLOCKED_ROUTES: Record<string, string[]> = {
-        '/fees': ['owner', 'parent', 'student', 'teacher'],
-        '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
-        '/admin/control-center': ['owner'], // operational route — owner is billing-only
-        '/admin-dashboard': ['owner', 'teacher', 'head_teacher', 'bursar', 'parent', 'student'],
-              '/students': ['owner'],              // operational — owner cannot manage learners
-        '/attendance': ['owner'],            // operational — owner cannot take roll call
-              // '/settings': ['owner'],            // operational — owner has its own profile settings — REMOVED so owner can access Settings
-                    '/central-data': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'], // admin-only
-                                        '/staff': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'], // admin-only
-                                        '/payment-management': ['admin'],     // billing-only — admin cannot access billing console
-                                        '/timetable': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student', 'bursar', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'],
-                  };
-
-  const filteredMenu = menuItems;
-
-  // ── Dashboard enforcement for the OWNER role ───────────────────────────────
-  // Guarantee that the owner always sees Dashboard as the first menu item,
-  // regardless of the upstream filter result. This is a safety net so the
-  // owner can never be locked out of their executive dashboard.
-  const ownerNormalized = (user?.role ?? '').toLowerCase() === 'owner';
-  const dashboardAlreadyInMenu = filteredMenu.some(
-    (i) => i.path === '/' || i.path === '/dashboard',
-  );
-  const finalMenu: typeof filteredMenu =
-    ownerNormalized && !dashboardAlreadyInMenu
-      ? [menuItems.find((i) => i.path === '/dashboard')!, ...filteredMenu]
-      : filteredMenu;
-
-  // Relabel Dashboard for admin users — the Dashboard component internally
-  // routes to AdminDashboard, but the sidebar label should reflect that.
-  const isAdminRole = (user?.role ?? '').toLowerCase() === 'admin' || (user?.role ?? '').toLowerCase() === 'super_admin';
-  const navMenu = isTeacherRole ? menuItems : (isAdminRole
-    ? finalMenu.map(item => item.path === '/dashboard' ? { ...item, label: 'Admin Dashboard' } : item)
-    : finalMenu);
-
-  // Bottom Navigation Bar Quick Links - Filtered by user role.
-  const bottomQuickNav = isTeacherRole ? [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: Users, label: 'Learners', path: '/learners', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: FileSpreadsheet, label: 'Assessments', path: '/assessments', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: FileText, label: 'Sync & Export', path: '/teacher-sync', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['teacher', 'staff', 'class_teacher', 'subject_teacher'] },
-  ] : [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
-    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
-    { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
-    { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
-        { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin'] },
-    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
-          { icon: Database, label: 'Central', path: '/central-data', roles: ['admin'] },
-          { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
-          { icon: Gamepad2, label: 'Games', path: '/games', global: true },
-                      { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
-                      { icon: Wifi, label: 'LAN Server', path: '/lan-config', roles: ['owner'] },
+  // Exact 42 Admin items in order without duplicates, plus Section Header ASSESSMENTS & EXAMS before item #26
+  const adminMenuItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: ShieldCheck, label: 'Data Harmonization', path: '/admin/harmonization' },
+    { icon: Users, label: 'Learners', path: '/learners' },
+    { icon: UserCheck, label: 'Staff Registry', path: '/staff-registry' },
+    { icon: Gamepad2, label: 'Games Hub', path: '/games' },
+    { icon: Layers, label: 'Grades & Streams', path: '/grades' },
+    { icon: Archive, label: 'Transferred Archive', path: '/learners/archive' },
+    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas' },
+    { icon: Award, label: 'Exam Types', path: '/exam-types' },
+    { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants' },
+    { icon: Wifi, label: 'LAN Server Config', path: '/lan-server-config' },
+    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management' },
+    { icon: Server, label: 'Admin Control Center', path: '/admin/control-center' },
+    { icon: MessageSquare, label: 'Communication', path: '/communication' },
+    { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication' },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices' },
+    { icon: Calendar, label: 'Timetable', path: '/timetable' },
+    { icon: Database, label: 'Central Data & APK', path: '/central-data' },
+    { icon: ClipboardCheck, label: 'Learner Attendance', path: '/attendance' },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in' },
+    { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor' },
+    { icon: Clock, label: 'Attendance Management', path: '/staff/attendance' },
+    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments' },
+    { icon: BarChart3, label: 'Results Analysis', path: '/analysis' },
+    { icon: FileText, label: 'Report Cards', path: '/reports' },
+    // --- Section Header: ASSESSMENTS & EXAMS ---
+    { icon: ClipboardList, label: 'ASSESSMENTS & EXAMS', path: '', section: true },
+    { icon: ClipboardCheck, label: 'Grading Review', path: '/grading' },
+    { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create' },
+    { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import' },
+    { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading' },
+    { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list' },
+    // ---
+    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub' },
+    { icon: FlaskConical, label: 'Science Lab Workstation', path: '/science-lab' },
+    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab' },
+    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills' },
+    { icon: Target, label: 'Practical Competencies', path: '/practical-competencies' },
+    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio' },
+    { icon: Library, label: 'Library & E-Resources', path: '/library' },
+    { icon: BookOpen, label: 'Study Corner', path: '/study-corner' },
+    { icon: Box, label: 'Tools & Inventory', path: '/inventory' },
+    { icon: Wallet, label: 'Fees & Finance', path: '/fees' },
+    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: GraduationCap, label: 'Promote Learners', path: '/promote' },
   ];
 
+  const bursarMenuItems = [
+    { icon: LayoutDashboard, label: 'Bursar Dashboard', path: '/dashboard' },
+    { icon: Wallet, label: 'Fee Ledgers & Finance', path: '/fees' },
+    { icon: CreditCard, label: 'Receipts & Payments', path: '/fees' },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in' },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices' },
+  ];
+
+  const librarianMenuItems = [
+    { icon: LayoutDashboard, label: 'Librarian Dashboard', path: '/dashboard' },
+    { icon: Library, label: 'Library & E-Resources', path: '/library' },
+    { icon: BookOpen, label: 'Study Corner', path: '/study-corner' },
+    { icon: Box, label: 'Tools & Inventory', path: '/inventory' },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in' },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices' },
+  ];
+
+  const teacherMenuItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+    { icon: Users, label: 'My Learners', path: '/learners' },
+    { icon: ClipboardCheck, label: 'Roll Call / Attendance', path: '/attendance' },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in' },
+    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab' },
+    { icon: FileSpreadsheet, label: 'Assessments & Marks', path: '/assessments' },
+    { icon: FileText, label: 'Sync & Export Package', path: '/teacher-export' },
+    { icon: Calendar, label: 'Timetable', path: '/timetable' },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices' },
+    { icon: ClipboardList, label: 'Exam Types', path: '/teacher/exam-types' },
+    { icon: FileText, label: 'Report Cards', path: '/reports' },
+    { icon: BookOpen, label: 'Study Corner', path: '/study-corner' },
+  ];
+
+  const activeMenu = isAdminOrOwner
+    ? adminMenuItems
+    : isBursarRole
+    ? bursarMenuItems
+    : isLibrarianRole
+    ? librarianMenuItems
+    : isTeacherRole
+    ? teacherMenuItems
+    : adminMenuItems; // default fallback
+
   return (
-      <div className={cn("flex min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
-      {/* Mobile Sidebar Overlay Backdrop */}
+    <div className={cn("flex min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
       {isOpen && (
         <div
           className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
@@ -826,380 +413,115 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Navigation List */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
-          {navMenu.map((item) => {
-            // Section header (non-clickable divider)
+          {activeMenu.map((item, index) => {
             if ((item as any).section) {
               if (isCollapsed) {
                 return (
-                  <div
-                    key={`section-${item.label}`}
-                    className="my-2 border-t border-slate-200 dark:border-slate-800"
-                    aria-label={item.label}
-                  />
+                  <div key={`section-${index}`} className="my-3 border-t border-slate-200 dark:border-slate-800" />
                 );
               }
               return (
-                <div
-                  key={`section-${item.label}`}
-                  className="px-3 pt-4 pb-1.5 flex items-center gap-2"
-                >
-                  <item.icon size={14} className="text-indigo-500 shrink-0" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                <div key={`section-${index}`} className="px-3 pt-4 pb-2 flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
                     {item.label}
                   </span>
                 </div>
               );
             }
+
             const isActive = location.pathname === item.path;
-                        const subItems = (item as any).subItems as Array<{ icon: any; label: string; path: string; roles: string[] }> | undefined;
-                        const hasSubItems = !!(subItems && subItems.length > 0);
-                        const isSubItemActive = hasSubItems && subItems!.some((sub) => location.pathname === sub.path);
-                        const isExpanded = hasSubItems ? (expandedMenus[item.path] ?? isSubItemActive) : false;
-            
-                        if (hasSubItems) {
-                          return (
-                            <div key={item.path} className="space-y-1">
-                              <div
-                                className={cn(
-                                  "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
-                                  isActive || isSubItemActive
-                                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
-                                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                )}
-                              >
-                                <Link
-                                  to={item.path}
-                                  onClick={() => setIsOpen(false)}
-                                  className="flex items-center gap-3 flex-1 min-w-0"
-                                >
-                                  <item.icon size={20} className={cn(
-                                    "shrink-0",
-                                    isActive || isSubItemActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
-                                  )} />
-                                  {!isCollapsed && <span className="truncate">{item.label}</span>}
-                                </Link>
-                                {!isCollapsed && (
-                                  <button
-                                    onClick={() => setExpandedMenus((prev) => ({ ...prev, [item.path]: !isExpanded }))}
-                                    className="p-1 rounded-lg hover:bg-white/20 transition-colors shrink-0"
-                                    aria-label={isExpanded ? 'Collapse' : 'Expand'}
-                                  >
-                                    <ChevronRight size={16} className={cn("transition-transform", isExpanded && "rotate-90")} />
-                                  </button>
-                                )}
-                              </div>
-                              {!isCollapsed && isExpanded && (
-                                <div className="ml-4 pl-3 border-l-2 border-slate-200 dark:border-slate-700 space-y-1">
-                                  {subItems!.map((sub) => {
-                                    const cActive = location.pathname === sub.path;
-                                    return (
-                                      <Link
-                                        key={sub.path}
-                                        to={sub.path}
-                                        onClick={() => setIsOpen(false)}
-                                        className={cn(
-                                          "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-200 min-h-[40px] group",
-                                          cActive
-                                            ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300"
-                                            : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                        )}
-                                      >
-                                        <sub.icon size={16} className={cn("shrink-0", cActive ? "text-indigo-600 dark:text-indigo-300" : "text-slate-400 group-hover:text-indigo-600")} />
-                                        <span className="truncate">{sub.label}</span>
-                                      </Link>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        }
-            
-                        return (
-                          <Link
-                            key={item.path}
-                            to={item.path}
-                            onClick={() => setIsOpen(false)}
-                            className={cn(
-                              "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
-                              isActive
-                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
-                                : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
-                            )}
-                          >
-                            <item.icon size={20} className={cn(
-                              "shrink-0",
-                              isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
-                            )} />
-                            {!isCollapsed && <span className="truncate">{item.label}</span>}
-                          </Link>
-                        );
-                      })}
-
-          {/* ── Hardcoded LAN Config links for teacher roles ──
-              Placed between Dashboard and Games Hub in the sidebar.
-              Visible only to teacher-variant roles. */}
-          {user && (() => {
-            const roleLower = (user.role ?? '').toLowerCase();
-            const isTeacherVariant =
-              roleLower.includes('teacher') ||
-              roleLower.includes('educator') ||
-              roleLower === 'class_teacher' ||
-              roleLower === 'subject_teacher' ||
-              roleLower === 'senior_teacher';
-            if (!isTeacherVariant) return null;
-
-            const lanItems = [
-                          { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config' },
-                        ];
 
             return (
-              <>
-                {lanItems.map((lanItem) => {
-                  const isActive = location.pathname === lanItem.path;
-                  return (
-                    <Link
-                      key={lanItem.path}
-                      to={lanItem.path}
-                      onClick={() => setIsOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
-                        isActive
-                          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
-                          : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
-                      )}
-                    >
-                      <lanItem.icon size={20} className={cn(
-                        "shrink-0",
-                        isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
-                      )} />
-                      {!isCollapsed && <span className="truncate">{lanItem.label}</span>}
-                    </Link>
-                  );
-                })}
-              </>
+              <Link
+                key={item.path + '-' + index}
+                to={item.path}
+                onClick={() => setIsOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[46px] group",
+                  isActive
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
+                )}
+              >
+                <item.icon size={20} className={cn(
+                  "shrink-0",
+                  isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                )} />
+                {!isCollapsed && <span className="truncate">{item.label}</span>}
+              </Link>
             );
-          })()}
+          })}
         </nav>
 
-        {/* User Account Footer */}
+        {/* Sidebar Footer */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
-          <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <Link to="/profile" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">
-                  {user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'}
-                </div>
-              </Link>
-              {!isCollapsed && (
-                <div className="overflow-hidden flex-1">
-                  <Link to="/profile" onClick={() => setIsOpen(false)}>
-                    <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{user?.name || 'Admin'}</p>
-                  </Link>
-                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">
-                    {(() => {
-                      try {
-                        const staffRaw = localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff') || '[]';
-                        const staffList = JSON.parse(staffRaw);
-                        if (Array.isArray(staffList)) {
-                          const found = staffList.find((s: any) =>
-                            (s.email && user?.email && s.email.toLowerCase() === user.email.toLowerCase()) ||
-                            (s.name && user?.name && s.name.toLowerCase() === user.name.toLowerCase()) ||
-                            (s.staffId && (user as any)?.staffId && s.staffId === (user as any).staffId)
-                          );
-                          if (found) {
-                            const roleTitle = found.role || found.title || found.category || found.assignedRole;
-                            if (roleTitle) {
-                              return String(roleTitle).replace(/_/g, ' ').toUpperCase();
-                            }
-                          }
-                        }
-                      } catch {}
-                      return (user?.role || 'Administrator').replace(/_/g, ' ');
-                    })()}
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            <div className="space-y-2 pt-2 border-t border-slate-200/50 dark:border-slate-700">
-              <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 px-1 font-mono">
-                <span title={new Date().toLocaleString()}>
-                  Build: {new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Vercel</span>
+          {!isCollapsed && user && (
+            <div className="mb-3 px-3 py-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-black text-xs flex items-center justify-center shrink-0">
+                {String(user.name || user.email || 'A').charAt(0).toUpperCase()}
               </div>
-              {!isCollapsed && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      const updated = await checkForUpdates();
-                      if (updated) {
-                        toast.success('New version found! Reloading...');
-                      } else {
-                        toast.success('You are on the latest build.');
-                      }
-                    }}
-                    className="w-full justify-center gap-2 rounded-xl h-8 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
-                  >
-                    <RefreshCw size={13} /> Check for Updates
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={logout}
-                    className="w-full justify-center gap-2 rounded-xl h-9 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                  >
-                    <LogOut size={14} /> Log Out
-                  </Button>
-                </>
-              )}
+              <div className="overflow-hidden">
+                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.name || user.email || 'Administrator'}</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold truncate">{normalizedRole || 'admin'}</p>
+              </div>
             </div>
-          </div>
+          )}
+          <button
+            onClick={() => {
+              logout();
+              navigate('/login', { replace: true });
+            }}
+            className={cn(
+              "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all font-bold text-sm min-h-[46px]",
+              isCollapsed && "justify-center px-0"
+            )}
+            title="Log Out"
+          >
+            <LogOut size={20} className="shrink-0" />
+            {!isCollapsed && <span>Log Out</span>}
+          </button>
         </div>
       </aside>
 
-      {/* Main Content Area - Updated with responsive margins to account for fixed sidebar */}
-      <main className={cn(
-        "flex-1 flex flex-col min-w-0 overflow-x-hidden w-full max-w-full transition-all duration-300",
-        isCollapsed ? "lg:ml-20" : "lg:ml-72 md:lg:ml-64"
+      {/* Main Content Wrapper */}
+      <div className={cn(
+        "flex-1 flex flex-col min-h-screen transition-all duration-300 w-full",
+        isCollapsed ? "lg:ml-20" : "lg:ml-72 md:ml-64"
       )}>
-        {/* Mobile & Desktop Header Bar - stacks on mobile, row on sm+ */}
-                <header className="min-h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 lg:px-8 py-3 shrink-0 z-20 print:hidden relative">
-                  <div className="flex items-center gap-3">
-                    {/* Hamburger Button for Mobile */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="lg:hidden rounded-2xl h-11 w-11 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 active:scale-95"
-                      onClick={() => setIsOpen(true)}
-                      aria-label="Open menu"
-                    >
-                      <Menu size={22} />
-                    </Button>
-        
-                    {/* Title / Home */}
-                    <div className="flex items-center gap-2 flex-1">
-                      <div className="lg:hidden w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-md shadow-indigo-100">
-                        M
-                      </div>
-                      <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight truncate">Munyaka Portal</span>
-                      {location.pathname !== '/' && (
-                        <button
-                          onClick={() => navigate('/')}
-                          className="px-3 py-1.5 text-sm font-medium rounded-lg text-slate-600 hover:text-purple-600 hover:bg-purple-50 flex items-center gap-2 transition-colors"
-                          aria-label="Go to home"
-                        >
-                          <Home size={16} />
-                          <span>Home</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-        
-                  <div className="flex items-center gap-2">
-                    {/* Sticky Sync Button in Header (Admin/Owner only) */}
-                    {user && !['teacher', 'staff', 'class_teacher', 'subject_teacher', 'senior_teacher'].includes(String(user.role || '').toLowerCase()) && (
-                      <SyncButton />
-                    )}
-                    <NotificationBell />
-                    {(() => {
-                      const hour = new Date().getHours();
-                      let greeting = "Good morning";
-                      if (hour >= 12 && hour < 17) {
-                        greeting = "Good afternoon";
-                      } else if (hour >= 17 || hour < 5) {
-                        greeting = "Good evening";
-                      }
-                      
-                      let rawName = user?.name || user?.role || "Admin";
-                      if (/^(school|munyaka|portal|system)$/i.test(rawName.trim()) || rawName.length > 25) {
-                        rawName = "Admin";
-                      }
-                      const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
-
-                      return (
-                        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 shadow-sm whitespace-nowrap">
-                          <span className="font-sans text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                            {greeting}, {displayName} 👋
-                          </span>
-                        </div>
-                      );
-                    })()}
-                    <button
-                      onClick={() => setIsDarkMode(!isDarkMode)}
-                      className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors h-11 w-11 flex items-center justify-center active:scale-95"
-                      aria-label="Toggle theme"
-                    >
-                      {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-500" />}
-                    </button>
-                    {/* LAN Server Connection Indicator - Visible only for owner; navigates to /lan-config */}
-                    {(user?.role ?? '').toLowerCase() === 'owner' ? (
-                      <Link
-                        to="/lan-config"
-                        className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                      >
-                        {isConnected ? (
-                          <>
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-emerald-600 dark:text-emerald-400">LAN Connected</span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-2 h-2 rounded-full bg-slate-300" />
-                            <span className="text-slate-400">Offline</span>
-                          </>
-                        )}
-                      </Link>
-                    ) : null}
-                  </div>
-                </header>
-
-        {/* Dynamic Main Viewport - prevent horizontal clipping */}
-                <div
-                          ref={scrollContainerRef}
-                          className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-3 sm:p-6 lg:p-8 pb-36 lg:pb-8 pb-safe custom-scrollbar"
-                  >
-                    <div className="flex-1 w-full max-w-7xl mx-auto p-3 sm:p-6 overflow-x-hidden">
-                    {children}
+        {/* Top Navbar */}
+        <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between min-h-[64px]">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsOpen(true)}
+              className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 min-h-[44px] min-w-[44px] flex items-center justify-center active:scale-95"
+              aria-label="Open menu"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Munyaka SMS Active</span>
+            </div>
           </div>
-        </div>
 
-        {/* Mobile Bottom Quick Navigation Bar (Role-Based One-Thumb Nav) - horizontally scrollable */}
-        <div className={cn(
-          "lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-1 pb-safe pt-2 z-40 shadow-2xl transition-transform duration-300 ease-in-out print:hidden",
-          showBottomNav ? "translate-y-0" : "translate-y-full"
-        )}>
-          {bottomQuickNav.length > 0 ? (
-            <div className="flex items-stretch justify-start gap-1 px-1 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
-              {bottomQuickNav.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={cn(
-                      "flex flex-col items-center justify-center py-2 px-2 rounded-2xl min-h-[52px] min-w-[64px] shrink-0 snap-start touch-active transition-all duration-200 ease-out",
-                      isActive
-                        ? "text-indigo-600 dark:text-indigo-400 font-black bg-indigo-50 dark:bg-indigo-950/40"
-                        : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                    )}
-                  >
-                    <item.icon size={20} className={cn("shrink-0 transition-transform duration-200", isActive && "scale-110")} />
-                    <span className="text-[10px] xs:text-xs mt-1 tracking-tight leading-tight text-center whitespace-normal break-words line-clamp-2 max-w-full px-0.5">{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center py-3 px-1">
-              <span className="text-xs text-slate-400 font-medium">No navigation available</span>
-            </div>
-          )}
-        </div>
-      </main>
+          <div className="flex items-center gap-3">
+            <SyncButton />
+            <NotificationBell />
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+              aria-label="Toggle theme"
+            >
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+          </div>
+        </header>
+
+        {/* Page Body */}
+        <main className="flex-1 pb-16 lg:pb-6 overflow-x-hidden" ref={scrollContainerRef}>
+          {children}
+        </main>
+      </div>
     </div>
   );
 };
