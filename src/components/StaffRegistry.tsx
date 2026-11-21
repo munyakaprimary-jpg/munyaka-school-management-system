@@ -204,30 +204,30 @@ export default function StaffRegistry() {
   };
 
   const [staffList, setStaffList] = useState<StaffMember[]>(() => {
-    const saved = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_v2');
-    let loadedStaff: any[] = [];
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          loadedStaff = parsed;
+      const saved = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_v2');
+      let loadedStaff: any[] = [];
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            loadedStaff = parsed;
+          }
+        } catch (e) {
+          console.error(e);
         }
-      } catch (e) {
-        console.error(e);
       }
-    }
-    // Use canonical deduplication utility
-    const deduplicated = deduplicateStaffRecords(loadedStaff);
-    // Sanitize and deduplicate loaded list or return empty array if none
-    const seenIds = new Set<string>();
-    const sanitized: StaffMember[] = deduplicated
-      .filter((staff: any) => {
-        const sid = String(staff?.id || staff?.staffId || staff?.staff_id || staff?.accessCode || staff?.code || '');
-        return Boolean(sid);
-      })
-      .map((staff) => {
-        // Use canonical ID for staff records
-        const canonicalId = getCanonicalStaffId(staff);
+      // Use canonical deduplication utility
+      const deduplicated = deduplicateStaffRecords(loadedStaff);
+      // Sanitize and deduplicate loaded list or return empty array if none
+      const seenIds = new Set<string>();
+      const sanitized: StaffMember[] = deduplicated
+        .filter((staff: any) => {
+          const sid = String(staff?.id || staff?.staffId || staff?.staff_id || staff?.accessCode || staff?.code || '');
+          return Boolean(sid);
+        })
+        .map((staff) => {
+          // Use canonical ID for staff records
+          const canonicalId = getCanonicalStaffId(staff);
           let id = String(staff.id || staff.staffId || staff.staff_id || staff.accessCode || staff.code || canonicalId);
           if (!id.startsWith('MUN-') && !id.startsWith('staff_')) {
             id = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
