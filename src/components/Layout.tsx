@@ -60,10 +60,82 @@ import { useMobileBackButton } from '@/hooks/useMobileBackButton';
 // ── Notification Bell Component ───────────────────────────────────────────────
 export const NotificationBell: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; time: string; read: boolean }>>([
-    { id: '1', title: 'System Boot', message: 'Munyaka SMS initialized successfully.', time: 'Just now', read: false },
-    { id: '2', title: 'Cloud Sync', message: 'All local records verified.', time: '5m ago', read: false },
-  ]);
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; time: string; read: boolean; timestamp: number }>>([]);
+
+  useEffect(() => {
+    const generateTelemetryNotifications = () => {
+      const now = Date.now();
+      const list: Array<{ id: string; title: string; message: string; time: string; read: boolean; timestamp: number }> = [];
+
+      // 1. Real Boot & Auth Telemetry
+      const bootTime = (window as any).__munyaka_boot_time || now;
+      const diffSec = Math.floor((now - bootTime) / 1000);
+      const timeStr = diffSec < 60 ? `${Math.max(1, diffSec)}s ago` : `${Math.floor(diffSec / 60)}m ago`;
+      
+      let authStateMsg = 'Firebase Auth: Anonymous session active';
+      try {
+        const currentUserObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+        if (currentUserObj?.email || currentUserObj?.name) {
+          authStateMsg = `Authenticated as ${currentUserObj.name || currentUserObj.email}`;
+        }
+      } catch {
+        /* no-op */
+      }
+
+      list.push({
+        id: 'boot-notif',
+        title: 'System Boot & Auth',
+        message: authStateMsg,
+        time: timeStr,
+        read: true,
+        timestamp: bootTime
+      });
+
+      // 2. Real Cloud Sync & Local Storage Telemetry
+      try {
+        const learnersRaw = localStorage.getItem('munyaka_learners') || '[]';
+        const staffRaw = localStorage.getItem('munyaka_staff') || '[]';
+        const learners = JSON.parse(learnersRaw);
+        const staff = JSON.parse(staffRaw);
+
+        const learnerCount = Array.isArray(learners) ? learners.length : 0;
+        const staffCount = Array.isArray(staff) ? staff.length : 0;
+
+        let syncMsg = `Local Storage: ${learnerCount} learners, ${staffCount} staff records loaded.`;
+        if (learnerCount === 0 && staffCount === 0) {
+          syncMsg = 'Local Storage is currently empty. Waiting for Firestore sync or manual entry.';
+        }
+
+        list.push({
+          id: 'sync-notif',
+          title: 'Cloud & Storage Telemetry',
+          message: syncMsg,
+          time: timeStr,
+          read: false,
+          timestamp: bootTime
+        });
+      } catch (e) {
+        list.push({
+          id: 'sync-notif-err',
+          title: 'Storage Telemetry',
+          message: 'Error reading local records telemetry.',
+          time: timeStr,
+          read: false,
+          timestamp: bootTime
+        });
+      }
+
+      setNotifications(list);
+    };
+
+    if (!(window as any).__munyaka_boot_time) {
+      (window as any).__munyaka_boot_time = Date.now();
+    }
+
+    generateTelemetryNotifications();
+    const interval = setInterval(generateTelemetryNotifications, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -87,7 +159,7 @@ export const NotificationBell: React.FC = () => {
           <div className="bg-gradient-to-r from-teal-700 to-indigo-700 p-4 text-white flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bell className="w-5 h-5 text-teal-200" />
-              <h4 className="font-black text-sm tracking-wide">Notifications</h4>
+              <h4 className="font-black text-sm tracking-wide">Live Telemetry Notifications</h4>
             </div>
             <button
               onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
@@ -98,7 +170,7 @@ export const NotificationBell: React.FC = () => {
           </div>
           <div className="max-h-80 overflow-y-auto p-3 space-y-2">
             {notifications.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-xs font-medium">No notifications</div>
+              <div className="py-8 text-center text-slate-400 text-xs font-medium">No telemetry notifications</div>
             ) : (
               notifications.map(n => (
                 <div key={n.id} className={cn("p-3 rounded-2xl border transition-all text-left", n.read ? "bg-slate-50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800" : "bg-teal-50/50 dark:bg-teal-950/20 border-teal-100 dark:border-teal-900/50")}>
