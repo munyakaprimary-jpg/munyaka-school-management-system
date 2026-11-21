@@ -2162,30 +2162,92 @@ export default function FirestoreSyncTab() {
     setIsSyncing(true);
 
     try {
-      // Step 1: Read local primary key
-      const UNIFIED_KEY = 'munyaka_learners_v2';
-      const localRecords = JSON.parse(localStorage.getItem(UNIFIED_KEY) || '[]');
-
-      // Step 2: Push all local records to Firestore first (Preserve Local Edits)
-      for (const record of localRecords) {
-        const docId = String(record.id || record.admissionNo || Date.now());
-        await setDoc(doc(db, "learners", docId), record, { merge: true });
+      const authInstance = getAuth();
+      if (!authInstance.currentUser) {
+        await signInAnonymously(authInstance).catch(() => {});
       }
 
-      // Step 3: Fetch updated clean snapshot back from Cloud
+      // Discover learners across all possible local sources & localStorage keys
+      let localRecords: any[] = [];
+      const keysToScan = ['munyaka_learners', 'munyaka_learners_v2', 'munyaka_learners_directory', 'learners', 'school_students', 'munyaka_students', 'students'];
+      for (const k of keysToScan) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              localRecords = parsed;
+              console.log(`Discovered ${parsed.length} learners from localStorage key: ${k}`);
+              break;
+            }
+          } catch {}
+        }
+      }
+      if (localRecords.length === 0) {
+        localRecords = HarmonizedLearnerService.getLearners() || [];
+        console.log(`Discovered ${localRecords.length} learners from HarmonizedLearnerService`);
+      }
+
+      if (localRecords.length === 0) {
+        // Also check if any other key in localStorage contains array of learners
+        for (let i = 0; i < localStorage.length; i++) {
+          const keyName = localStorage.key(i);
+          if (keyName && (keyName.includes('learner') || keyName.includes('student') || keyName.includes('munyaka'))) {
+            try {
+              const val = JSON.parse(localStorage.getItem(keyName) || '');
+              if (Array.isArray(val) && val.length > 0 && val[0] && (val[0].name || val[0].admissionNo || val[0].admission_number)) {
+                localRecords = val;
+                console.log(`Discovered ${val.length} learners from wildcard storage key: ${keyName}`);
+                break;
+              }
+            } catch {}
+          }
+        }
+      }
+
+      console.log(`Total local learners found to sync: ${localRecords.length}`);
+
+      // Push all local records to Firestore
+      const batch = writeBatch(db);
+      localRecords.forEach((record: any, idx: number) => {
+        const rawId = record.id || record.admissionNo || record.admission_number || record.admNo || `learner_${idx + 1}`;
+        const docId = String(rawId).startsWith('learner-') ? String(rawId) : `learner-${rawId}`;
+        const normalizedRecord = {
+          ...record,
+          id: docId,
+          admission_number: String(record.admissionNumber || record.admission_number || record.admission_no || record.admissionNo || record.admNo || docId).trim(),
+          name: String(record.name || `${record.firstName || ''} ${record.lastName || ''}`).trim() || 'Learner',
+          grade: String(record.grade || record.gradeLevel || 'Grade 1').trim(),
+          stream: String(record.stream || '').trim(),
+          parent_phone: String(record.parentPhone || record.guardianPhone || record.parent_phone || record.phone || '').trim(),
+          updated_at: new Date().toISOString()
+        };
+        const docRef = doc(db, "learners", docId);
+        batch.set(docRef, normalizedRecord, { merge: true });
+      });
+
+      await batch.commit();
+
+      // Save standardized list back to local storage
+      localStorage.setItem('munyaka_learners_v2', JSON.stringify(localRecords));
+      localStorage.setItem('munyaka_learners', JSON.stringify(localRecords));
+
+      // Fetch updated clean snapshot back from Cloud
       const snapshot = await getDocs(collection(db, "learners"));
       const freshCloudRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      // Step 4: Overwrite primary key with verified merged data & purge legacy keys
-      localStorage.setItem(UNIFIED_KEY, JSON.stringify(freshCloudRecords));
-      localStorage.removeItem('students');
-      localStorage.removeItem('cached_learners');
+      setCloudLearnersCount(freshCloudRecords.length);
+      setCloudLearnersList(freshCloudRecords);
+      setCloudCount(freshCloudRecords.length);
 
-      // Step 5: Notify UI counters
+      // Notify UI counters
       window.dispatchEvent(new Event('learners_updated'));
       alert(`Successfully pushed local changes and harmonized ${freshCloudRecords.length} records!`);
-    } catch (error) {
+      showSuccess(`Successfully pushed local changes and harmonized ${freshCloudRecords.length} records!`);
+    } catch (error: any) {
       console.error("Local-to-cloud sync failed:", error);
+      alert(`Sync failed: ${error.message || error}`);
+      showError(error.message || 'Sync failed');
     } finally {
       setIsSyncing(false);
     }
