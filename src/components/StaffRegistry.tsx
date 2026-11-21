@@ -1280,7 +1280,9 @@ export default function StaffRegistry() {
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleRemoveSubjectAllocation(getCanonicalStaffId(staff) || staff.id, bIdx);
+                                        if (confirm(`Remove "${badge.label}" from this staff member?`)) {
+                                          handleRemoveSubjectAllocation(getCanonicalStaffId(staff) || staff.id, bIdx);
+                                        }
                                       }}
                                       className="w-3.5 h-3.5 rounded-full inline-flex items-center justify-center text-indigo-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-0.5"
                                       title="Remove assignment"

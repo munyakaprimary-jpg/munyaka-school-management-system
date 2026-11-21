@@ -141,17 +141,11 @@ export const AdminControlCenter: React.FC = () => {
   };
 
   const handleDeleteStaff = (id: string) => {
-    const target = staff.find((u: any) => u.id === id);
-    if (!target) {
+    if (confirm('Are you sure you want to remove this staff record & revoke authentication access?')) {
       const updated = staff.filter(u => u.id !== id);
       persistStaffList(updated);
-      showSuccess('Staff record successfully removed.');
-      return;
+      showSuccess('Staff record and auth access successfully revoked.');
     }
-    // Forward or trigger the staff registry deletion modal or handle directly with admin verification
-    const updated = staff.filter(u => u.id !== id);
-    persistStaffList(updated);
-    showSuccess('Staff record and auth access successfully revoked.');
   };
 
   const togglePasswordReveal = (key: string) => {
