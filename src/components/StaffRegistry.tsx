@@ -29,6 +29,7 @@ import {
   Bell,
   BellOff,
   MoreVertical,
+  X,
 } from 'lucide-react';
 import {
   DropdownMenu,
