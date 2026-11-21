@@ -52,7 +52,7 @@ const Dashboard: React.FC = () => {
   }
 
   // Class Teacher or Teacher gets Teacher Dashboard
-  if (isClassTeacherRole(normalizedRole) || isSubjectTeacherRole(normalizedRole) || normalizedRole === 'teacher' || normalizedRole === 'educator' || userName.includes('BRIAN KIPTOO')) {
+  if (isClassTeacherRole(normalizedRole) || isSubjectTeacherRole(normalizedRole) || normalizedRole === 'teacher' || normalizedRole === 'educator' || normalizedRole.includes('teacher') || userName.includes('BRIAN KIPTOO')) {
     return <TeacherDashboard />;
   }
 
@@ -71,10 +71,8 @@ const Dashboard: React.FC = () => {
     return <AdminDashboard />;
   }
 
-  // Default fallback - block non-admin roles from Admin Dashboard
-  // For any other role, redirect to appropriate dashboard
-  // This prevents unauthorized access to Admin Dashboard
-  return <AdminDashboard />;
+  // For any non-admin role (teacher, staff, subject_teacher, etc.), always render TeacherDashboard
+  return <TeacherDashboard />;
 };
 
 export default Dashboard;
