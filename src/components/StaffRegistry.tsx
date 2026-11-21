@@ -752,6 +752,41 @@ export default function StaffRegistry() {
     };
 
   // Extract unique learning areas names for subject pill grid
+  const handleRemoveSubjectAllocation = async (staffId: string, badgeIndex: number) => {
+    const targetStaff = staffList.find(s => getCanonicalStaffId(s) === staffId || s.id === staffId);
+    if (!targetStaff) return;
+
+    const staffObj: any = { ...targetStaff };
+    const rawAssignments = Array.isArray(staffObj.subjectAssignments) ? [...staffObj.subjectAssignments] : [];
+    const fallbackSubjects = Array.isArray(staffObj.teachingSubjects || staffObj.subjects) ? [...(staffObj.teachingSubjects || staffObj.subjects)] : [];
+
+    if (rawAssignments.length > badgeIndex) {
+      rawAssignments.splice(badgeIndex, 1);
+    } else if (fallbackSubjects.length > badgeIndex) {
+      fallbackSubjects.splice(badgeIndex, 1);
+    }
+
+    const updatedSubjects = Array.from(new Set(rawAssignments.map((a: any) => typeof a === 'string' ? a : (a.subject || a.name || ''))).filter(Boolean));
+    if (updatedSubjects.length === 0 && fallbackSubjects.length > 0) {
+      fallbackSubjects.splice(badgeIndex, 1);
+    }
+
+    const updatedData = {
+      ...staffObj,
+      subjectAssignments: rawAssignments,
+      teachingSubjects: updatedSubjects.length > 0 ? updatedSubjects : fallbackSubjects,
+      subjects: updatedSubjects.length > 0 ? updatedSubjects : fallbackSubjects,
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      const canonicalId = getCanonicalStaffId(updatedData) || updatedData.id;
+      await setDoc(doc(db, 'staff', canonicalId), updatedData, { merge: true });
+    } catch {}
+
+    setStaffList(prev => prev.map(s => (getCanonicalStaffId(s) === staffId || s.id === staffId ? updatedData : s)));
+  };
+
   const availableLearningAreas = useMemo(() => {
     try {
       const storedClusters = getLearningAreas();
@@ -814,7 +849,42 @@ export default function StaffRegistry() {
     ];
   }, []);
 
-  // Helper function to check if a category is a teaching role
+  // Helper function to remove a single subject allocation
+  const handleRemoveSubjectAllocation = async (staffId: string, badgeIndex: number) => {
+    const targetStaff = staffList.find(s => getCanonicalStaffId(s) === staffId || s.id === staffId);
+    if (!targetStaff) return;
+
+    const staffObj: any = { ...targetStaff };
+    const rawAssignments = Array.isArray(staffObj.subjectAssignments) ? [...staffObj.subjectAssignments] : [];
+    const fallbackSubjects = Array.isArray(staffObj.teachingSubjects || staffObj.subjects) ? [...(staffObj.teachingSubjects || staffObj.subjects)] : [];
+
+    if (rawAssignments.length > badgeIndex) {
+      rawAssignments.splice(badgeIndex, 1);
+    } else if (fallbackSubjects.length > badgeIndex) {
+      fallbackSubjects.splice(badgeIndex, 1);
+    }
+
+    // Also update teachingSubjects/subjects
+    const updatedSubjects = Array.from(new Set(rawAssignments.map((a: any) => typeof a === 'string' ? a : (a.subject || a.name || ''))).filter(Boolean));
+    if (updatedSubjects.length === 0 && fallbackSubjects.length > 0) {
+      fallbackSubjects.splice(badgeIndex, 1);
+    }
+
+    const updatedData = {
+      ...staffObj,
+      subjectAssignments: rawAssignments,
+      teachingSubjects: updatedSubjects.length > 0 ? updatedSubjects : fallbackSubjects,
+      subjects: updatedSubjects.length > 0 ? updatedSubjects : fallbackSubjects,
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      const canonicalId = getCanonicalStaffId(updatedData) || updatedData.id;
+      await setDoc(doc(db, 'staff', canonicalId), updatedData, { merge: true });
+    } catch {}
+
+    setStaffList(prev => prev.map(s => (getCanonicalStaffId(s) === staffId || s.id === staffId ? updatedData : s)));
+  };
   const categoryIsTeaching = (cat: string) => {
     return cat !== 'Bursar' && cat !== 'Store Master';
   };
@@ -1188,13 +1258,26 @@ export default function StaffRegistry() {
 
                             return formattedBadges.length > 0 ? (
                               <div className="flex flex-wrap gap-1.5 max-w-[320px]">
-                                {formattedBadges.map((badge) => (
+                                {formattedBadges.map((badge, bIdx) => (
                                   <span
                                     key={badge.key}
-                                    className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs break-words hyphens-auto"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs break-words hyphens-auto group"
                                     title={badge.label}
                                   >
-                                    {badge.label}
+                                    <span>{badge.label}</span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirm(`Remove "${badge.label}" from this staff member?`)) {
+                                          handleRemoveSubjectAllocation(getCanonicalStaffId(staff) || staff.id, bIdx);
+                                        }
+                                      }}
+                                      className="w-3.5 h-3.5 rounded-full inline-flex items-center justify-center text-indigo-400 hover:text-red-600 hover:bg-red-50 transition-colors ml-0.5"
+                                      title="Remove assignment"
+                                    >
+                                      <X className="w-2.5 h-2.5" />
+                                    </button>
                                   </span>
                                 ))}
                               </div>
