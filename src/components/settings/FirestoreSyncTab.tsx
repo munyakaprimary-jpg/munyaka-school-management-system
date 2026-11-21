@@ -390,11 +390,21 @@ export default function FirestoreSyncTab() {
     setIsCheckingCollections(true);
     setErrorMessage(null);
     try {
+      const authInstance = getAuth();
+      if (!authInstance.currentUser) {
+        await signInAnonymously(authInstance).catch(() => {});
+      }
+
       // Learners Collection
-      const learnersSnap = await getDocs(collection(db, 'learners')).catch(() => ({ size: 0, docs: [] }));
+      const learnersSnap = await getDocs(collection(db, 'learners')).catch((err) => {
+        console.warn('Learners collection fetch error:', err);
+        return { size: 0, docs: [] };
+      });
+      console.log('Fetched learners docs count from Firestore:', learnersSnap?.size || 0);
       setCloudLearnersCount(learnersSnap?.size || 0);
       const learnersDocs = (learnersSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudLearnersList(learnersDocs);
+      setCloudCount(learnersSnap?.size || 0);
 
       // Fees Collection (dedicated 'fees' Firestore collection)
       const feesSnap = await getDocs(collection(db, 'fees')).catch(() => ({ size: 0, docs: [] }));
