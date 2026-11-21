@@ -53,8 +53,8 @@ import { Separator } from '@/components/ui/separator';
 import { getCanonicalStaffId, toFlatStaffSchema, deduplicateStaffRecords } from '@/utils/staffCanonicalUtils';
 import { db } from '@/config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
-
-const defaultCbcLearningAreas: any[] = [];
+import { getLearningAreas } from '@/utils/storage';
+import { comprehensiveCbcLearningAreas } from '@/data/defaultCbcLearningAreas';
 
 export type StaffCategoryRole =
   | 'Class Teacher'
@@ -752,27 +752,67 @@ export default function StaffRegistry() {
     };
 
   // Extract unique learning areas names for subject pill grid
-  const availableLearningAreas = Array.isArray(defaultCbcLearningAreas) && defaultCbcLearningAreas.length > 0
-    ? defaultCbcLearningAreas.map((la: any) => {
-        if (!la) return 'Learning Area';
-        if (typeof la === 'string') return la;
-        if (typeof la === 'object') {
-          return String(la.name || la.title || la.subject || la.label || JSON.stringify(la));
+  const availableLearningAreas = useMemo(() => {
+    try {
+      const storedClusters = getLearningAreas();
+      if (Array.isArray(storedClusters) && storedClusters.length > 0) {
+        let extracted: { name: string; gradeBand?: string; grades?: string[] }[] = [];
+        storedClusters.forEach((cluster: any) => {
+          const clusterGrades = cluster.grades || cluster.gradeBands || (cluster.name ? [cluster.name] : []);
+          const areas = cluster.learningAreas || cluster.subjects || cluster.items || [];
+          if (Array.isArray(areas)) {
+            areas.forEach((la: any) => {
+              if (!la) return;
+              const subName = typeof la === 'string' ? la : String(la.name || la.title || la.subject || la.label || '');
+              if (subName) {
+                extracted.push({
+                  name: subName,
+                  gradeBand: cluster.name || cluster.gradeBand || '',
+                  grades: clusterGrades
+                });
+              }
+            });
+          }
+        });
+        if (extracted.length > 0) return extracted;
+      }
+    } catch {}
+
+    if (Array.isArray(comprehensiveCbcLearningAreas) && comprehensiveCbcLearningAreas.length > 0) {
+      let extracted: { name: string; gradeBand?: string; grades?: string[] }[] = [];
+      comprehensiveCbcLearningAreas.forEach((cluster: any) => {
+        const clusterGrades = cluster.grades || cluster.gradeBands || (cluster.name ? [cluster.name] : []);
+        const areas = cluster.learningAreas || cluster.subjects || [];
+        if (Array.isArray(areas)) {
+          areas.forEach((la: any) => {
+            if (!la) return;
+            const subName = typeof la === 'string' ? la : String(la.name || la.title || la.subject || '');
+            if (subName) {
+              extracted.push({
+                name: subName,
+                gradeBand: cluster.name || '',
+                grades: clusterGrades
+              });
+            }
+          });
         }
-        return String(la);
-      })
-    : [
-        'Mathematics',
-        'English Language',
-        'Kiswahili Lugha',
-        'Science and Technology',
-        'Social Studies',
-        'Religious Education (CRE/IRE/HRE)',
-        'Creative Arts',
-        'Physical Education and Sports',
-        'Agriculture and Nutrition',
-        'Pre-Technical Studies'
-      ];
+      });
+      if (extracted.length > 0) return extracted;
+    }
+
+    return [
+      { name: 'Mathematics', gradeBand: 'All Grades', grades: [] },
+      { name: 'English Language', gradeBand: 'All Grades', grades: [] },
+      { name: 'Kiswahili Lugha', gradeBand: 'All Grades', grades: [] },
+      { name: 'Science and Technology', gradeBand: 'All Grades', grades: [] },
+      { name: 'Social Studies', gradeBand: 'All Grades', grades: [] },
+      { name: 'Religious Education (CRE/IRE/HRE)', gradeBand: 'All Grades', grades: [] },
+      { name: 'Creative Arts', gradeBand: 'All Grades', grades: [] },
+      { name: 'Physical Education and Sports', gradeBand: 'All Grades', grades: [] },
+      { name: 'Agriculture and Nutrition', gradeBand: 'All Grades', grades: [] },
+      { name: 'Pre-Technical Studies', gradeBand: 'All Grades', grades: [] }
+    ];
+  }, []);
 
   // Helper function to check if a category is a teaching role
   const categoryIsTeaching = (cat: string) => {
@@ -819,67 +859,55 @@ export default function StaffRegistry() {
   
   const filteredLearningAreasForClasses = useMemo(() => {
     if (!assignedClasses || assignedClasses.length === 0) {
-      return availableLearningAreas;
-    }
-
-    let hasPrePrimary = false;
-    let hasLowerPrimary = false;
-    let hasUpperPrimary = false;
-    let hasJuniorSecondary = false;
-
-    assignedClasses.forEach(cls => {
-      const upperCls = cls.toUpperCase();
-      if (upperCls.includes('PP1') || upperCls.includes('PP2') || upperCls.includes('PRE-PRIMARY')) {
-        hasPrePrimary = true;
-      }
-      if (upperCls.includes('GRADE 1') || upperCls.includes('GRADE 2') || upperCls.includes('GRADE 3')) {
-        hasLowerPrimary = true;
-      }
-      if (upperCls.includes('GRADE 4') || upperCls.includes('GRADE 5') || upperCls.includes('GRADE 6')) {
-        hasUpperPrimary = true;
-      }
-      if (upperCls.includes('GRADE 7') || upperCls.includes('GRADE 8') || upperCls.includes('GRADE 9') || upperCls.includes('JUNIOR')) {
-        hasJuniorSecondary = true;
-      }
-    });
-
-    if (!hasPrePrimary && !hasLowerPrimary && !hasUpperPrimary && !hasJuniorSecondary) {
-      return availableLearningAreas;
+      return [];
     }
 
     const filtered = availableLearningAreas.filter(area => {
-      const lower = area.toLowerCase();
-
-      if ((hasPrePrimary || hasLowerPrimary) && !hasUpperPrimary && !hasJuniorSecondary) {
-        return (
-          lower.includes('math') ||
-          lower.includes('english') ||
-          lower.includes('kiswahili') ||
-          lower.includes('language') ||
-          lower.includes('lugha') ||
-          lower.includes('environmental') ||
-          lower.includes('hygiene') ||
-          lower.includes('nutrition') ||
-          lower.includes('religious') ||
-          lower.includes('cre') ||
-          lower.includes('ire') ||
-          lower.includes('hre') ||
-          lower.includes('movement') ||
-          lower.includes('creative') ||
-          lower.includes('music') ||
-          lower.includes('art')
-        );
-      }
-
-      if (hasUpperPrimary || hasJuniorSecondary) {
-        return true;
-      }
-
+      if (!area || !itemMatchesGrades(area, assignedClasses)) return false;
       return true;
     });
 
-    return filtered.length > 0 ? filtered : availableLearningAreas;
+    // Deduplicate by name
+    const seenNames = new Set<string>();
+    const uniqueList: typeof availableLearningAreas = [];
+    filtered.forEach(item => {
+      const name = typeof item === 'string' ? item : item.name;
+      if (name && !seenNames.has(name)) {
+        seenNames.add(name);
+        uniqueList.push(item);
+      }
+    });
+
+    return uniqueList.length > 0 ? uniqueList : [];
   }, [assignedClasses, availableLearningAreas]);
+
+  function itemMatchesGrades(item: any, selectedGrades: string[]): boolean {
+    if (!item) return false;
+    const gradeBand = (typeof item === 'object' && item.gradeBand ? item.gradeBand : '').toLowerCase();
+    const itemGrades = (typeof item === 'object' && Array.isArray(item.grades) ? item.grades : []).map((g: string) => g.toLowerCase());
+    
+    if (!gradeBand && itemGrades.length === 0) return true; // fallback if unassigned
+
+    return selectedGrades.some(cls => {
+      const c = cls.toLowerCase();
+      // Match by grade band name or specific grade
+      if (gradeBand && (gradeBand.includes(c) || c.includes(gradeBand))) return true;
+      if (itemGrades.some((g: string) => g.includes(c) || c.includes(g))) return true;
+      
+      // Category matches
+      const isPP = c.includes('pp') || c.includes('pre-primary');
+      const isLower = c.includes('grade 1') || c.includes('grade 2') || c.includes('grade 3');
+      const isUpper = c.includes('grade 4') || c.includes('grade 5') || c.includes('grade 6');
+      const isJunior = c.includes('grade 7') || c.includes('grade 8') || c.includes('grade 9') || c.includes('junior');
+
+      if (isPP && (gradeBand.includes('pp') || gradeBand.includes('pre') || gradeBand.includes('foundation'))) return true;
+      if (isLower && (gradeBand.includes('lower') || gradeBand.includes('1') || gradeBand.includes('2') || gradeBand.includes('3'))) return true;
+      if (isUpper && (gradeBand.includes('upper') || gradeBand.includes('4') || gradeBand.includes('5') || gradeBand.includes('6'))) return true;
+      if (isJunior && (gradeBand.includes('junior') || gradeBand.includes('7') || gradeBand.includes('8') || gradeBand.includes('9') || gradeBand.includes('secondary'))) return true;
+
+      return false;
+    });
+  }
 
   // Filters
   const filteredStaff = useMemo(() => {
@@ -1652,38 +1680,61 @@ export default function StaffRegistry() {
                     </span>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto p-1 custom-scrollbar">
-                    {filteredLearningAreasForClasses.map((sub) => {
-                      const isSelected = selectedSubjects.includes(sub);
-                      const primaryGrade = assignedClasses[0] || homeroomGrade || 'Grade 7';
-                      const primaryStream = assignedStreams[0] || homeroomStream || availableSchoolStreams[0] || 'Mercury';
-                      return (
-                        <div
-                          key={sub}
-                          onClick={() => handleToggleSubject(sub)}
-                          className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-xs font-medium transition-all duration-200 border ${
-                            isSelected
-                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200'
-                              : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 truncate">
-                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
-                              isSelected ? 'bg-white border-white text-indigo-600' : 'border-slate-300 bg-white'
-                            }`}>
-                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                            </div>
-                            <span className="truncate font-semibold">{sub}</span>
+                  {assignedClasses.length === 0 ? (
+                    <div className="p-6 text-center bg-white border border-indigo-100 rounded-xl">
+                      <BookOpen className="w-8 h-8 text-indigo-300 mx-auto mb-2" />
+                      <p className="text-xs font-semibold text-slate-700">Select at least one Grade and Stream above to bind subject allocations.</p>
+                      <p className="text-[11px] text-slate-400 mt-1">Learning areas will be dynamically filtered based on your grade selection.</p>
+                    </div>
+                  ) : filteredLearningAreasForClasses.length === 0 ? (
+                    <div className="p-6 text-center bg-white border border-indigo-100 rounded-xl">
+                      <BookOpen className="w-8 h-8 text-indigo-300 mx-auto mb-2" />
+                      <p className="text-xs font-semibold text-slate-700">No learning areas configured for the selected grade(s).</p>
+                      <p className="text-[11px] text-slate-400 mt-1">Add them under Learning Areas module.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto p-1 custom-scrollbar">
+                      {filteredLearningAreasForClasses.map((item: any) => {
+                        const subName = typeof item === 'string' ? item : item.name;
+                        const subGradeBand = typeof item === 'object' && item.gradeBand ? item.gradeBand : '';
+                        const isSelected = selectedSubjects.includes(subName);
+                        const primaryGrade = assignedClasses[0] || homeroomGrade || '';
+                        const primaryStream = assignedStreams[0] || homeroomStream || '';
+                        return (
+                          <div
+                            key={subName}
+                            onClick={() => handleToggleSubject(subName)}
+                            className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-xs font-medium transition-all duration-200 border ${
+                              isSelected
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200'
+                                : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 truncate">
+                          <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                            isSelected ? 'bg-white border-white text-indigo-600' : 'border-slate-300 bg-white'
+                          }`}>
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                           </div>
-                          {isSelected && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-700/80 text-indigo-100 border border-indigo-500/50 whitespace-nowrap">
-                              {primaryGrade} {assignedStreams.length > 0 ? assignedStreams.join(', ') : ''}
-                            </span>
-                          )}
+                          <div className="truncate">
+                            <span className="font-semibold block truncate">{subName}</span>
+                            {subGradeBand && (
+                              <span className={`text-[10px] block truncate ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>
+                                {subGradeBand}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                        {isSelected && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-700/80 text-indigo-100 border border-indigo-500/50 whitespace-nowrap ml-2">
+                            {primaryGrade} {assignedStreams.length > 0 ? assignedStreams.join(', ') : ''}
+                          </span>
+                        )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
