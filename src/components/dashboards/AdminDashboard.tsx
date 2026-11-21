@@ -55,7 +55,14 @@ export const AdminDashboardComponent: React.FC = () => {
 
   const learners = reactiveLearners;
 
-  const staff = getStoredStaff();
+  const staff = (() => {
+    try {
+      const raw = localStorage.getItem('munyaka_staff') || localStorage.getItem('school_staff_data') || '[]';
+      return JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  })();
 
   const teaching = staff.filter((s: any) => {
     const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
