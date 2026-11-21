@@ -24,12 +24,17 @@ export const AdminDashboardComponent: React.FC = () => {
   // ── Centralized LocalStorage DB Sync (unified merge across all learner storage keys) ──
   const [reactiveLearners, setReactiveLearners] = useState<any[]>(() => mergeStoredLearners());
 
-  const [localStaff, setLocalStaff] = useState<any[]>(() => getStoredStaff());
+  const [localStaff, setLocalStaff] = useState<any[]>([]);
 
   useEffect(() => {
     const handleSync = () => {
           setReactiveLearners(mergeStoredLearners());
-          setLocalStaff(getStoredStaff());
+          try {
+            const raw = localStorage.getItem('munyaka_staff') || localStorage.getItem('school_staff_data') || '[]';
+            setLocalStaff(JSON.parse(raw));
+          } catch {
+            setLocalStaff([]);
+          }
         };
 
     handleSync();
