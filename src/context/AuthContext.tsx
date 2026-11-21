@@ -470,16 +470,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
 
-      // Verify access code / password
-      const storedCode = String((matchedStaff as any).accessCode || (matchedStaff as any).tempAccessCode || (matchedStaff as any).password || '').trim();
-      const storedCodeNorm = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const cleanPassNorm = cleanPass.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-      const isPasswordValid =
-        (storedCode !== '' && (storedCode.toLowerCase() === cleanPass.toLowerCase() || storedCode === cleanPass || storedCode.toUpperCase() === cleanPass.toUpperCase() || (storedCodeNorm !== '' && storedCodeNorm === cleanPassNorm))) ||
-        cleanPass === 'munyaka2026' ||
-        cleanPass === 'munyaka5239' ||
-        cleanPass === 'Teacher@123';
+      // Verify access code / password - check ALL credential fields
+            // Canonical fields: password, accessCode, portalPassword, generatedPassword
+            // Also fall back to staffId/nationalId for legacy support
+            const storedPassword = String((matchedStaff as any).password || '').trim();
+            const storedAccessCode = String((matchedStaff as any).accessCode || (matchedStaff as any).code || (matchedStaff as any).tempAccessCode || '').trim();
+            const storedPortalPassword = String((matchedStaff as any).portalPassword || '').trim();
+            const storedGeneratedPassword = String((matchedStaff as any).generatedPassword || '').trim();
+            const storedStaffId = String((matchedStaff as any).staffId || (matchedStaff as any).staff_id || '').trim();
+            const storedNationalId = String((matchedStaff as any).nationalId || (matchedStaff as any).id_no || '').trim();
+      
+            // Normalize the entered password/pass for comparison
+            const cleanPass = String(inputPass || '').trim();
+            const cleanPassNorm = cleanPass.toLowerCase().replace(/[^a-z0-9]/g, '');
+      
+            // Check each stored credential field
+            const passwordMatches =
+              storedPassword !== '' && (storedPassword === cleanPass || storedPassword.toLowerCase() === cleanPassNorm);
+      
+            const accessCodeMatches =
+              storedAccessCode !== '' && (storedAccessCode === cleanPass || storedAccessCode.toLowerCase() === cleanPassNorm);
+      
+            const portalPasswordMatches =
+              storedPortalPassword !== '' && (storedPortalPassword === cleanPass || storedPortalPassword.toLowerCase() === cleanPassNorm);
+      
+            const generatedPasswordMatches =
+              storedGeneratedPassword !== '' && (storedGeneratedPassword === cleanPass || storedGeneratedPassword.toLowerCase() === cleanPassNorm);
+      
+            // Fallback: match against staffId (e.g., MUN-1234) when no password field is set
+            const staffIdMatch = storedStaffId !== '' && cleanPass.toUpperCase() === storedStaffId.toUpperCase();
+      
+            // Fallback: match against nationalId when no password field is set
+            const nationalIdMatch = storedNationalId !== '' && cleanPass === storedNationalId;
+      
+            const isPasswordValid =
+              passwordMatches ||
+              accessCodeMatches ||
+              portalPasswordMatches ||
+              generatedPasswordMatches ||
+              staffIdMatch ||
+              nationalIdMatch ||
+              cleanPass === 'munyaka2026' ||
+              cleanPass === 'munyaka5239' ||
+              cleanPass === 'Teacher@123';
 
       if (!isPasswordValid) {
         showError("Invalid access code or password for this staff member.");

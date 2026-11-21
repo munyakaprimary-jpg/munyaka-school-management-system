@@ -1572,6 +1572,11 @@ export default function FirestoreSyncTab() {
                 email: flat.email ?? (email.includes('@') ? email : `${email}@munyaka.sc.ke`),
                 phone: flat.phone ?? st?.phone ?? st?.phoneNumber ?? st?.tel ?? 'N/A',
                 category: flat.category ?? (flat.tscNumber ? 'Teaching' : 'Non-Teaching'),
+                // Preserve credential fields so they are never wiped during sync
+                password: st?.password ?? flat.password ?? null,
+                accessCode: st?.accessCode ?? flat.accessCode ?? null,
+                portalPassword: st?.portalPassword ?? flat.portalPassword ?? null,
+                generatedPassword: st?.generatedPassword ?? flat.generatedPassword ?? null,
                 syncedAt: flat.updatedAt ?? new Date().toISOString(),
               };
       

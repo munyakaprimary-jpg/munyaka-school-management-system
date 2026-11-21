@@ -101,11 +101,15 @@ export interface StaffMember {
   fullName?: string;
   status: 'Active' | 'On Leave' | 'Inactive';
   createdAt?: string;
-  // New authentication fields
+  // Authentication fields - canonical fields kept in sync
   password?: string;
+  accessCode?: string;
+  portalPassword?: string;
+  generatedPassword?: string;
   passwordHash?: string;
   lastPasswordChange?: string;
   loginEnabled?: boolean;
+  staffId?: string;
 }
 
 // Normalization helper to keep original access codes intact

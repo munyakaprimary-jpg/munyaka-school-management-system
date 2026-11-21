@@ -70,6 +70,8 @@ export function toFlatStaffSchema(staff: any): Record<string, any> {
     accessCode,
     code: accessCode,
     password: staff.password || staff.tempAccessCode || accessCode,
+    portalPassword: staff.portalPassword || staff.password || accessCode,
+    generatedPassword: staff.generatedPassword || staff.password || accessCode,
 
     // Role & system fields
     assignedRole: staff.assignedRole || staff.role || staff.rbacRole || 'subject_teacher',

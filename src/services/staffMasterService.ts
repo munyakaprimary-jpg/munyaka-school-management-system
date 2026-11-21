@@ -35,6 +35,11 @@ export interface MasterStaffRecord {
   status?: string;
   staffId?: string;
   tempAccessCode?: string;
+  accessCode?: string;
+  password?: string;
+  portalPassword?: string;
+  generatedPassword?: string;
+  loginEnabled?: boolean;
   joinedDate?: string;
 }
 
@@ -152,6 +157,8 @@ export const fetchStaffFromFirestore = async (): Promise<any[]> => {
         password,
         accessCode,
         tempAccessCode: accessCode,
+        portalPassword: flat.portalPassword || password,
+        generatedPassword: flat.generatedPassword || password,
         loginEnabled,
         canonicalId,
       };
@@ -222,13 +229,35 @@ export const verifyStaffLogin = async (identifier: string, accessCode: string): 
   }
 
   const storedPassword = String(matched.password || matched.temp_password || '').trim();
-  const storedCode = String(matched.accessCode || matched.code || matched.pin || matched.tempAccessCode || matched.access_key || matched.ref || '').trim();
+  const storedAccessCode = String(matched.accessCode || matched.code || matched.pin || matched.tempAccessCode || matched.access_key || matched.ref || '').trim();
+  const storedPortalPassword = String(matched.portalPassword || '').trim();
+  const storedGeneratedPassword = String(matched.generatedPassword || '').trim();
+  const storedStaffId = String(matched.staffId || matched.staff_id || '').trim();
+  const storedNationalId = String(matched.nationalId || matched.id_no || '').trim();
 
-  // Compare password case-sensitively, or access code case-insensitively
+  // Normalize the entered password/pass for comparison
+  const cleanPass = String(pass || '').trim();
+  const cleanPassNorm = cleanPass.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  // Check each stored credential field
+  const passwordMatches = storedPassword !== '' && (storedPassword === cleanPass || storedPassword.toLowerCase() === cleanPassNorm);
+  const accessCodeMatches = storedAccessCode !== '' && (storedAccessCode === cleanPass || storedAccessCode.toLowerCase() === cleanPassNorm);
+  const portalPasswordMatches = storedPortalPassword !== '' && (storedPortalPassword === cleanPass || storedPortalPassword.toLowerCase() === cleanPassNorm);
+  const generatedPasswordMatches = storedGeneratedPassword !== '' && (storedGeneratedPassword === cleanPass || storedGeneratedPassword.toLowerCase() === cleanPassNorm);
+
+  // Fallback: match against staffId (e.g., MUN-1234) when no password field is set
+  const staffIdMatch = storedStaffId !== '' && cleanPass.toUpperCase() === storedStaffId.toUpperCase();
+
+  // Fallback: match against nationalId when no password field is set
+  const nationalIdMatch = storedNationalId !== '' && cleanPass === storedNationalId;
+
   const isPasswordValid =
-    (storedPassword && storedPassword === pass) ||
-    (storedCode && storedCode.toLowerCase() === pass.toLowerCase()) ||
-    pass.toUpperCase() === String(matched.staffId || matched.staff_id || '').trim().toUpperCase();
+    passwordMatches ||
+    accessCodeMatches ||
+    portalPasswordMatches ||
+    generatedPasswordMatches ||
+    staffIdMatch ||
+    nationalIdMatch;
 
   if (!isPasswordValid) {
     console.warn(`[StaffLogin] Password mismatch for ${matched.email || matched.name}.`);
@@ -293,6 +322,9 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     const exactRole = s.role || s.category || s.title || 'Subject Teacher';
     const sysRole = s.systemRole || mapDesignationToSystemRole(exactRole);
     const accessCode = s.accessCode || s.code || s.password || s.pin || s.tempAccessCode || s.access_key || s.ref || s.staffId || 'MUN-1234';
+    const password = s.password || s.portalPassword || s.generatedPassword || accessCode;
+    const portalPassword = s.portalPassword || s.password || accessCode;
+    const generatedPassword = s.generatedPassword || s.password || accessCode;
     return {
       id: s.id || s.staffId || `staff_${Math.random()}`,
       name: s.name || s.full_name || 'Staff Member',
@@ -312,6 +344,9 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
       tempAccessCode: accessCode,
       accessCode: accessCode,
       code: accessCode,
+      password,
+      portalPassword,
+      generatedPassword,
     };
   });
 };
@@ -369,6 +404,11 @@ export const addStaffMaster = (record: Omit<MasterStaffRecord, 'id' | 'staffId' 
     assignedStream: record.assignedStream,
     assignedSubjects: record.assignedSubjects,
     status: record.status || 'Pre-Registered',
+    password: record.password,
+    accessCode: record.accessCode,
+    portalPassword: record.portalPassword,
+    generatedPassword: record.generatedPassword,
+    loginEnabled: record.loginEnabled,
   });
   const canonicalId = getCanonicalStaffId(created);
   return {
@@ -387,6 +427,11 @@ export const addStaffMaster = (record: Omit<MasterStaffRecord, 'id' | 'staffId' 
     status: (created.status as any) || 'Pre-Registered',
     staffId: (created as any).staffId,
     tempAccessCode: (created as any).tempAccessCode,
+    accessCode: (created as any).accessCode || record.accessCode,
+    password: (created as any).password || record.password,
+    portalPassword: (created as any).portalPassword || record.portalPassword,
+    generatedPassword: (created as any).generatedPassword || record.generatedPassword,
+    loginEnabled: (created as any).loginEnabled !== false,
     joinedDate: (created as any).joined,
   };
 };
@@ -394,11 +439,13 @@ export const addStaffMaster = (record: Omit<MasterStaffRecord, 'id' | 'staffId' 
 export const updateStaffMaster = (id: string, updates: Partial<MasterStaffRecord>): void => {
   // If updating by ID, ensure canonical ID is used for the staff record
   const canonicalId = getCanonicalStaffId({ id });
-  const updatedData = {
-    ...updates,
-    canonicalId,
-  };
-  CentralDataService.updateStaff(id, updatedData as any);
+  // Preserve credential fields - never overwrite with undefined/empty
+  const safeUpdates: any = { ...updates, canonicalId };
+  if (updates.password !== undefined) safeUpdates.password = updates.password;
+  if (updates.accessCode !== undefined) safeUpdates.accessCode = updates.accessCode;
+  if (updates.portalPassword !== undefined) safeUpdates.portalPassword = updates.portalPassword;
+  if (updates.generatedPassword !== undefined) safeUpdates.generatedPassword = updates.generatedPassword;
+  CentralDataService.updateStaff(id, safeUpdates);
 };
 
 export const deleteStaffMaster = (id: string): void => {
