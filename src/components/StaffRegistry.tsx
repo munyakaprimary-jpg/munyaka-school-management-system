@@ -1089,31 +1089,29 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3 max-w-[180px]">
-                        {categoryIsTeaching(staff.category) && staff.subjects && staff.subjects.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 max-w-[280px]">
-                            {staff.subjects.map((sub, sIdx) => {
-                              const subName = typeof sub === 'string'
-                                ? sub
-                                : (sub && typeof sub === 'object'
-                                    ? String((sub as any).name || (sub as any).title || (sub as any).subject || (sub as any).learningArea || JSON.stringify(sub))
-                                    : String(sub));
-                              return (
-                                <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 break-words hyphens-auto" title={subName}>
-                                  {subName}
-                                </span>
-                              );
-                            })}
+                        {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
+                              <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
+                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
+                            </span>
+                          </div>
+                        ) : staff.assignedGrades && staff.assignedGrades.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {staff.assignedGrades.map((g: string, idx: number) => (
+                              <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                {g} {staff.assignedStreams?.[idx] ? staff.assignedStreams[idx] : staff.assignedStreams?.length === 1 ? staff.assignedStreams[0] : ''}
+                              </span>
+                            ))}
                           </div>
                         ) : (
-                          <span className="text-slate-400 text-xs">—</span>
+                          <span className="text-slate-400 text-xs italic">Not assigned</span>
                         )}
                       </td>
 
                       <td className="py-3.5 px-3 max-w-[220px]">
                         {(() => {
                           const assignments = staff.subjectAssignments || [];
-                          const grades = staff.assignedGrades || staff.assignedClasses || staff.classes || [];
-                          const streams = staff.assignedStreams || staff.streams || [];
                           const subjects = staff.teachingSubjects || staff.subjects || [];
 
                           if (assignments.length > 0) {
@@ -1131,34 +1129,19 @@ export default function StaffRegistry() {
                             );
                           }
 
-                          if (subjects.length > 0 || grades.length > 0) {
+                          if (subjects.length > 0) {
                             return (
-                              <div className="flex flex-col gap-1.5">
-                                {subjects.length > 0 && (
-                                  <div className="flex flex-wrap gap-1">
-                                    <span className="text-[10px] font-black uppercase text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">Subjects:</span>
-                                    {subjects.map((sub: string, sIdx: number) => (
-                                      <span key={sIdx} className="px-2 py-0.5 rounded-md text-xs font-bold bg-purple-50 text-purple-800 border border-purple-200">
-                                        {sub}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                                {(grades.length > 0 || streams.length > 0) && (
-                                  <div className="flex flex-wrap gap-1">
-                                    <span className="text-[10px] font-black uppercase text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">Classes:</span>
-                                    {grades.map((g: string, gIdx: number) => (
-                                      <span key={gIdx} className="px-2 py-0.5 rounded-md text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
-                                        {g} {streams[gIdx] ? `(${streams[gIdx]})` : streams.length > 0 ? `(${streams.join(', ')})` : ''}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
+                              <div className="flex flex-wrap gap-1">
+                                {subjects.map((sub: string, sIdx: number) => (
+                                  <span key={sIdx} className="px-2 py-0.5 rounded-md text-xs font-bold bg-purple-50 text-purple-800 border border-purple-200">
+                                    {sub}
+                                  </span>
+                                ))}
                               </div>
                             );
                           }
 
-                          return <span className="text-slate-400 text-xs italic">Not assigned</span>;
+                          return <span className="text-slate-400 text-xs">—</span>;
                         })()}
                       </td>
 
