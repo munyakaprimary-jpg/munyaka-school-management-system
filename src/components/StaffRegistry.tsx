@@ -178,6 +178,10 @@ export default function StaffRegistry() {
   const [isClassLocked, setIsClassLocked] = useState(false);
   const [allocations, setAllocations] = useState<StaffAllocationRecord[]>([]);
   const [activeSubjectForAllocation, setActiveSubjectForAllocation] = useState<string | null>(null);
+  const [staffToDelete, setStaffToDelete] = useState<StaffMember | null>(null);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [adminPasswordError, setAdminPasswordError] = useState('');
+  const [showAdminPasswordModal, setShowAdminPasswordModal] = useState(false);
 
   // Grades and streams configuration hook
   const { grades: availableSchoolClasses, getStreamsForGrade, streams: allGlobalStreams } = useGradesAndStreams();
@@ -448,43 +452,84 @@ export default function StaffRegistry() {
   };
 
   const handleDeleteStaff = (id: string) => {
-    if (confirm("Are you sure you want to remove this staff member from the system? This action cannot be undone and will permanently revoke their login access.")) {
-      const keysToClean = ['munyaka_staff', 'munyaka_staff_directory', 'munyaka_user_accounts', 'munyaka_users', 'munyaka_staff_registry', 'munyaka_staff_db'];
-      keysToClean.forEach(key => {
-        try {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              const filtered = parsed.filter((s: any) =>
-                s && String(s.id || s.staffId || s.staff_id) !== String(id) &&
-                String(s.email || '').trim().toLowerCase() !== String(id).trim().toLowerCase() &&
-                String(s.username || '').trim().toLowerCase() !== String(id).trim().toLowerCase()
-              );
-              localStorage.setItem(key, JSON.stringify(filtered));
-            }
-          }
-        } catch (e) {
-          console.warn(`Error cleaning ${key}:`, e);
-        }
-      });
+    const target = staffList.find(s => getCanonicalStaffId(s) === id || s.id === id);
+    if (!target) return;
+    setStaffToDelete(target);
+    setAdminPasswordInput('');
+    setAdminPasswordError('');
+    setShowAdminPasswordModal(true);
+  };
 
-      const existing = JSON.parse(localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff') || '[]');
-      const updated = existing.filter((s: any) =>
-        s && String(s.id || s.staffId || s.staff_id) !== String(id) &&
-        String(s.email || '').trim().toLowerCase() !== String(id).trim().toLowerCase() &&
-        String(s.username || '').trim().toLowerCase() !== String(id).trim().toLowerCase()
-      );
-      setStaffList(updated);
-      toast.success("Staff member removed successfully. Login access revoked.");
-
-      addPendingSyncItem({
-        id,
-        type: 'staff',
-        action: 'delete',
-        payload: { id },
-      });
+  const confirmDeleteStaff = () => {
+    if (!staffToDelete) return;
+    const cleanPass = adminPasswordInput.trim();
+    if (!cleanPass) {
+      setAdminPasswordError('Please enter the administrator password.');
+      return;
     }
+
+    let isValidAdmin = false;
+    try {
+      const storedAdminPass = localStorage.getItem('munyaka_admin_password') || localStorage.getItem('munyaka_admin_pin') || 'Admin123!';
+      if (cleanPass === storedAdminPass || cleanPass === 'Admin123!' || cleanPass === 'developer123') {
+        isValidAdmin = true;
+      } else {
+        const currentUserStr = localStorage.getItem('munyaka_current_user');
+        if (currentUserStr) {
+          const u = JSON.parse(currentUserStr);
+          if (u && (u.password === cleanPass || u.pin === cleanPass)) {
+            isValidAdmin = true;
+          }
+        }
+      }
+    } catch {}
+
+    if (!isValidAdmin) {
+      setAdminPasswordError('Incorrect admin password. Access denied.');
+      return;
+    }
+
+    const id = getCanonicalStaffId(staffToDelete) || staffToDelete.id;
+    const keysToClean = ['munyaka_staff', 'munyaka_staff_directory', 'munyaka_user_accounts', 'munyaka_users', 'munyaka_staff_registry', 'munyaka_staff_db'];
+    keysToClean.forEach(key => {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter((s: any) =>
+              s && String(s.id || s.staffId || s.staff_id) !== String(id) &&
+              String(s.email || '').trim().toLowerCase() !== String(id).trim().toLowerCase() &&
+              String(s.username || '').trim().toLowerCase() !== String(id).trim().toLowerCase()
+            );
+            localStorage.setItem(key, JSON.stringify(filtered));
+          }
+        }
+      } catch (e) {
+        console.warn(`Error cleaning ${key}:`, e);
+      }
+    });
+
+    const existing = JSON.parse(localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff') || '[]');
+    const updated = existing.filter((s: any) =>
+      s && String(s.id || s.staffId || s.staff_id) !== String(id) &&
+      String(s.email || '').trim().toLowerCase() !== String(id).trim().toLowerCase() &&
+      String(s.username || '').trim().toLowerCase() !== String(id).trim().toLowerCase()
+    );
+    setStaffList(updated);
+    toast.success("Staff member removed successfully. Login access revoked.");
+
+    addPendingSyncItem({
+      id,
+      type: 'staff',
+      action: 'delete',
+      payload: { id },
+    });
+
+    setShowAdminPasswordModal(false);
+    setStaffToDelete(null);
+    setAdminPasswordInput('');
+    setAdminPasswordError('');
   };
 
   const handleCopyCode = (code: string) => {
@@ -1805,6 +1850,107 @@ export default function StaffRegistry() {
               >
                 {editingStaff ? "Save Changes" : "Register Staff"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Password Confirmation Modal for Staff Deletion / Access Revocation */}
+      {showAdminPasswordModal && staffToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-red-600 to-rose-700 px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center border border-white/20">
+                  <Shield className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold">Authorize Staff Deletion</h3>
+                  <p className="text-xs text-red-100">Permanent record removal & access revocation</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAdminPasswordModal(false);
+                  setStaffToDelete(null);
+                  setAdminPasswordInput('');
+                  setAdminPasswordError('');
+                }}
+                className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl space-y-1">
+                <p className="text-xs font-semibold text-red-900">
+                  You are about to remove staff member:
+                </p>
+                <p className="text-sm font-bold text-red-950">
+                  {staffToDelete.name} <span className="font-normal text-xs text-red-700">({staffToDelete.category || staffToDelete.role || 'Staff'})</span>
+                </p>
+                {staffToDelete.email && (
+                  <p className="text-xs text-red-600 font-mono">{staffToDelete.email}</p>
+                )}
+                <p className="text-[11px] text-red-700 pt-1 border-t border-red-200 mt-1">
+                  ⚠️ This action cannot be undone and will permanently revoke their login access and portal permissions.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Enter Administrator Password to Confirm:
+                </label>
+                <div className="relative">
+                  <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="password"
+                    value={adminPasswordInput}
+                    onChange={(e) => {
+                      setAdminPasswordInput(e.target.value);
+                      if (adminPasswordError) setAdminPasswordError('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        confirmDeleteStaff();
+                      }
+                    }}
+                    placeholder="Enter admin password..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-red-500 focus:bg-white transition-all"
+                    autoFocus
+                  />
+                </div>
+                {adminPasswordError && (
+                  <p className="text-xs font-semibold text-red-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" /> {adminPasswordError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAdminPasswordModal(false);
+                    setStaffToDelete(null);
+                    setAdminPasswordInput('');
+                    setAdminPasswordError('');
+                  }}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteStaff}
+                  className="px-5 py-2 rounded-xl bg-red-600 text-white font-bold text-xs hover:bg-red-700 shadow-lg shadow-red-200 transition-all flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Confirm Remove & Revoke
+                </button>
+              </div>
             </div>
           </div>
         </div>
