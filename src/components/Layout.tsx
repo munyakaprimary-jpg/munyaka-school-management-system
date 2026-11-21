@@ -477,7 +477,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Users, label: 'My Classes & Learners', path: '/learners' },
     { icon: ClipboardCheck, label: 'Roll Call / Attendance', path: '/attendance' },
     { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in' },
-    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab' },
     { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments' },
     { icon: BarChart3, label: 'Results Analysis', path: '/analysis' },
     { icon: FileText, label: 'Report Cards', path: '/reports' },
