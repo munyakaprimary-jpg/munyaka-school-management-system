@@ -17,7 +17,7 @@ import {
   RefreshCw,
   Wifi,
 } from 'lucide-react';
-import { LicenseBadge } from '@/components/layout/LicenseBadge';
+// LicenseBadge import removed
 import { showSuccess, showError } from '@/utils/toast';
 import {
   activateLicense,
@@ -374,7 +374,7 @@ const AppUnlock = ({ children, forceShow = false, currentRole }: AppUnlockProps)
 
       {/* Floating license indicator (top-right) */}
       <div className="fixed top-3 right-3 z-50">
-        <LicenseBadge />
+        {/* License badge removed to prevent duplicate headers */}
       </div>
 
       {/* Pass children through */}
