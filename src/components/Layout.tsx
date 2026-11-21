@@ -406,6 +406,55 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   // Strict role precedence: Teacher/Bursar/Librarian roles MUST NEVER be treated as Admin
   const isActuallyAdmin = isAdminRole && !isTeacherRole && !isBursarRole && !isLibrarianRole;
 
+  // Exact 42 Admin items in order without duplicates, plus Section Header ASSESSMENTS & EXAMS before item #26
+  const adminMenuItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: ShieldCheck, label: 'Data Harmonization', path: '/admin/harmonization' },
+    { icon: Users, label: 'Learners', path: '/learners' },
+    { icon: UserCheck, label: 'Staff Registry', path: '/staff-registry' },
+    { icon: Gamepad2, label: 'Games Hub', path: '/games' },
+    { icon: Layers, label: 'Grades & Streams', path: '/grades' },
+    { icon: Archive, label: 'Transferred Archive', path: '/learners/archive' },
+    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas' },
+    { icon: Award, label: 'Exam Types', path: '/exam-types' },
+    { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants' },
+    { icon: Wifi, label: 'LAN Server Config', path: '/lan-server-config' },
+    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management' },
+    { icon: Server, label: 'Admin Control Center', path: '/admin/control-center' },
+    { icon: MessageSquare, label: 'Communication', path: '/communication' },
+    { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication' },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices' },
+    { icon: Calendar, label: 'Timetable', path: '/timetable' },
+    { icon: Database, label: 'Central Data & APK', path: '/central-data' },
+    { icon: ClipboardCheck, label: 'Learner Attendance', path: '/attendance' },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in' },
+    { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor' },
+    { icon: Clock, label: 'Attendance Management', path: '/staff/attendance' },
+    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments' },
+    { icon: BarChart3, label: 'Results Analysis', path: '/analysis' },
+    { icon: FileText, label: 'Report Cards', path: '/reports' },
+    // --- Section Header: ASSESSMENTS & EXAMS ---
+    { icon: ClipboardList, label: 'ASSESSMENTS & EXAMS', path: '', section: true },
+    { icon: ClipboardCheck, label: 'Grading Review', path: '/grading' },
+    { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create' },
+    { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import' },
+    { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading' },
+    { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list' },
+    // ---
+    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub' },
+    { icon: FlaskConical, label: 'Science Lab Workstation', path: '/science-lab' },
+    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab' },
+    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills' },
+    { icon: Target, label: 'Practical Competencies', path: '/practical-competencies' },
+    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio' },
+    { icon: Library, label: 'Library & E-Resources', path: '/library' },
+    { icon: BookOpen, label: 'Study Corner', path: '/study-corner' },
+    { icon: Box, label: 'Tools & Inventory', path: '/inventory' },
+    { icon: Wallet, label: 'Fees & Finance', path: '/fees' },
+    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: GraduationCap, label: 'Promote Learners', path: '/promote' },
+  ];
+
   const bursarMenuItems = [
     { icon: LayoutDashboard, label: 'Bursar Dashboard', path: '/dashboard' },
     { icon: Wallet, label: 'Fee Ledgers & Finance', path: '/fees' },
