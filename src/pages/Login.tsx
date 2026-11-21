@@ -508,6 +508,8 @@ const Login: React.FC = () => {
         finalRbacRole = 'class_teacher';
       } else if (normalizedRoleKey.includes('ADMIN') || normalizedRoleKey.includes('HOI') || normalizedRoleKey.includes('HEAD')) {
         finalRbacRole = 'admin';
+      } else if (normalizedRoleKey.includes('LIBRARY') || normalizedRoleKey.includes('LIBRARIAN')) {
+        finalRbacRole = 'library_teacher';
       }
 
       const userData: any = {
@@ -545,7 +547,14 @@ const Login: React.FC = () => {
       showSuccess(`Welcome, ${userData.name}!`);
       
       const landingPage = getRoleLandingPage(userData.role, undefined, userData);
-      navigate(landingPage, { replace: true });
+      // Librarian staff must land directly on the dedicated Librarian Dashboard
+      // (rendered by Dashboard.tsx via isLibrarianRole) instead of falling back
+      // to a generic teacher dashboard.
+      const isLibrarianStaff = String(userData.role || '').toLowerCase().includes('librar') ||
+        String(userData.category || '').toLowerCase().includes('librar') ||
+        String(userData.title || '').toLowerCase().includes('librar');
+      const finalLandingPage = isLibrarianStaff ? '/dashboard' : landingPage;
+      navigate(finalLandingPage, { replace: true });
       setIsStaffVerifying(false);
   };
 
