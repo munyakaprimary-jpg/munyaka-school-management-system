@@ -486,7 +486,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Calendar, label: 'Timetable', path: '/timetable' },
     { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication' },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices' },
-    { icon: Library, label: 'Library & E-Resources', path: '/library' },
     { icon: BookOpen, label: 'Study Corner', path: '/study-corner' },
   ];
 

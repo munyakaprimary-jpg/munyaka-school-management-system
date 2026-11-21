@@ -602,7 +602,7 @@ const App = () => {
                       <Route path="/staff-registry" element={<ProtectedRoute allowedRoles={['admin', 'owner', 'developer']}><AppUnlock><Layout><StaffRegistry /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff-storage-scanner" element={<ProtectedRoute allowedRoles={['admin', 'owner', 'developer']}><AppUnlock><Layout><StaffStorageScanner /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/science-lab" element={<ProtectedRoute><AppUnlock><Layout><ScienceLab /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/library" element={<ProtectedRoute><AppUnlock><Layout><Library /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/library" element={<ProtectedRoute allowedRoles={['admin', 'owner', 'developer', 'librarian', 'library_teacher']}><AppUnlock><Layout><Library /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/inventory" element={<ProtectedRoute><AppUnlock><Layout><Inventory /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/fees" element={<ProtectedRoute allowedRoles={['admin', 'owner', 'developer', 'bursar', 'accountant', 'head_teacher', 'senior_teacher']}><AppUnlock><Layout><Fees /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/central-data" element={<ProtectedRoute allowedRoles={['admin', 'owner', 'developer']}><AppUnlock><Layout><CentralDataService /></Layout></AppUnlock></ProtectedRoute>} />
