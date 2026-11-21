@@ -23,6 +23,7 @@ export const AdminDashboardComponent: React.FC = () => {
 
   // ── Centralized LocalStorage DB Sync (unified merge across all learner storage keys) ──
   const [syncKey, setSyncKey] = useState(0);
+  const [reactiveLearners, setReactiveLearners] = useState<any[]>(() => mergeStoredLearners());
 
   const [localStaff, setLocalStaff] = useState<any[]>([]);
 
