@@ -549,8 +549,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         isCollapsed ? "lg:ml-20" : "lg:ml-72 md:ml-64"
       )}>
         {/* Top Navbar */}
-        <header className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between min-h-[64px]">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 min-h-[64px]">
+          <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => setIsOpen(true)}
               className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 min-h-[44px] min-w-[44px] flex items-center justify-center active:scale-95"
@@ -564,12 +564,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <SyncButton />
+          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap justify-end ml-auto">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-black tracking-wide shrink-0 whitespace-nowrap shadow-sm">
+              <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+              <span>LICENSED · 8D LEFT</span>
+            </div>
+            <div className="shrink-0 whitespace-nowrap">
+              <SyncButton />
+            </div>
             <NotificationBell />
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+              className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors shrink-0"
               aria-label="Toggle theme"
             >
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
