@@ -1109,72 +1109,57 @@ export default function StaffRegistry() {
                         )}
                       </td>
 
-                      <td className="py-3.5 px-3 max-w-[180px]">
-                        {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
-                              <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
-                            </span>
-                          </div>
-                        ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
-                          <div className="flex flex-col gap-1.5 max-w-[220px]">
-                            {staff.assignedClasses && staff.assignedClasses.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
-                                  let formattedCls = '';
-                                  if (typeof cls === 'string') {
-                                    formattedCls = cls;
-                                  } else if (cls && typeof cls === 'object') {
-                                    const item = cls as any;
-                                    formattedCls = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
-                                    if (!formattedCls) formattedCls = JSON.stringify(item);
-                                  } else {
-                                    formattedCls = String(cls);
-                                  }
-                                  return (
-                                    <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100 break-words hyphens-auto" title={formattedCls}>
-                                      {formattedCls}
+                      <td className="py-3.5 px-3 max-w-[220px]">
+                        {(() => {
+                          const assignments = staff.subjectAssignments || [];
+                          const grades = staff.assignedGrades || staff.assignedClasses || staff.classes || [];
+                          const streams = staff.assignedStreams || staff.streams || [];
+                          const subjects = staff.teachingSubjects || staff.subjects || [];
+
+                          if (assignments.length > 0) {
+                            return (
+                              <div className="flex flex-col gap-1.5">
+                                {assignments.map((asg: any, aIdx: number) => (
+                                  <div key={aIdx} className="px-2 py-1 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200 rounded-lg text-xs font-semibold">
+                                    <span className="font-black text-purple-700 dark:text-purple-300">{Array.isArray(asg.subjects) ? asg.subjects.join(', ') : asg.subject || 'Subject'}</span>
+                                    <span className="text-[11px] text-slate-600 dark:text-slate-400 block">
+                                      {asg.grade} {asg.stream ? `(${asg.stream})` : ''}
                                     </span>
-                                  );
-                                })}
-                                {staff.assignedClasses.length > 3 && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    +{staff.assignedClasses.length - 3}
-                                  </span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+
+                          if (subjects.length > 0 || grades.length > 0) {
+                            return (
+                              <div className="flex flex-col gap-1.5">
+                                {subjects.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    <span className="text-[10px] font-black uppercase text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">Subjects:</span>
+                                    {subjects.map((sub: string, sIdx: number) => (
+                                      <span key={sIdx} className="px-2 py-0.5 rounded-md text-xs font-bold bg-purple-50 text-purple-800 border border-purple-200">
+                                        {sub}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                                {(grades.length > 0 || streams.length > 0) && (
+                                  <div className="flex flex-wrap gap-1">
+                                    <span className="text-[10px] font-black uppercase text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">Classes:</span>
+                                    {grades.map((g: string, gIdx: number) => (
+                                      <span key={gIdx} className="px-2 py-0.5 rounded-md text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                                        {g} {streams[gIdx] ? `(${streams[gIdx]})` : streams.length > 0 ? `(${streams.join(', ')})` : ''}
+                                      </span>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
-                            )}
-                            {staff.assignedStreams && staff.assignedStreams.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
-                                  let formattedStrm = '';
-                                  if (typeof strm === 'string') {
-                                    formattedStrm = strm;
-                                  } else if (strm && typeof strm === 'object') {
-                                    const item = strm as any;
-                                    formattedStrm = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
-                                    if (!formattedStrm) formattedStrm = JSON.stringify(item);
-                                  } else {
-                                    formattedStrm = String(strm);
-                                  }
-                                  return (
-                                    <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100 break-words hyphens-auto" title={formattedStrm}>
-                                      {formattedStrm}
-                                    </span>
-                                  );
-                                })}
-                                {staff.assignedStreams.length > 3 && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    +{staff.assignedStreams.length - 3}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-xs">—</span>
-                        )}
+                            );
+                          }
+
+                          return <span className="text-slate-400 text-xs italic">Not assigned</span>;
+                        })()}
                       </td>
 
                       <td className="py-3.5 px-3 text-center whitespace-nowrap">
