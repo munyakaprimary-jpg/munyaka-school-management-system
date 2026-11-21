@@ -752,41 +752,6 @@ export default function StaffRegistry() {
     };
 
   // Extract unique learning areas names for subject pill grid
-  const handleRemoveSubjectAllocation = async (staffId: string, badgeIndex: number) => {
-    const targetStaff = staffList.find(s => getCanonicalStaffId(s) === staffId || s.id === staffId);
-    if (!targetStaff) return;
-
-    const staffObj: any = { ...targetStaff };
-    const rawAssignments = Array.isArray(staffObj.subjectAssignments) ? [...staffObj.subjectAssignments] : [];
-    const fallbackSubjects = Array.isArray(staffObj.teachingSubjects || staffObj.subjects) ? [...(staffObj.teachingSubjects || staffObj.subjects)] : [];
-
-    if (rawAssignments.length > badgeIndex) {
-      rawAssignments.splice(badgeIndex, 1);
-    } else if (fallbackSubjects.length > badgeIndex) {
-      fallbackSubjects.splice(badgeIndex, 1);
-    }
-
-    const updatedSubjects = Array.from(new Set(rawAssignments.map((a: any) => typeof a === 'string' ? a : (a.subject || a.name || ''))).filter(Boolean));
-    if (updatedSubjects.length === 0 && fallbackSubjects.length > 0) {
-      fallbackSubjects.splice(badgeIndex, 1);
-    }
-
-    const updatedData = {
-      ...staffObj,
-      subjectAssignments: rawAssignments,
-      teachingSubjects: updatedSubjects.length > 0 ? updatedSubjects : fallbackSubjects,
-      subjects: updatedSubjects.length > 0 ? updatedSubjects : fallbackSubjects,
-      updatedAt: new Date().toISOString()
-    };
-
-    try {
-      const canonicalId = getCanonicalStaffId(updatedData) || updatedData.id;
-      await setDoc(doc(db, 'staff', canonicalId), updatedData, { merge: true });
-    } catch {}
-
-    setStaffList(prev => prev.map(s => (getCanonicalStaffId(s) === staffId || s.id === staffId ? updatedData : s)));
-  };
-
   const availableLearningAreas = useMemo(() => {
     try {
       const storedClusters = getLearningAreas();
