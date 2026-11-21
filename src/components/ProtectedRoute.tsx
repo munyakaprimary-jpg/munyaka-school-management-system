@@ -41,15 +41,10 @@ const ProtectedRoute = ({
   const rawRole = (user.role || '').toLowerCase().trim();
   const upperRole = rawRole.toUpperCase();
 
-  // Guard: ict_teacher and ict_technician must never access admin or general management views
-  const isIctRole = rawRole === 'ict_teacher' || rawRole === 'ict_technician' || upperRole === 'ICT_TEACHER';
-  const isTryingRestricted = location.pathname.startsWith('/admin') || location.pathname.startsWith('/staff-registry') || location.pathname.includes('/settings/staff');
-  if (isIctRole && isTryingRestricted) {
-    return <Navigate to="/ict" replace />;
-  }
-
-  const isOwnerOrSuper = upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN' || upperRole === 'SUPER';
-  const isAdmin = upperRole === 'ADMIN' || upperRole === 'HOI' || upperRole === 'DHOI' || upperRole === 'ADMINISTRATOR';
+  // Strict check: subject teachers, class teachers, and teachers must never be treated as admin or owner
+  const isTeacherRole = rawRole.includes('teacher') || rawRole === 'staff' || rawRole === 'subject_teacher' || rawRole === 'class_teacher' || rawRole === 'senior_teacher';
+  const isOwnerOrSuper = !isTeacherRole && (upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN' || upperRole === 'SUPER');
+  const isAdmin = !isTeacherRole && (upperRole === 'ADMIN' || upperRole === 'HOI' || upperRole === 'DHOI' || upperRole === 'ADMINISTRATOR');
 
   // Determine corresponding module key from pathname if not explicitly provided
   let targetModuleKey = moduleKey;
