@@ -17,7 +17,7 @@ import { useFileDownload } from '@/utils/fileDownloader';
 import { notifyDataChanged, readStorage, addPendingSyncItem } from '@/utils/storage';
 import AdminAuthModal, { verifyAdminPassword } from "@/components/common/AdminAuthModal";
 
-// Dynamic data hooks
+import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 import { useStudentsStore, useTransactionsStore } from '@/hooks/usePersistentStorage';
 
 // Sub-components
@@ -165,34 +165,48 @@ const Fees = () => {
   const { state: studentsFromHook } = useStudentsStore();
   const { state: transactionsFromHook } = useTransactionsStore();
 
-  // Direct Data Hydration Hook for Learners DB
+  // Direct Data Hydration Hook for Learners DB with mergeStoredLearners
   const [learners, setLearners] = useState<any[]>(() => {
-    const storedRaw = localStorage.getItem('munyaka_learners');
-    if (storedRaw) {
+    try {
+      const merged = mergeStoredLearners();
+      if (Array.isArray(merged) && merged.length > 0) return merged;
+    } catch {}
+
+    for (const key of ['munyaka_learners', 'munyaka_learners_directory', 'munyaka_learners_v2', 'munyaka_students', 'students', 'learners', 'school_students']) {
       try {
-        const parsed = JSON.parse(storedRaw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {
-        console.error('Failed to parse munyaka_learners', e);
-      }
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
     }
     return [];
   });
 
   useEffect(() => {
     const loadRoster = () => {
-      const storedRaw = localStorage.getItem('munyaka_learners');
-      if (storedRaw) {
-        try {
-          const parsed = JSON.parse(storedRaw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setLearners(parsed);
-            return;
-          }
-        } catch (e) {
-          console.error('Failed to parse munyaka_learners', e);
+      try {
+        const merged = mergeStoredLearners();
+        if (Array.isArray(merged) && merged.length > 0) {
+          setLearners(merged);
+          return;
         }
+      } catch {}
+
+      for (const key of ['munyaka_learners', 'munyaka_learners_directory', 'munyaka_learners_v2', 'munyaka_students', 'students', 'learners', 'school_students']) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setLearners(parsed);
+              return;
+            }
+          }
+        } catch {}
       }
+
       if (studentsFromHook && studentsFromHook.length > 0) {
         setLearners(studentsFromHook);
       }
@@ -211,7 +225,33 @@ const Fees = () => {
   
   // Normalize students from hook or direct learners DB to match Learner interface
   const studentsFromStore: Learner[] = useMemo(() => {
-    const activeList = learners.length > 0 ? learners : studentsFromHook;
+    let activeList = learners;
+    if (!activeList || activeList.length === 0) {
+      try {
+        const merged = mergeStoredLearners();
+        if (Array.isArray(merged) && merged.length > 0) {
+          activeList = merged;
+        }
+      } catch {}
+    }
+    if (!activeList || activeList.length === 0) {
+      for (const key of ['munyaka_learners', 'munyaka_learners_directory', 'munyaka_learners_v2', 'munyaka_students', 'students', 'learners', 'school_students']) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              activeList = parsed;
+              break;
+            }
+          }
+        } catch {}
+      }
+    }
+    if (!activeList || activeList.length === 0) {
+      activeList = studentsFromHook || [];
+    }
+
     return activeList.map(s => ({
       id: s.id || s.admNo || s.admissionNo || '',
       admNo: s.admNo || s.admissionNo || s.id || '',
@@ -487,7 +527,25 @@ const Fees = () => {
   /** Build fee records dynamically from students */
   const calculatedFees: FeeRecord[] = useMemo(() => {
     try {
-      const rawLearners = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
+      let rawLearners = learners;
+      if (!rawLearners || rawLearners.length === 0) {
+        try {
+          const merged = mergeStoredLearners();
+          if (Array.isArray(merged) && merged.length > 0) rawLearners = merged;
+        } catch {}
+      }
+      if (!rawLearners || rawLearners.length === 0) {
+        for (const key of ['munyaka_learners', 'munyaka_learners_directory', 'munyaka_learners_v2', 'munyaka_students', 'students', 'learners', 'school_students']) {
+          const stored = localStorage.getItem(key);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              rawLearners = parsed;
+              break;
+            }
+          }
+        }
+      }
       const allLearners = Array.isArray(rawLearners) && rawLearners.length > 0 ? rawLearners : studentsFromStore;
 
       return allLearners.map((learner: any) => {
@@ -543,7 +601,7 @@ const Fees = () => {
       console.error("Failed to compute calculatedFees from munyaka_learners:", err);
       return [];
     }
-  }, [studentsFromStore, getTotalPaidForStudent, getTermFeeForGrade, findGradeIdForLearner, selectedYear, selectedTerm]);
+  }, [learners, studentsFromStore, getTotalPaidForStudent, getTermFeeForGrade, findGradeIdForLearner, selectedYear, selectedTerm]);
 
   /** Filter fee records by grade level and stream */
   const filteredCalculatedFees: FeeRecord[] = useMemo(() => {
@@ -557,7 +615,7 @@ const Fees = () => {
       });
     }
 
-    if (selectedStream && selectedStream !== "all" && selectedStream !== "ALL" && selectedStream !== "") {
+    if (selectedStream && selectedStream !== "all" && selectedStream !== "ALL" && selectedStream !== "" && selectedStream.toLowerCase() !== "all streams") {
       list = list.filter(fee => {
         const feeStream = String(fee.stream || '').trim().toLowerCase();
         const filterStream = String(selectedStream || '').trim().toLowerCase();
