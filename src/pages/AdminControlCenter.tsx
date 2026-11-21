@@ -37,6 +37,10 @@ export const AdminControlCenter: React.FC = () => {
   const [staff, setStaff] = useState<any[]>([]);
   // Track revealed passwords by staff id / email
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+  const [staffToRemove, setStaffToRemove] = useState<any | null>(null);
+  const [isAdminPasswordModalOpen, setIsAdminPasswordModalOpen] = useState(false);
+  const [adminPasswordInput, setAdminPasswordInput] = useState('');
+  const [adminPasswordError, setAdminPasswordError] = useState('');
 
   useEffect(() => {
     loadStaff();
@@ -140,12 +144,26 @@ export const AdminControlCenter: React.FC = () => {
     showSuccess(`Login access for ${u.name} is now ${nextState ? 'Enabled' : 'Disabled'}`);
   };
 
-  const handleDeleteStaff = (id: string) => {
-    if (confirm('Are you sure you want to remove this staff record & revoke authentication access?')) {
-      const updated = staff.filter(u => u.id !== id);
-      persistStaffList(updated);
-      showSuccess('Staff record and auth access successfully revoked.');
+  const handleDeleteStaff = (enteredPassword: string, id: string) => {
+    // Validate admin password
+    const configuredAdminPassword = localStorage.getItem('munyaka_admin_password') || 'admin123';
+    if (!enteredPassword || enteredPassword.trim() === '') {
+      setAdminPasswordError('Admin password is required');
+      return false;
     }
+    if (enteredPassword !== configuredAdminPassword) {
+      setAdminPasswordError('Incorrect admin password');
+      return false;
+    }
+
+    const updated = staff.filter(u => u.id !== id);
+    persistStaffList(updated);
+    showSuccess('Staff record and auth access successfully revoked.');
+    setIsAdminPasswordModalOpen(false);
+    setStaffToRemove(null);
+    setAdminPasswordInput('');
+    setAdminPasswordError('');
+    return true;
   };
 
   const togglePasswordReveal = (key: string) => {
@@ -371,9 +389,14 @@ export const AdminControlCenter: React.FC = () => {
                             )}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="flex items-center gap-2 text-rose-600 cursor-pointer"
-                            onClick={() => handleDeleteStaff(u.id)}
+                            onClick={() => {
+                              setStaffToRemove(u);
+                              setAdminPasswordInput('');
+                              setAdminPasswordError('');
+                              setIsAdminPasswordModalOpen(true);
+                            }}
                           >
                             <UserX className="w-4 h-4" />
                             Remove Staff & Revoke Access
@@ -391,6 +414,63 @@ export const AdminControlCenter: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Admin Password Modal for Staff Removal */}
+      {isAdminPasswordModalOpen && staffToRemove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
+                <Shield className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Admin Password Required</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Enter admin password to revoke access for {staffToRemove.name || staffToRemove.email}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Admin Password</label>
+              <input
+                type="password"
+                value={adminPasswordInput}
+                onChange={(e) => {
+                  setAdminPasswordInput(e.target.value);
+                  setAdminPasswordError('');
+                }}
+                placeholder="Enter admin password..."
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                autoFocus
+              />
+              {adminPasswordError && (
+                <p className="text-xs font-semibold text-rose-600 mt-1">{adminPasswordError}</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAdminPasswordModalOpen(false);
+                  setStaffToRemove(null);
+                  setAdminPasswordInput('');
+                  setAdminPasswordError('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  handleDeleteStaff(adminPasswordInput, staffToRemove.id);
+                }}
+              >
+                Confirm Remove & Revoke
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
