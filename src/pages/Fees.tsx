@@ -247,6 +247,7 @@ const Fees = () => {
   const activeAcademicYear = selectedYear || "2026";
   const activeTerm = selectedTerm || "term1";
   const [selectedGrade, setSelectedGrade] = useState("all");
+  const [selectedStream, setSelectedStream] = useState("all");
   const [tabGradeFilter, setTabGradeFilter] = useState<string>("ALL");
 
   // Fee structures (managed locally with persistence)
@@ -544,22 +545,28 @@ const Fees = () => {
     }
   }, [studentsFromStore, getTotalPaidForStudent, getTermFeeForGrade, findGradeIdForLearner, selectedYear, selectedTerm]);
 
-  /** Filter fee records by grade level */
+  /** Filter fee records by grade level and stream */
   const filteredCalculatedFees: FeeRecord[] = useMemo(() => {
-    let rawLearners = [];
-    try {
-      rawLearners = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
-    } catch {}
+    let list = calculatedFees;
 
-    if (!selectedGrade || selectedGrade === "all" || selectedGrade === "ALL" || selectedGrade === "") {
-      return calculatedFees;
+    if (selectedGrade && selectedGrade !== "all" && selectedGrade !== "ALL" && selectedGrade !== "") {
+      list = list.filter(fee => {
+        const feeGradeKey = getGradeMatchKey(fee.grade);
+        const filterKey = getGradeMatchKey(selectedGrade);
+        return feeGradeKey === filterKey || fee.studentGradeId === selectedGrade || fee.grade?.toLowerCase().trim() === selectedGrade?.toLowerCase().trim();
+      });
     }
-    return calculatedFees.filter(fee => {
-      const feeGradeKey = getGradeMatchKey(fee.grade);
-      const filterKey = getGradeMatchKey(selectedGrade);
-      return feeGradeKey === filterKey || fee.studentGradeId === selectedGrade || fee.grade?.toLowerCase().trim() === selectedGrade?.toLowerCase().trim();
-    });
-  }, [calculatedFees, selectedGrade]);
+
+    if (selectedStream && selectedStream !== "all" && selectedStream !== "ALL" && selectedStream !== "") {
+      list = list.filter(fee => {
+        const feeStream = String(fee.stream || '').trim().toLowerCase();
+        const filterStream = String(selectedStream || '').trim().toLowerCase();
+        return feeStream === filterStream || feeStream.includes(filterStream);
+      });
+    }
+
+    return list;
+  }, [calculatedFees, selectedGrade, selectedStream]);
 
   /** Filter transactions by grade level */
   const filteredTransactions: ExtendedTransaction[] = useMemo(() => {
@@ -1072,10 +1079,11 @@ const Fees = () => {
       </div>
 
       {/* Filter Controls */}
-      <FeeFilters 
-        year={selectedYear} setYear={setSelectedYear} 
-        term={selectedTerm} setTerm={setSelectedTerm} 
-        grade={selectedGrade} setGrade={setSelectedGrade} 
+      <FeeFilters
+        year={selectedYear} setYear={setSelectedYear}
+        term={selectedTerm} setTerm={setSelectedTerm}
+        grade={selectedGrade} setGrade={setSelectedGrade}
+        stream={selectedStream} setStream={setSelectedStream}
       />
 
       {/* Summary Metrics */}

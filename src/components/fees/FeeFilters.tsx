@@ -11,12 +11,14 @@ interface FeeFiltersProps {
   setTerm: (v: string) => void;
   grade: string;
   setGrade: (v: string) => void;
+  stream: string;
+  setStream: (v: string) => void;
 }
 
-const FeeFilters = ({ year, setYear, term, setTerm, grade, setGrade }: FeeFiltersProps) => (
+const FeeFilters = ({ year, setYear, term, setTerm, grade, setGrade, stream, setStream }: FeeFiltersProps) => (
   <div className="action-bar">
     <Card className="border border-slate-200/80 shadow-sm rounded-xl bg-white p-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Academic Year</Label>
           <Select value={year} onValueChange={setYear}>
@@ -48,6 +50,7 @@ const FeeFilters = ({ year, setYear, term, setTerm, grade, setGrade }: FeeFilter
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All Grades</SelectItem>
               <SelectItem value="pp1">Pre-Primary 1</SelectItem>
               <SelectItem value="pp2">Pre-Primary 2</SelectItem>
               <SelectItem value="grade1">Grade 1</SelectItem>
@@ -59,6 +62,28 @@ const FeeFilters = ({ year, setYear, term, setTerm, grade, setGrade }: FeeFilter
               <SelectItem value="grade7">Grade 7</SelectItem>
               <SelectItem value="grade8">Grade 8</SelectItem>
               <SelectItem value="grade9">Grade 9</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Stream</Label>
+          <Select value={stream} onValueChange={setStream}>
+            <SelectTrigger className="rounded-lg h-10 px-3 bg-slate-50 border-slate-200 text-sm font-medium text-slate-800">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Streams</SelectItem>
+              <SelectItem value="blue">Blue</SelectItem>
+              <SelectItem value="green">Green</SelectItem>
+              <SelectItem value="yellow">Yellow</SelectItem>
+              <SelectItem value="red">Red</SelectItem>
+              <SelectItem value="jupiter">Jupiter</SelectItem>
+              <SelectItem value="mars">Mars</SelectItem>
+              <SelectItem value="venus">Venus</SelectItem>
+              <SelectItem value="east">East</SelectItem>
+              <SelectItem value="west">West</SelectItem>
+              <SelectItem value="north">North</SelectItem>
+              <SelectItem value="south">South</SelectItem>
             </SelectContent>
           </Select>
         </div>
