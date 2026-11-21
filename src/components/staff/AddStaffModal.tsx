@@ -22,13 +22,19 @@ export interface AddStaffModalProps {
 }
 
 const AVAILABLE_GRADES = [
-  'Playgroup', 'PP1', 'PP2', 
-  'Grade 1', 'Grade 2', 'Grade 3', 
-  'Grade 4', 'Grade 5', 'Grade 6', 
+  'Playgroup', 'PP1', 'PP2',
+  'Grade 1', 'Grade 2', 'Grade 3',
+  'Grade 4', 'Grade 5', 'Grade 6',
   'Grade 7', 'Grade 8', 'Grade 9'
 ];
 
 const AVAILABLE_STREAMS = ['East', 'West', 'North', 'South', 'Red', 'Blue', 'Green', 'Gold'];
+
+const AVAILABLE_SUBJECTS = [
+  'Mathematics', 'English', 'Kiswahili', 'Science & Technology',
+  'Integrated Science', 'Social Studies', 'Creative Arts',
+  'Agriculture & Nutrition', 'Religious Education (CRE/IRE/HRE)', 'ICT / Computer Studies'
+];
 
 export function AddStaffModal({ isOpen, onClose, onStaffAdded }: AddStaffModalProps) {
   const { toast } = useToast();
@@ -39,6 +45,7 @@ export function AddStaffModal({ isOpen, onClose, onStaffAdded }: AddStaffModalPr
   const [role, setRole] = useState('Teacher');
   const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
   const [selectedStreams, setSelectedStreams] = useState<string[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
 
   // 2. Secure access code generator state that initializes with a random code (e.g. "MUN-" + 4 random alphanumeric characters)
   const generateRandomCode = () => {
@@ -77,7 +84,7 @@ export function AddStaffModal({ isOpen, onClose, onStaffAdded }: AddStaffModalPr
 
   // 3. Checkbox handlers to select/deselect assigned grades and streams
   const handleGradeToggle = (grade: string) => {
-    setSelectedGrades(prev => 
+    setSelectedGrades(prev =>
       prev.includes(grade) ? prev.filter(g => g !== grade) : [...prev, grade]
     );
   };
@@ -85,6 +92,12 @@ export function AddStaffModal({ isOpen, onClose, onStaffAdded }: AddStaffModalPr
   const handleStreamToggle = (stream: string) => {
     setSelectedStreams(prev =>
       prev.includes(stream) ? prev.filter(s => s !== stream) : [...prev, stream]
+    );
+  };
+
+  const handleSubjectToggle = (subj: string) => {
+    setSelectedSubjects(prev =>
+      prev.includes(subj) ? prev.filter(s => s !== subj) : [...prev, subj]
     );
   };
 
