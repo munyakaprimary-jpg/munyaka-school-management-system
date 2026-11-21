@@ -57,6 +57,66 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
 
+// ── Notification Bell Component ───────────────────────────────────────────────
+export const NotificationBell: React.FC = () => {
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; time: string; read: boolean }>>([
+    { id: '1', title: 'System Boot', message: 'Munyaka SMS initialized successfully.', time: 'Just now', read: false },
+    { id: '2', title: 'Cloud Sync', message: 'All local records verified.', time: '5m ago', read: false },
+  ]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setShowNotifications(!showNotifications)}
+        className="relative p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+        aria-label="Notifications"
+      >
+        <Bell size={18} />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center shadow-md animate-pulse">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+
+      {showNotifications && (
+        <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden animate-fadeIn">
+          <div className="bg-gradient-to-r from-teal-700 to-indigo-700 p-4 text-white flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-teal-200" />
+              <h4 className="font-black text-sm tracking-wide">Notifications</h4>
+            </div>
+            <button
+              onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+              className="text-xs text-teal-100 hover:text-white font-bold underline"
+            >
+              Mark all read
+            </button>
+          </div>
+          <div className="max-h-80 overflow-y-auto p-3 space-y-2">
+            {notifications.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs font-medium">No notifications</div>
+            ) : (
+              notifications.map(n => (
+                <div key={n.id} className={cn("p-3 rounded-2xl border transition-all text-left", n.read ? "bg-slate-50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800" : "bg-teal-50/50 dark:bg-teal-950/20 border-teal-100 dark:border-teal-900/50")}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white">{n.title}</span>
+                    <span className="text-[10px] text-slate-400">{n.time}</span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">{n.message}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Functional Sync Button Component ──────────────────────────────────────────
 export const SyncButton: React.FC = () => {
   const [pendingCount, setPendingCount] = useState<number>(0);
