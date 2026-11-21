@@ -545,16 +545,33 @@ export const AdminDashboardComponent: React.FC = () => {
                     const rawL = localStorage.getItem('munyaka_students') || localStorage.getItem('school_learners_data') || '[]';
                     learnersList = JSON.parse(rawL);
                   }
-                  const rawAtt = localStorage.getItem('roll_call_records') || localStorage.getItem('munyaka_attendance_records') || localStorage.getItem('attendance_records') || '{}';
+                  const rawAtt = localStorage.getItem('roll_call_records') || localStorage.getItem('munyaka_roll_call') || localStorage.getItem('munyaka_attendance_records') || localStorage.getItem('school_attendance_v1') || localStorage.getItem('attendance_records') || '{}';
                   const parsedAtt = JSON.parse(rawAtt);
                   if (parsedAtt && typeof parsedAtt === 'object') {
                     if (Array.isArray(parsedAtt)) {
                       parsedAtt.forEach((item: any) => {
-                        const k = `${item.grade || ''}_${item.stream || ''}_${item.date || ''}_${item.session || ''}`;
+                        if (!item) return;
+                        const gKey = String(item.grade || '').trim().toLowerCase();
+                        const sKey = String(item.stream || '').trim().toLowerCase();
+                        const dKey = String(item.date || '').trim();
+                        const sessKey = String(item.session || '').trim().toLowerCase();
+                        const k = `${gKey}_${sKey}_${dKey}_${sessKey}`;
                         attendanceLogs[k] = item;
+                        // Also store fallback key without session or date for maximum compatibility
+                        attendanceLogs[`${gKey}_${sKey}`] = item;
                       });
                     } else {
-                      attendanceLogs = parsedAtt;
+                      // Object format (e.g. key-value record maps)
+                      Object.entries(parsedAtt).forEach(([k, item]: [string, any]) => {
+                        if (item) {
+                          attendanceLogs[k] = item;
+                          const gKey = String(item.grade || '').trim().toLowerCase();
+                          const sKey = String(item.stream || '').trim().toLowerCase();
+                          if (gKey && sKey) {
+                            attendanceLogs[`${gKey}_${sKey}`] = item;
+                          }
+                        }
+                      });
                     }
                   }
                 } catch (e) {

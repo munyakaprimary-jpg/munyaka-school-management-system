@@ -468,6 +468,7 @@ export default function Attendance() {
 
       localStorage.setItem('roll_call_records', JSON.stringify(masterParsed));
       localStorage.setItem('munyaka_roll_call', JSON.stringify(masterParsed));
+      localStorage.setItem('school_attendance_v1', JSON.stringify(masterParsed));
 
       const munyakaRaw = localStorage.getItem('munyaka_attendance_records') || '[]';
       let munyakaList = [];
@@ -476,7 +477,12 @@ export default function Attendance() {
       
       munyakaList.push(recordPayload);
       localStorage.setItem('munyaka_attendance_records', JSON.stringify(munyakaList));
-      localStorage.setItem('school_attendance_v1', JSON.stringify(masterParsed));
+
+      // Broadcast update events so Admin Dashboard and stream attendance table instantly re-aggregate live
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+      window.dispatchEvent(new Event('roll_call_updated'));
+      window.dispatchEvent(new Event('attendance_updated'));
 
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
