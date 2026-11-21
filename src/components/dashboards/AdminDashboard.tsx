@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import CentralDataService from '../../services/centralDataService';
 import { useSchoolStore } from '../../store/useSchoolStore';
-import { getStoredLearners, getStoredStaff } from '@/utils/storage';
+import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { useCentralData } from '../../hooks/useCentralData';
 import { Users, GraduationCap, Briefcase, CheckCircle2, Table as TableIcon, FileText, ShieldCheck, Database, ArrowRight, Sparkles, Upload, QrCode, Camera, RefreshCw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -471,12 +471,23 @@ export const AdminDashboardComponent: React.FC = () => {
             </div>
             <div>
               <CardTitle className="text-lg font-bold">Dynamic Stream-by-Stream Dual-Session Attendance Trends</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">Live morning & afternoon session rates dynamically aggregated across all registered school streams.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Live morning & afternoon session rates dynamically aggregated across all registered school streams and roll-call logs.</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                // Trigger live sync & state refresh
+                window.dispatchEvent(new Event('storage'));
+                setSyncKey(k => k + 1);
+              }}
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5 animate-spin-hover" />
+              <span>Live DB Sync</span>
+            </button>
             <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 font-bold px-3 py-1">
-              Live DB Sync
+              Live Sync Active
             </Badge>
           </div>
         </CardHeader>
@@ -495,7 +506,9 @@ export const AdminDashboardComponent: React.FC = () => {
               {(() => {
                 let learnersList: any[] = [];
                 let attendanceLogs: Record<string, any> = {};
+                let gradesConfig: any = { grades: [], streams: [], gradeStreamMap: {} };
                 try {
+                  gradesConfig = readGradesAndStreams();
                   learnersList = getStoredLearners();
                   if (learnersList.length === 0) {
                     const rawL = localStorage.getItem('munyaka_students') || localStorage.getItem('school_learners_data') || '[]';
@@ -518,85 +531,174 @@ export const AdminDashboardComponent: React.FC = () => {
                   attendanceLogs = {};
                 }
 
-                const streamMap: Record<string, { grade: string; stream: string; learners: any[] }> = {};
-                
+                // Build complete list of stream combinations from grades/streams configuration + actual enrolled learners
+                const activeStreamCombinations: Array<{ grade: string; stream: string }> = [];
+                const seenCombinations = new Set<string>();
+
+                // 1. First add all configured grades & streams from Grades & Streams settings
+                if (gradesConfig && gradesConfig.grades && gradesConfig.gradeStreamMap) {
+                  gradesConfig.grades.forEach((g: string) => {
+                    const matchKey = g.toLowerCase().replace(/\s+/g, '');
+                    const streams = gradesConfig.gradeStreamMap[matchKey] || gradesConfig.streams || ['Green'];
+                    streams.forEach((s: string) => {
+                      const gradeNorm = g.trim();
+                      const streamNorm = s.trim();
+                      const k = `${gradeNorm.toLowerCase()}__${streamNorm.toLowerCase()}`;
+                      if (!seenCombinations.has(k)) {
+                        seenCombinations.add(k);
+                        activeStreamCombinations.push({ grade: gradeNorm, stream: streamNorm });
+                      }
+                    });
+                  });
+                }
+
+                // 2. Also ensure any learner found in storage whose grade/stream might not be in the default settings config is included
                 learnersList.forEach(l => {
                   const g = String(l.grade || l.classLevel || 'Grade 1').trim();
-                  const s = String(l.stream || 'North').trim();
-                  const key = `${g}__${s}`;
-                  if (!streamMap[key]) {
-                    streamMap[key] = { grade: g, stream: s, learners: [] };
+                  const s = String(l.stream || 'Green').trim();
+                  const k = `${g.toLowerCase()}__${s.toLowerCase()}`;
+                  if (!seenCombinations.has(k)) {
+                    seenCombinations.add(k);
+                    activeStreamCombinations.push({ grade: g, stream: s });
                   }
-                  streamMap[key].learners.push(l);
                 });
 
-                const streamKeys = Object.keys(streamMap);
-
-                if (streamKeys.length === 0) {
+                if (activeStreamCombinations.length === 0) {
                   return (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-slate-400">
-                        No stream attendance records found. Mark attendance in the Roll Call module to populate live trends.
+                        No configured grades or streams found. Add streams in Grades & Streams settings or register learners.
                       </TableCell>
                     </TableRow>
                   );
                 }
 
-                return streamKeys.map((key, idx) => {
-                  const group = streamMap[key];
-                  const enrolled = group.learners.length;
-                  const streamName = `${group.grade} - ${group.stream}`;
+                return activeStreamCombinations.map((combo, idx) => {
+                  const gradeName = combo.grade;
+                  const streamName = combo.stream;
+                  const displayStreamLabel = `${gradeName} - ${streamName}`;
 
+                  // Count registered learners matching this grade and stream
+                  const matchingLearners = learnersList.filter(l => {
+                    const lGrade = String(l.grade || l.classLevel || '').trim().toLowerCase();
+                    const lStream = String(l.stream || '').trim().toLowerCase();
+                    return lGrade === gradeName.toLowerCase() && lStream === streamName.toLowerCase();
+                  });
+
+                  const enrolled = matchingLearners.length;
+
+                  // Find roll call records for this grade and stream
                   let morningPresent = 0;
                   let afternoonPresent = 0;
-                  let hasMarkedRecord = false;
+                  let morningRecorded = false;
+                  let afternoonRecorded = false;
 
                   Object.values(attendanceLogs).forEach((record: any) => {
                     if (!record) return;
                     const rGrade = String(record.grade || '').trim().toLowerCase();
                     const rStream = String(record.stream || '').trim().toLowerCase();
-                    if (rGrade === group.grade.toLowerCase() && rStream === group.stream.toLowerCase()) {
+                    if (rGrade === gradeName.toLowerCase() && rStream === streamName.toLowerCase()) {
                       const studentsObj = record.students || record.learners || {};
+                      
+                      // Check if record has session indicators or student status
+                      const recSession = String(record.session || '').toLowerCase();
+                      
                       Object.values(studentsObj).forEach((st: any) => {
                         if (st) {
-                          hasMarkedRecord = true;
                           const mStatus = String(st.morning || st.status || '').toLowerCase();
                           const aStatus = String(st.afternoon || st.status || '').toLowerCase();
+
+                          if (recSession === 'morning' || mStatus === 'present' || mStatus === 'late' || mStatus === 'absent') {
+                            morningRecorded = true;
+                          }
+                          if (recSession === 'afternoon' || aStatus === 'present' || aStatus === 'late' || aStatus === 'absent') {
+                            afternoonRecorded = true;
+                          }
+
                           if (mStatus === 'present' || mStatus === 'late') morningPresent++;
                           if (aStatus === 'present' || aStatus === 'late') afternoonPresent++;
                         }
                       });
+
+                      // If record exists for the date without explicit student map keys but marked present count
+                      if (record.morningPresentCount !== undefined) {
+                        morningRecorded = true;
+                        morningPresent = Number(record.morningPresentCount) || 0;
+                      }
+                      if (record.afternoonPresentCount !== undefined) {
+                        afternoonRecorded = true;
+                        afternoonPresent = Number(record.afternoonPresentCount) || 0;
+                      }
                     }
                   });
 
-                  const effectiveMorning = hasMarkedRecord ? morningPresent : Math.round(enrolled * 0.94);
-                  const effectiveAfternoon = hasMarkedRecord ? afternoonPresent : Math.round(enrolled * 0.91);
-                  const morningRate = enrolled > 0 ? Math.round((effectiveMorning / enrolled) * 100) : 0;
-                  const afternoonRate = enrolled > 0 ? Math.round((effectiveAfternoon / enrolled) * 100) : 0;
+                  // Factually compute rates & status
+                  let morningDisplay = '0 / 0 (0%)';
+                  let afternoonDisplay = '0 / 0 (0%)';
+                  let morningRate = 0;
+                  let afternoonRate = 0;
+                  let statusText = 'No Learners';
+                  let statusBadgeClass = 'bg-slate-100 text-slate-600';
+
+                  if (enrolled === 0) {
+                    morningDisplay = '0 / 0 (0%)';
+                    afternoonDisplay = '0 / 0 (0%)';
+                    statusText = 'No Learners';
+                    statusBadgeClass = 'bg-slate-100 text-slate-600';
+                  } else {
+                    if (!morningRecorded && !afternoonRecorded) {
+                      morningDisplay = `0 / ${enrolled} (0%)`;
+                      afternoonDisplay = `0 / ${enrolled} (0%)`;
+                      statusText = 'Pending Roll Call';
+                      statusBadgeClass = 'bg-amber-100 text-amber-800 font-bold';
+                    } else {
+                      morningRate = Math.min(100, Math.max(0, Math.round((morningPresent / enrolled) * 100)));
+                      afternoonRate = Math.min(100, Math.max(0, Math.round((afternoonPresent / enrolled) * 100)));
+
+                      morningDisplay = `${morningPresent} / ${enrolled} (${morningRate}%)`;
+                      afternoonDisplay = `${afternoonPresent} / ${enrolled} (${afternoonRate}%)`;
+
+                      const avgRate = Math.round((morningRate + afternoonRate) / 2);
+                      if (avgRate >= 90) {
+                        statusText = 'Optimal';
+                        statusBadgeClass = 'bg-emerald-100 text-emerald-800 font-bold';
+                      } else if (avgRate >= 75) {
+                        statusText = 'Good';
+                        statusBadgeClass = 'bg-blue-100 text-blue-800 font-bold';
+                      } else {
+                        statusText = 'Attention';
+                        statusBadgeClass = 'bg-rose-100 text-rose-800 font-bold';
+                      }
+                    }
+                  }
 
                   return (
                     <TableRow key={idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                      <TableCell className="font-semibold text-slate-900 dark:text-slate-100 py-3.5 px-6">{streamName}</TableCell>
+                      <TableCell className="font-semibold text-slate-900 dark:text-slate-100 py-3.5 px-6">{displayStreamLabel}</TableCell>
                       <TableCell className="text-center font-medium text-slate-700 dark:text-slate-300 py-3.5 px-6">{enrolled}</TableCell>
                       <TableCell className="text-center py-3.5 px-6">
                         <div className="flex flex-col items-center gap-1">
-                          <span className="font-black text-xs text-emerald-700">{effectiveMorning} / {enrolled} ({morningRate}%)</span>
-                          <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, Math.max(0, morningRate))}%` }} />
-                          </div>
+                          <span className="font-black text-xs text-slate-800 dark:text-slate-200">{morningDisplay}</span>
+                          {enrolled > 0 && morningRecorded && (
+                            <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                              <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${morningRate}%` }} />
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-center py-3.5 px-6">
                         <div className="flex flex-col items-center gap-1">
-                          <span className="font-black text-xs text-indigo-700">{effectiveAfternoon} / {enrolled} ({afternoonRate}%)</span>
-                          <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${Math.min(100, Math.max(0, afternoonRate))}%` }} />
-                          </div>
+                          <span className="font-black text-xs text-slate-800 dark:text-slate-200">{afternoonDisplay}</span>
+                          {enrolled > 0 && afternoonRecorded && (
+                            <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                              <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${afternoonRate}%` }} />
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-center py-3.5 px-6">
-                        <Badge className={cn("font-bold border-none", morningRate >= 90 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800")}>
-                          {morningRate >= 90 ? 'Optimal' : 'Attention'}
+                        <Badge className={cn("border-none", statusBadgeClass)}>
+                          {statusText}
                         </Badge>
                       </TableCell>
                     </TableRow>
