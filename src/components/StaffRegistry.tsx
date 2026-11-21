@@ -228,24 +228,24 @@ export default function StaffRegistry() {
       .map((staff) => {
         // Use canonical ID for staff records
         const canonicalId = getCanonicalStaffId(staff);
-          let id = String(staff.id || staff.staffId || staff.staff_id || staff.accessCode || staff.code || canonicalId);
-          if (!id.startsWith('MUN-') && !id.startsWith('staff_')) {
-            id = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
-          }
-          if (seenIds.has(id)) {
-            id = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
-          }
-          seenIds.add(id);
-  
-          let cat: StaffCategoryRole = staff.category;
+        let id = String(staff.id || staff.staffId || staff.staff_id || staff.accessCode || staff.code || canonicalId);
+        if (!id.startsWith('MUN-') && !id.startsWith('staff_')) {
+          id = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+        if (seenIds.has(id)) {
+          id = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+        seenIds.add(id);
+
+        let cat: StaffCategoryRole = staff.category;
           if (cat === ('Teaching Staff' as any)) cat = 'Subject Teacher';
           else if (cat === ('Administration' as any)) cat = 'HOI';
           else if (cat === ('Support Staff' as any)) cat = 'Store Master';
           else if (!cat) cat = 'Class Teacher';
   
           const rawClasses = staff.assignedClasses || staff.classes || staff.assignedGrades || [];
-          const rawStreams = staff.assignedStreams || staff.streams || [];
-          const rawSubjects = staff.teachingSubjects || staff.subjects || [];
+          const rawStreamsArr = staff.assignedStreams || staff.streams || [];
+          const rawSubjectsArr = staff.teachingSubjects || staff.subjects || [];
           const cleanClasses = Array.isArray(rawClasses)
             ? rawClasses.map((c: any) => {
               if (!c) return '';
@@ -257,9 +257,8 @@ export default function StaffRegistry() {
             }).filter(Boolean)
           : [];
   
-          const rawStreams = staff.assignedStreams || staff.streams || [];
-          const cleanStreams = Array.isArray(rawStreams)
-            ? rawStreams.map((s: any) => {
+          const cleanStreams = Array.isArray(rawStreamsArr)
+            ? rawStreamsArr.map((s: any) => {
                 if (!s) return '';
                 if (typeof s === 'string') return s;
                 if (typeof s === 'object') {
@@ -269,9 +268,8 @@ export default function StaffRegistry() {
               }).filter(s => s && s !== 'Mercury')
             : [];
   
-          const rawSubjects = staff.subjects || staff.assignedSubjects || [];
-          const cleanSubjects = Array.isArray(rawSubjects)
-            ? rawSubjects.map((sub: any) => {
+          const cleanSubjects = Array.isArray(rawSubjectsArr)
+            ? rawSubjectsArr.map((sub: any) => {
                 if (!sub) return '';
                 if (typeof sub === 'string') return sub;
                 if (typeof sub === 'object') {
