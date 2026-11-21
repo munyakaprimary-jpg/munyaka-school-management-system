@@ -1011,7 +1011,7 @@ export default function StaffRegistry() {
           <div className="h-2 min-w-[1300px]"></div>
         </div>
 
-        <div 
+        <div
           ref={bottomScrollRef}
           onScroll={handleBottomScroll}
           className="overflow-x-auto custom-scrollbar"
@@ -1023,8 +1023,8 @@ export default function StaffRegistry() {
                 <th className="py-3.5 px-3 min-w-[170px] whitespace-nowrap">ASSIGNED ROLE / RBAC</th>
                 <th className="py-3.5 px-3 min-w-[180px] whitespace-nowrap">Contact Info</th>
                 <th className="py-3.5 px-3 min-w-[120px] whitespace-nowrap">Official ID / TSC No.</th>
-                <th className="py-3.5 px-3 min-w-[180px] whitespace-nowrap">Subjects</th>
-                <th className="py-3.5 px-3 min-w-[180px] whitespace-nowrap">Assigned Classes</th>
+                <th className="py-3.5 px-3 min-w-[180px] whitespace-nowrap">SUBJECTS</th>
+                <th className="py-3.5 px-3 min-w-[180px] whitespace-nowrap">ASSIGNED CLASSES</th>
                 <th className="py-3.5 px-3 text-center whitespace-nowrap">Status</th>
                 <th className="py-3.5 px-4 text-right whitespace-nowrap">Actions</th>
               </tr>
@@ -1112,68 +1112,13 @@ export default function StaffRegistry() {
                       <td className="py-3.5 px-3 max-w-[180px]">
                         {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs" title={`${staff.homeroomGrade || ''} ${staff.homeroomStream || ''}`.trim()}>
                               <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
                               {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
                             </span>
                           </div>
-                        ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
-                          <div className="flex flex-col gap-1.5 max-w-[220px]">
-                            {staff.assignedClasses && staff.assignedClasses.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
-                                  let formattedCls = '';
-                                  if (typeof cls === 'string') {
-                                    formattedCls = cls;
-                                  } else if (cls && typeof cls === 'object') {
-                                    const item = cls as any;
-                                    formattedCls = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
-                                    if (!formattedCls) formattedCls = JSON.stringify(item);
-                                  } else {
-                                    formattedCls = String(cls);
-                                  }
-                                  return (
-                                    <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100 break-words hyphens-auto" title={formattedCls}>
-                                      {formattedCls}
-                                    </span>
-                                  );
-                                })}
-                                {staff.assignedClasses.length > 3 && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    +{staff.assignedClasses.length - 3}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {staff.assignedStreams && staff.assignedStreams.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
-                                  let formattedStrm = '';
-                                  if (typeof strm === 'string') {
-                                    formattedStrm = strm;
-                                  } else if (strm && typeof strm === 'object') {
-                                    const item = strm as any;
-                                    formattedStrm = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
-                                    if (!formattedStrm) formattedStrm = JSON.stringify(item);
-                                  } else {
-                                    formattedStrm = String(strm);
-                                  }
-                                  return (
-                                    <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100 break-words hyphens-auto" title={formattedStrm}>
-                                      {formattedStrm}
-                                    </span>
-                                  );
-                                })}
-                                {staff.assignedStreams.length > 3 && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    +{staff.assignedStreams.length - 3}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
                         ) : (
-                          <span className="text-slate-400 text-xs">—</span>
+                          <span className="text-slate-400 text-xs">Not assigned</span>
                         )}
                       </td>
 
@@ -1226,7 +1171,7 @@ export default function StaffRegistry() {
             </div>
 
             {/* Modal Form Scroll Area */}
-            <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-5 flex-1 custom-scrollbar">
+            <form onSubmit={handleSubmit} className="overflow-y-auto p-6 pb-24 space-y-5 flex-1 custom-scrollbar">
               {/* Profile details grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
