@@ -305,10 +305,16 @@ export default function FirestoreSyncTab() {
 
   const getUnifiedLocalCount = (): number => {
     try {
-      const raw = localStorage.getItem(UNIFIED_STORAGE_KEY);
-      if (!raw) return 0;
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed.length : 0;
+      for (const k of [UNIFIED_STORAGE_KEY, 'munyaka_learners_v2', 'munyaka_learners_directory', 'learners', 'school_students']) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.length;
+          }
+        }
+      }
+      return 0;
     } catch {
       return 0;
     }
@@ -339,9 +345,16 @@ export default function FirestoreSyncTab() {
 
   const localLearners = (() => {
     try {
-      const raw = localStorage.getItem(UNIFIED_STORAGE_KEY) || localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('learners');
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
+      for (const k of [UNIFIED_STORAGE_KEY, 'munyaka_learners_v2', 'munyaka_learners_directory', 'learners', 'school_students']) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      }
+      return [];
     } catch {
       return [];
     }
