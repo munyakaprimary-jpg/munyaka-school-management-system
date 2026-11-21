@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -16,4 +16,16 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Automatically sign in anonymously on startup so request.auth != null is satisfied for Firestore rules
+if (typeof window !== 'undefined') {
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      signInAnonymously(auth).catch((err) => {
+        console.warn('Anonymous sign-in warning:', err);
+      });
+    }
+  });
+}
+
 export default app;
