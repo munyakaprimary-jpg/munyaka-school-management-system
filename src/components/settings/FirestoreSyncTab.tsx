@@ -2196,16 +2196,33 @@ export default function FirestoreSyncTab() {
     setIsSyncing(true);
 
     try {
-      const UNIFIED_KEY = 'munyaka_learners_v2';
-      const rawData = localStorage.getItem(UNIFIED_KEY) || localStorage.getItem('munyaka_learners') || localStorage.getItem('learners') || '';
-      let localLearnersList: any[] = [];
-      if (rawData) {
-        try {
-          localLearnersList = JSON.parse(rawData);
-        } catch {}
+      const authInstance = getAuth();
+      if (!authInstance.currentUser) {
+        await signInAnonymously(authInstance).catch(() => {});
       }
-      if (!Array.isArray(localLearnersList) || localLearnersList.length === 0) {
+
+      const keysToTry = ['munyaka_learners', 'munyaka_learners_v2', 'munyaka_learners_directory', 'learners', 'school_students'];
+      let localLearnersList: any[] = [];
+      for (const k of keysToTry) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              localLearnersList = parsed;
+              break;
+            }
+          } catch {}
+        }
+      }
+      if (localLearnersList.length === 0) {
         localLearnersList = HarmonizedLearnerService.getLearners() || [];
+      }
+
+      if (localLearnersList.length === 0) {
+        alert('No local learners found to sync.');
+        setIsSyncing(false);
+        return;
       }
 
       // Standardize helper
@@ -2228,31 +2245,16 @@ export default function FirestoreSyncTab() {
           grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
           stream: String(l.stream || '').trim(),
           gender: String(l.gender || 'Unknown').trim(),
+          parent_phone: String(l.parentPhone || l.guardianPhone || l.parent_phone || l.phone || '').trim(),
           updated_at: new Date().toISOString()
         };
       }).filter(Boolean);
 
-      localStorage.setItem(UNIFIED_KEY, JSON.stringify(localLearnersList));
+      localStorage.setItem('munyaka_learners', JSON.stringify(localLearnersList));
+      localStorage.setItem('munyaka_learners_v2', JSON.stringify(localLearnersList));
 
-      // Step A: Fetch existing cloud doc IDs
-      const cloudSnap = await getDocs(collection(db, "learners"));
-      const localIds = new Set(localLearnersList.map((l: any) => l.id));
-
-      // Step B: Delete orphaned / legacy documents in Firestore (including numeric raw IDs)
+      // Push active standardized local records to Firestore
       const batch = writeBatch(db);
-      let deleteCount = 0;
-
-      cloudSnap.docs.forEach((docSnap) => {
-        const docId = docSnap.id;
-        const normalizedDocId = standardizeLearnerId(docId);
-        // If the doc ID is not in local IDs, or if it was stored without 'learner-' prefix (numeric/raw), delete it so it gets re-created with the standardized 'learner-' ID
-        if (!localIds.has(docId) || !docId.startsWith('learner-')) {
-          batch.delete(docSnap.ref);
-          deleteCount++;
-        }
-      });
-
-      // Step C: Push active standardized local records
       localLearnersList.forEach((learner: any) => {
         const docRef = doc(db, "learners", learner.id);
         batch.set(docRef, learner, { merge: true });
@@ -2262,19 +2264,13 @@ export default function FirestoreSyncTab() {
 
       setLastSynced(new Date());
 
-      const fetchCloudCount = async () => {
-        try {
-          const snapshot = await getDocs(collection(db, "learners"));
-          setCloudLearnersCount(snapshot.size);
-          setCloudLearnersList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-        } catch (err) {
-          console.error("Error fetching learners cloud count:", err);
-        }
-      };
-      await fetchCloudCount();
+      const snapshot = await getDocs(collection(db, "learners"));
+      setCloudLearnersCount(snapshot.size);
+      setCloudLearnersList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      setCloudCount(snapshot.size);
 
-      alert(`Clean Standardized Sync Complete! Overwrote Firestore with exact ${localLearnersList.length} standardized records (Purged ${deleteCount} legacy/numeric cloud items).`);
-      showSuccess(`Clean Standardized Sync Complete! Overwrote Firestore with exact ${localLearnersList.length} standardized records (Purged ${deleteCount} legacy/numeric cloud items).`);
+      alert(`Successfully synced ${localLearnersList.length} learners to Firestore!`);
+      showSuccess(`Successfully synced ${localLearnersList.length} learners to Firestore!`);
 
       window.dispatchEvent(new Event('learners_updated'));
       handleTestCloudTables().catch(console.error);
@@ -3957,15 +3953,15 @@ export default function FirestoreSyncTab() {
                           {learner.admission_number || learner.admissionNo || learner.admNo || learner.admission_no || learner.id || 'N/A'}
                         </TableCell>
                         <TableCell className="font-semibold text-slate-900">
-                          {learner.name || 'Unnamed Learner'}
+                          {learner.name || learner.fullName || `${learner.firstName || ''} ${learner.lastName || ''}`.trim() || 'Unnamed Learner'}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="bg-slate-100 text-slate-800 font-medium">
-                            {learner.grade || 'Grade 1'} {learner.stream ? `(${learner.stream})` : ''}
+                            {learner.grade || learner.gradeLevel || 'Grade 1'} {learner.stream ? `(${learner.stream})` : ''}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-slate-600 text-xs">
-                          {learner.parent_phone || learner.guardianPhone || 'N/A'}
+                          {learner.parent_phone || learner.guardianPhone || learner.parentPhone || learner.phone || 'N/A'}
                         </TableCell>
                       </TableRow>
                     ))
