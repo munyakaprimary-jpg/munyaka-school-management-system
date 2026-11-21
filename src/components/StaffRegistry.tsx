@@ -243,7 +243,9 @@ export default function StaffRegistry() {
           else if (cat === ('Support Staff' as any)) cat = 'Store Master';
           else if (!cat) cat = 'Class Teacher';
   
-          const rawClasses = staff.assignedClasses || staff.classes || [];
+          const rawClasses = staff.assignedClasses || staff.classes || staff.assignedGrades || [];
+          const rawStreams = staff.assignedStreams || staff.streams || [];
+          const rawSubjects = staff.teachingSubjects || staff.subjects || [];
           const cleanClasses = Array.isArray(rawClasses)
             ? rawClasses.map((c: any) => {
               if (!c) return '';
@@ -1546,12 +1548,12 @@ export default function StaffRegistry() {
                 </div>
               </div>
 
-              {/* Class & Stream Assignments Grid FIRST */}
+              {/* Class & Stream & Subject Assignments Grid */}
               {isTeachingStaff({ category, tscNumber } as StaffMember) && (
                 <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Assigned Grades & Streams
+                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Assigned Grades, Streams & Subjects
                     </h4>
                     <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
                       {assignedClasses.length} class(es), {assignedStreams.length} stream(s) selected
