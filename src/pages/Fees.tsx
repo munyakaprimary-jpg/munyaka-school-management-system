@@ -1136,10 +1136,10 @@ const Fees = () => {
                 <div className="p-4 bg-amber-50 rounded-full">
                   <Database className="w-10 h-10 text-amber-500" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">No Learners Found</h3>
+                <h3 className="text-lg font-bold text-slate-900">No Registered Learners</h3>
                 <p className="text-sm text-slate-500">
-                  No learners are currently registered. Please add learners in the 
-                  <strong className="text-slate-800"> Learners Management </strong> 
+                  No learners are currently registered in the school directory. Please add learners in the
+                  <strong className="text-slate-800"> Learners Management </strong>
                   section first, then return here to manage their fee records.
                 </p>
               </div>
@@ -1150,10 +1150,13 @@ const Fees = () => {
                 <div className="p-4 bg-slate-50 rounded-full">
                   <FileText className="w-10 h-10 text-slate-400" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">No Fee Records Found</h3>
+                <h3 className="text-lg font-bold text-slate-900">No Learners in Selected Grade/Stream</h3>
                 <p className="text-sm text-slate-500">
-                  No learners match the selected grade filter "{GRADE_LEVEL_OPTIONS.find(o => o.value === tabGradeFilter)?.label || tabGradeFilter}". 
-                  Try selecting "All Grade Levels" to view all records.
+                  {selectedGrade && selectedGrade !== "all" && selectedGrade !== "ALL" ? (
+                    <span>No learners found in <strong className="text-slate-800">{selectedGrade}</strong>{selectedStream && selectedStream !== "all" ? <span className="text-slate-800"> - {selectedStream}</span> : ""}. Try selecting "All Grades" or a different stream in the filter panel above.</span>
+                  ) : (
+                    <span>No learners match the current filter criteria.</span>
+                  )}
                 </p>
               </div>
             </Card>
