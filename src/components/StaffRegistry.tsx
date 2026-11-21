@@ -1088,22 +1088,92 @@ export default function StaffRegistry() {
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-3 max-w-[180px]">
-                        {categoryIsTeaching(staff.category) && staff.subjects && staff.subjects.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 max-w-[280px]">
-                            {staff.subjects.map((sub, sIdx) => {
-                              const subName = typeof sub === 'string'
-                                ? sub
-                                : (sub && typeof sub === 'object'
-                                    ? String((sub as any).name || (sub as any).title || (sub as any).subject || (sub as any).learningArea || JSON.stringify(sub))
-                                    : String(sub));
-                              return (
-                                <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 break-words hyphens-auto" title={subName}>
-                                  {subName}
-                                </span>
-                              );
-                            })}
-                          </div>
+                      <td className="py-3.5 px-3 max-w-[280px]">
+                        {categoryIsTeaching(staff.category) ? (
+                          (() => {
+                            // Read from staff member's subjectAssignments or allocations, as well as fallback fields (teachingSubjects / subjects, assignedGrades, assignedStreams)
+                            const staffObj: any = staff;
+                            const rawAssignments = staffObj.subjectAssignments || staffObj.allocations || [];
+                            const fallbackSubjects = staffObj.teachingSubjects || staffObj.subjects || [];
+                            const fallbackGrades = staffObj.assignedClasses || staffObj.assignedGrades || (staffObj.homeroomGrade ? [staffObj.homeroomGrade] : []);
+                            const fallbackStreams = staffObj.assignedStreams || (staffObj.homeroomStream ? [staffObj.homeroomStream] : []);
+
+                            let formattedBadges: { key: string; label: string }[] = [];
+
+                            if (Array.isArray(rawAssignments) && rawAssignments.length > 0) {
+                              rawAssignments.forEach((item: any, itemIdx: number) => {
+                                if (!item) return;
+                                const subName = typeof item === 'string' ? item : (item.subject || item.name || item.title || '');
+                                if (!subName) return;
+                                const gradeName = item.grade || fallbackGrades[0] || '';
+                                const streamName = item.stream && item.stream !== 'Mercury' ? item.stream : (fallbackStreams[0] || '');
+                                
+                                // Avoid duplicating the stream name (render Grade 4 Green, never Grade 4 Green (Green))
+                                let locationStr = '';
+                                if (gradeName && streamName) {
+                                  const trimmedGrade = String(gradeName).trim();
+                                  const trimmedStream = String(streamName).trim();
+                                  if (trimmedGrade.toLowerCase().includes(trimmedStream.toLowerCase())) {
+                                    locationStr = trimmedGrade;
+                                  } else {
+                                    locationStr = `${trimmedGrade} ${trimmedStream}`;
+                                  }
+                                } else if (gradeName) {
+                                  locationStr = String(gradeName).trim();
+                                } else if (streamName) {
+                                  locationStr = String(streamName).trim();
+                                }
+
+                                const label = locationStr ? `${subName} — ${locationStr}` : subName;
+                                formattedBadges.push({ key: `${itemIdx}-${subName}-${locationStr}`, label });
+                              });
+                            }
+
+                            // If no structured allocations/subjectAssignments were parsed, fall back to fallback subjects combined with fallback grades & streams
+                            if (formattedBadges.length === 0 && Array.isArray(fallbackSubjects) && fallbackSubjects.length > 0) {
+                              fallbackSubjects.forEach((sub: any, subIdx: number) => {
+                                const subName = typeof sub === 'string' ? sub : (sub?.subject || sub?.name || sub?.title || String(sub));
+                                if (!subName) return;
+
+                                const gradeName = fallbackGrades[subIdx] || fallbackGrades[0] || '';
+                                const streamName = fallbackStreams[subIdx] || fallbackStreams[0] || '';
+
+                                let locationStr = '';
+                                if (gradeName && streamName) {
+                                  const trimmedGrade = String(gradeName).trim();
+                                  const trimmedStream = String(streamName).trim();
+                                  if (trimmedGrade.toLowerCase().includes(trimmedStream.toLowerCase())) {
+                                    locationStr = trimmedGrade;
+                                  } else {
+                                    locationStr = `${trimmedGrade} ${trimmedStream}`;
+                                  }
+                                } else if (gradeName) {
+                                  locationStr = String(gradeName).trim();
+                                } else if (streamName) {
+                                  locationStr = String(streamName).trim();
+                                }
+
+                                const label = locationStr ? `${subName} — ${locationStr}` : subName;
+                                formattedBadges.push({ key: `fallback-${subIdx}-${subName}`, label });
+                              });
+                            }
+
+                            return formattedBadges.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5 max-w-[320px]">
+                                {formattedBadges.map((badge) => (
+                                  <span
+                                    key={badge.key}
+                                    className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs break-words hyphens-auto"
+                                    title={badge.label}
+                                  >
+                                    {badge.label}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 text-xs">—</span>
+                            );
+                          })()
                         ) : (
                           <span className="text-slate-400 text-xs">—</span>
                         )}
