@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
 import PaymentManagement from './PaymentManagement';
+import OwnersDashboard from './ownersDashboard';
 import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 import { getStoredStaff } from '@/utils/storage';
 import { useSessionHeartbeat } from '@/utils/sessionHeartbeat';
@@ -30,7 +31,7 @@ import { ConnectedActiveUsersMonitor } from '@/components/ConnectedActiveUsersMo
 export default function JamlyanAnalyticsPortal() {
   useSessionHeartbeat();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions' | 'locks' | 'updates' | 'diagnostics' | 'lan' | 'users'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions' | 'locks' | 'updates' | 'diagnostics' | 'lan' | 'users' | 'tenants'>('overview');
 
   // Dynamic Subscription & Lock State using unified utility
   const [licenseInfo, setLicenseInfo] = useState(() => {
@@ -257,6 +258,18 @@ export default function JamlyanAnalyticsPortal() {
             <Users size={18} />
             <span>Connected Users</span>
           </button>
+
+          <button
+            onClick={() => { setActiveTab('tenants'); setMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
+              activeTab === 'tenants'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <Building2 size={18} />
+            <span>Tenants & Campuses</span>
+          </button>
         </nav>
 
         {/* Sidebar Footer */}
@@ -302,6 +315,7 @@ export default function JamlyanAnalyticsPortal() {
                 {activeTab === 'diagnostics' && 'System Diagnostics & Firestore Sync'}
                 {activeTab === 'lan' && 'LAN Wi-Fi Server Configuration & Sync'}
                 {activeTab === 'users' && 'Connected Active Users Monitor'}
+                {activeTab === 'tenants' && 'Tenants & Campuses Management'}
               </h1>
               <p className="text-xs md:text-sm text-slate-300 max-w-2xl">
                 Authorized operator portal for Jamlyan Analytics. Monitor tenant seat utilization, subscription invoices, global teacher-app security locks, and system updates.
@@ -331,6 +345,10 @@ export default function JamlyanAnalyticsPortal() {
           </div>
         ) : activeTab === 'users' ? (
           <ConnectedActiveUsersMonitor />
+        ) : activeTab === 'tenants' ? (
+          <div className="bg-slate-900 rounded-[2rem] p-6 border border-slate-800">
+            <OwnersDashboard />
+          </div>
         ) : activeTab === 'locks' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
