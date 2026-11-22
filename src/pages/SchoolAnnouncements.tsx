@@ -24,15 +24,10 @@ import {
 } from 'lucide-react';
 import { CentralDataService } from '@/services/centralDataService';
 import { CommunicationItem } from './TeacherCommunication';
-import { useAuth } from '@/context/AuthContext';
 
 const COMMUNICATION_STORAGE_KEY = 'munyaka_school_communications';
 
 const SchoolAnnouncements = () => {
-  const { user } = useAuth();
-  const rawRole = String(user?.role || (user as any)?.systemRole || localStorage.getItem('munyaka_current_auth_role') || '').toLowerCase();
-  const isStudentUser = rawRole.includes('student') || rawRole.includes('learner') || rawRole.includes('pupil');
-
   const [communications, setCommunications] = useState<CommunicationItem[]>([]);
   const [filterType, setFilterType] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -100,18 +95,14 @@ const SchoolAnnouncements = () => {
 
   const filteredCommunications = useMemo(() => {
     return communications.filter(item => {
-      // For student users, hide administrative/staff teacher-direct tools or broadcasts not meant for learners
-      if (isStudentUser && item.type === 'TEACHER_DIRECT') {
-        return false;
-      }
       const matchesType = filterType === 'ALL' || item.type === filterType;
-      const matchesSearch = !searchQuery.trim() ||
+      const matchesSearch = !searchQuery.trim() || 
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.sender.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesType && matchesSearch;
     });
-  }, [communications, filterType, searchQuery, isStudentUser]);
+  }, [communications, filterType, searchQuery]);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -165,44 +156,42 @@ const SchoolAnnouncements = () => {
           />
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto flex-nowrap whitespace-nowrap shrink-0 w-full md:w-auto pb-2 md:pb-0 scrollbar-none">
+        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
           <Button
             variant={filterType === 'ALL' ? 'default' : 'outline'}
             onClick={() => setFilterType('ALL')}
-            className="rounded-xl font-bold text-xs h-10 px-4 shrink-0"
+            className="rounded-xl font-bold text-xs h-10 px-4"
           >
             All Items
           </Button>
           <Button
             variant={filterType === 'ANNOUNCEMENT' ? 'default' : 'outline'}
             onClick={() => setFilterType('ANNOUNCEMENT')}
-            className="rounded-xl font-bold text-xs h-10 px-4 shrink-0"
+            className="rounded-xl font-bold text-xs h-10 px-4"
           >
             Announcements
           </Button>
           <Button
             variant={filterType === 'HOMEWORK' ? 'default' : 'outline'}
             onClick={() => setFilterType('HOMEWORK')}
-            className="rounded-xl font-bold text-xs h-10 px-4 shrink-0"
+            className="rounded-xl font-bold text-xs h-10 px-4"
           >
             Homework
           </Button>
           <Button
             variant={filterType === 'FEE_CIRCULAR' ? 'default' : 'outline'}
             onClick={() => setFilterType('FEE_CIRCULAR')}
-            className="rounded-xl font-bold text-xs h-10 px-4 shrink-0"
+            className="rounded-xl font-bold text-xs h-10 px-4"
           >
             Fee Circulars
           </Button>
-          {!isStudentUser && (
-            <Button
-              variant={filterType === 'TEACHER_DIRECT' ? 'default' : 'outline'}
-              onClick={() => setFilterType('TEACHER_DIRECT')}
-              className="rounded-xl font-bold text-xs h-10 px-4 shrink-0"
-            >
-              Teacher Direct
-            </Button>
-          )}
+          <Button
+            variant={filterType === 'TEACHER_DIRECT' ? 'default' : 'outline'}
+            onClick={() => setFilterType('TEACHER_DIRECT')}
+            className="rounded-xl font-bold text-xs h-10 px-4"
+          >
+            Teacher Direct
+          </Button>
         </div>
       </div>
 
