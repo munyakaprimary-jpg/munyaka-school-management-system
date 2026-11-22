@@ -110,12 +110,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const isAdminOrOwner = true; // Admin/staff should have access to all menus as requested
   const isStaffOnly = true;
 
-  // ── Strict RBAC: STUDENT users must never see Teacher Portal navigation ──
-  const isStudentUser = isStudentRole(user);
   const studentMenuItems: NavItem[] = [
     { name: 'Student Dashboard', href: '/student-dashboard', icon: GraduationCap, allowedRoles: ['all'] },
     { name: 'My Assessment', href: '/student-assessment', icon: BookOpen, allowedRoles: ['all'] },
     { name: 'All Set Exams', href: '/assessments/list', icon: BookOpenCheck, allowedRoles: ['all'] },
+    { name: 'Communication', href: '/communication', icon: MessageSquare, allowedRoles: ['all'] },
+    { name: 'Study Corner', href: '/study-corner', icon: BookOpen, allowedRoles: ['all'] },
   ];
 
   const displayName = currentStaff.name || currentStaff.fullName || user?.name || (user as any)?.username || 'Staff Member';

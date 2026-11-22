@@ -424,7 +424,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas' },
     { icon: Award, label: 'Exam Types', path: '/exam-types' },
     { icon: Server, label: 'Admin Control Center', path: '/admin/control-center' },
-    { icon: MessageSquare, label: 'Communication', path: '/communication' },
     { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication' },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices' },
     { icon: Calendar, label: 'Timetable', path: '/timetable' },
