@@ -86,9 +86,12 @@ export async function getAuthoritativeTime(): Promise<Date> {
       const estimatedServerTime = lastServerTime + elapsedLocalTime;
       
       // Check if device clock was rolled back (tampering detection)
+      // Only enforce autolock if not explicitly manually unlocked by user/owner override
       if (localNow < lastServerTime || (estimatedServerTime - localNow) > 12 * 60 * 60 * 1000) {
         console.warn('[Security] Device clock rollback detected! Potential tampering. Enforcing security lock.');
-        localStorage.setItem(GLOBAL_LOCK_KEY, 'true');
+        if (localStorage.getItem('munyaka_lock_bypass') !== 'true') {
+          localStorage.setItem(GLOBAL_LOCK_KEY, 'true');
+        }
       }
       
       return new Date(estimatedServerTime);
@@ -199,6 +202,13 @@ function getCurrentMonthDeadline(): Date {
  * Check if auto-lock should be triggered using authoritative time
  */
 export function shouldAutoLock(): boolean {
+  // If Owner Bypass is active, never trigger auto-lock
+  try {
+    if (localStorage.getItem('munyaka_lock_bypass') === 'true') {
+      return false;
+    }
+  } catch {}
+
   const deadline = getCurrentMonthDeadline();
   const now = getAuthoritativeTimeSync();
   
@@ -214,14 +224,26 @@ export function shouldAutoLock(): boolean {
 }
 
 /**
- * Apply auto-lock if conditions are met
+ * Apply auto-lock if conditions are met.
+ * CRITICAL: Never overwrite a manual lock or manual unlock when triggered merely by startup/billing checks
+ * unless explicitly overdue and no manual override is active.
  */
 export function applyAutoLock(): boolean {
+  // If owner bypass is active, ensure locked is false
+  try {
+    if (localStorage.getItem('munyaka_lock_bypass') === 'true') {
+      return false;
+    }
+  } catch {}
+
   if (shouldAutoLock()) {
     try {
       const currentLock = localStorage.getItem(GLOBAL_LOCK_KEY);
       if (currentLock !== 'true') {
         localStorage.setItem(GLOBAL_LOCK_KEY, 'true');
+        try {
+          localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'true');
+        } catch {}
         window.dispatchEvent(new Event('storage'));
         console.info('[Billing Auto-Lock] Teacher apps auto-locked due to overdue payment (Authoritative Time Verified)');
         return true;
@@ -234,11 +256,23 @@ export function applyAutoLock(): boolean {
 }
 
 /**
- * Check and apply auto-lock on app startup with authoritative time sync
+ * Check and apply auto-lock on app startup with authoritative time sync.
+ * Respects explicit manual lock state stored persistently.
  */
 export async function runBillingAutoLockCheck(): Promise<void> {
   try {
     await getAuthoritativeTime();
+    
+    // Hydrate persistent lock state if present
+    const persistentLock = localStorage.getItem('munyaka_teacher_apps_lock_persistent');
+    if (persistentLock === 'true') {
+      localStorage.setItem(GLOBAL_LOCK_KEY, 'true');
+      return;
+    } else if (persistentLock === 'false') {
+      localStorage.setItem(GLOBAL_LOCK_KEY, 'false');
+      return;
+    }
+
     applyAutoLock();
   } catch (err) {
     console.error('[Billing Auto-Lock] Startup check failed:', err);
@@ -283,6 +317,7 @@ export function recordPaymentAndUnlock(paymentData: {
     } catch {}
 
     localStorage.setItem(GLOBAL_LOCK_KEY, 'false');
+    localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'false');
     window.dispatchEvent(new Event('storage'));
     console.info('[Billing Auto-Lock] Payment recorded as PAID and teacher apps unlocked.');
   } catch (err) {
@@ -298,38 +333,22 @@ export function getAutoLockStatus(): {
   deadline: Date;
   daysUntilDeadline: number;
   isPastDeadline: boolean;
-  isCurrentCyclePaid: boolean;
-  settings: BillingSettings;
 } {
-  const settings = getBillingSettings();
   const deadline = getCurrentMonthDeadline();
   const now = getAuthoritativeTimeSync();
-  const isPastDeadline = now > deadline;
-  const isPaid = isCurrentCyclePaid();
-  const isLocked = localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
-  
   const diffTime = deadline.getTime() - now.getTime();
   const daysUntilDeadline = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const isPastDeadline = now > deadline;
   
+  let isLocked = false;
+  try {
+    isLocked = localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
+  } catch {}
+
   return {
     isLocked,
     deadline,
-    daysUntilDeadline: Math.max(0, daysUntilDeadline),
+    daysUntilDeadline,
     isPastDeadline,
-    isCurrentCyclePaid: isPaid,
-    settings,
   };
-}
-
-/**
- * Format deadline for display
- */
-export function formatDeadline(deadline: Date): string {
-  return deadline.toLocaleDateString('en-KE', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
