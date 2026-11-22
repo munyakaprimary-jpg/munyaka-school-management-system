@@ -288,16 +288,16 @@ export function ConnectedActiveUsersMonitor() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[750px] table-auto text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[11px] font-black uppercase tracking-wider">
-                  <th className="py-4 px-6">User Name</th>
-                  <th className="py-4 px-6">Role Badge</th>
-                  <th className="py-4 px-6">Device / Browser</th>
-                  <th className="py-4 px-6">Connection Source</th>
-                  <th className="py-4 px-6">Current Activity</th>
-                  <th className="py-4 px-6">Last Active</th>
-                  <th className="py-4 px-6 text-right">Actions</th>
+                  <th className="py-4 px-6 min-w-[200px] w-[26%]">User Name</th>
+                  <th className="py-4 px-6 whitespace-nowrap w-[12%]">Role Badge</th>
+                  <th className="py-4 px-6 whitespace-nowrap w-[16%]">Device / Browser</th>
+                  <th className="py-4 px-6 whitespace-nowrap w-[15%]">Connection Source</th>
+                  <th className="py-4 px-6 whitespace-nowrap w-[12%]">Current Activity</th>
+                  <th className="py-4 px-6 whitespace-nowrap w-[10%]">Last Active</th>
+                  <th className="py-4 px-6 text-right whitespace-nowrap w-[9%]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-xs font-medium">
@@ -310,55 +310,57 @@ export function ConnectedActiveUsersMonitor() {
                 ) : (
                   filteredSessions.map((session) => (
                     <tr key={session.sessionId} className="hover:bg-slate-950/40 transition-colors">
-                      <td className="py-4 px-6 font-bold text-white flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-black shrink-0">
-                          {session.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-bold text-white">{session.name}</p>
-                          <p className="text-[10px] text-slate-400 font-mono">ID: {session.deviceId.substring(0, 10)}</p>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-black shrink-0">
+                            {session.name ? session.name.charAt(0).toUpperCase() : 'U'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis">{session.name || 'Active User'}</p>
+                            <p className="text-[10px] text-slate-400 font-mono truncate">ID: {session.deviceId || 'dev_unknown'}</p>
+                          </div>
                         </div>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-6 whitespace-nowrap">
                         <Badge className={`
-                          font-bold text-[10px] px-2.5 py-0.5 rounded-full
+                          font-bold text-[10px] px-2.5 py-0.5 rounded-full inline-block
                           ${session.role === 'admin' || session.role === 'jamlyan_analytics' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : ''}
                           ${session.role === 'teacher' || session.role === 'staff' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : ''}
                           ${session.role === 'student' || session.role === 'learner' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : ''}
                         `}>
-                          {session.role.toUpperCase()}
+                          {(session.role || 'user').toUpperCase()}
                         </Badge>
                       </td>
-                      <td className="py-4 px-6 text-slate-300">
+                      <td className="py-4 px-6 text-slate-300 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
-                          {session.deviceType.includes('Mobile') ? <Smartphone size={14} className="text-blue-400" /> : <Laptop size={14} className="text-amber-400" />}
-                          <span>{session.deviceType}</span>
+                          {session.deviceType?.includes('Mobile') ? <Smartphone size={14} className="text-blue-400 shrink-0" /> : <Laptop size={14} className="text-amber-400 shrink-0" />}
+                          <span className="truncate">{session.deviceType || 'Desktop Browser'}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-6 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold ${
                           session.connectionType === 'LAN' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
                         }`}>
-                          {session.connectionType === 'LAN' ? <Wifi size={12} /> : <Globe size={12} />}
-                          {session.connectionType === 'LAN' ? 'Standalone Local' : 'Firestore'}
+                          {session.connectionType === 'LAN' ? <Wifi size={12} className="shrink-0" /> : <Globe size={12} className="shrink-0" />}
+                          <span>{session.connectionType === 'LAN' ? 'Standalone Local' : 'Firestore'}</span>
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-slate-300 font-mono text-[11px] max-w-[200px] truncate">
+                      <td className="py-4 px-6 text-slate-300 font-mono text-[11px] whitespace-nowrap max-w-[150px] truncate" title={session.currentScreen || 'Dashboard'}>
                         {session.currentScreen || 'Dashboard'}
                       </td>
-                      <td className="py-4 px-6 text-slate-400">
+                      <td className="py-4 px-6 text-slate-400 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1 font-mono text-[11px]">
-                          <Clock size={12} className="text-amber-400" /> {formatLastSeen(session.lastSeenAt)}
+                          <Clock size={12} className="text-amber-400 shrink-0" /> {formatLastSeen(session.lastSeenAt)}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-right">
+                      <td className="py-4 px-6 text-right whitespace-nowrap">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleForceSignOut(session.sessionId, session.name)}
                           className="bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-600 hover:text-white font-bold h-8 px-3 rounded-xl text-[11px]"
                         >
-                          <LogOut size={12} className="mr-1.5" /> Force Sign Out
+                          <LogOut size={12} className="mr-1.5 shrink-0" /> Force Sign Out
                         </Button>
                       </td>
                     </tr>
