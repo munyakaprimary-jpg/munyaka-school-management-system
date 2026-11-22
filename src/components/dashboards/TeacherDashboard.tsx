@@ -31,10 +31,17 @@ import { getCanonicalStaffId } from '@/utils/staffCanonicalUtils';
 import { matchesBoundClass, getTeacherBoundClass } from '@/utils/classLockUtils';
 import { db } from '@/config/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { useTeacherPortalLockState } from '@/hooks/useTeacherPortalLockState';
+import TeacherPortalLockedScreen from '@/components/teacher/TeacherPortalLockedScreen';
 
 export default function TeacherDashboard() {
+  const isLocked = useTeacherPortalLockState();
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  if (isLocked) {
+    return <TeacherPortalLockedScreen />;
+  }
   
   // Dynamic User Profile details from session
   const displayName = user?.name || (user as any)?.username || 'Staff Member';
