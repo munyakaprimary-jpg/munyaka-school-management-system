@@ -34,6 +34,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { showSuccess, showError } from '@/utils/toast';
+import { Switch } from '@/components/ui/switch';
 import PaymentManagement from './PaymentManagement';
 import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 import { getStoredStaff } from '@/utils/storage';
