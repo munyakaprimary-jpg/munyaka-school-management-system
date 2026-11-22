@@ -224,7 +224,7 @@ export default function LibraryDashboard() {
     
     const csvHeader = getSchoolHeaderCsv(reportTitle, reportDate);
     const csvColumns = 'Title,Author,Category,ISBN,Total Copies,Available,Publisher\n';
-    const csvRows = books.map(b => 
+    const csvRows = books.map((b: any) =>
       `"${b.title}","${b.author || ''}","${b.category}","${b.isbn || ''}",${b.quantity || b.copies || b.stock || 1},${b.quantity || b.copies || b.stock || 1},"${b.publisher || ''}"`
     ).join('\n');
     
@@ -241,8 +241,8 @@ export default function LibraryDashboard() {
     
     const csvHeader = getSchoolHeaderCsv(reportTitle, reportDate);
     const csvColumns = 'Book Title,Borrower Name,Grade,Issue Date,Due Date,Status,Quantity Issued,Quantity Returned,Quantity Lost\n';
-    const csvRows = circulation.map(c => 
-      `"${c.bookTitle || c.title || ''}","${c.borrowerName || c.learnerName || ''}","${c.grade || ''}","${c.issueDate || ''}","${c.dueDate || ''}","${c.status || ''}",${c.qty_issued || 1},${c.qty_returned || 0},${c.qty_lost || 0}`
+    const csvRows = circulation.map((c: any) =>
+      `"${c.bookTitle || c.title || ''}","${c.borrowerName || c.learnerName || ''}","${c.grade || ''}","${c.issuedDate || c.issueDate || ''}","${c.dueDate || ''}","${c.status || ''}",${c.qty_issued || 1},${c.qty_returned || 0},${c.qty_lost || 0}`
     ).join('\n');
     
     const csvContent = csvHeader + csvColumns + csvRows;

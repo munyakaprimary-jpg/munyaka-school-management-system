@@ -27,8 +27,8 @@ export const BillingWarningBanner: React.FC<BillingWarningBannerProps> = ({ curr
     return null;
   }
 
-  // 2. If already locked or paid or dismissed, don't show the warning banner
-  if (status.isLocked || status.isCurrentCyclePaid || dismissed) {
+  // 2. If already locked or dismissed, don't show the warning banner
+  if (status.isLocked || dismissed) {
     return null;
   }
 
