@@ -31,111 +31,124 @@ export function ConnectedActiveUsersMonitor() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadSessions = () => {
+  const loadSessions = async () => {
     setIsRefreshing(true);
     try {
+      // 1. Read real local active sessions from localStorage
       const raw = localStorage.getItem('munyaka_active_sessions');
       let parsed: ActiveSession[] = [];
       if (raw) {
-        parsed = JSON.parse(raw);
-      }
-      
-      // Ensure current operator is always listed
-      const currentId = localStorage.getItem('munyaka_active_session_id') || 'current_op_session';
-      const hasCurrent = parsed.some(s => s.sessionId === currentId);
-      if (!hasCurrent) {
-        parsed.unshift({
-          sessionId: currentId,
-          deviceId: localStorage.getItem('munyaka_device_id') || 'dev_operator',
-          name: 'Jamlyan Analytics Operator',
-          role: 'jamlyan_analytics',
-          deviceType: 'Desktop Browser',
-          connectionType: 'Firestore',
-          currentScreen: '/#/jamlyan-analytics',
-          lastSeenAt: Date.now()
-        });
+        try {
+          parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) parsed = [];
+        } catch {
+          parsed = [];
+        }
       }
 
-      // Also generate mock active sessions for demonstration if list is sparse
-      if (parsed.length < 3) {
-        parsed.push(
-          {
-            sessionId: 'sess_teacher_1',
-            deviceId: 'dev_droid_98',
-            name: 'Madam Grace Wanjiku',
-            role: 'teacher',
-            deviceType: 'Android APK',
-            connectionType: 'LAN',
-            currentScreen: 'Grade 4 CBC Attendance',
-            lastSeenAt: Date.now() - 5000
-          },
-          {
-            sessionId: 'sess_admin_2',
-            deviceId: 'dev_mac_book_pro',
-            name: 'Principal John Ochieng',
-            role: 'admin',
-            deviceType: 'Desktop Browser',
-            connectionType: 'Firestore',
-            currentScreen: 'Fee Payment Ledger',
-            lastSeenAt: Date.now() - 14000
-          },
-          {
-            sessionId: 'sess_student_3',
-            deviceId: 'dev_tablet_tab10',
-            name: 'Brian Kiprop (Grade 6)',
-            role: 'student',
-            deviceType: 'Tablet',
-            connectionType: 'LAN',
-            currentScreen: 'CBC Digital Assessment',
-            lastSeenAt: Date.now() - 25000
-          }
-        );
+      // Ensure current operator is always included as a real session
+      const currentId = localStorage.getItem('munyaka_active_session_id') || `sess_${Math.random().toString(36).substring(2, 10)}`;
+      localStorage.setItem('munyaka_active_session_id', currentId);
+
+      const deviceId = localStorage.getItem('munyaka_device_id') || `dev_${Math.random().toString(36).substring(2, 10)}`;
+      localStorage.setItem('munyaka_device_id', deviceId);
+
+      const storedUser = localStorage.getItem('munyaka_user') || localStorage.getItem('munyaka_current_user') || localStorage.getItem('munyaka_admin_session');
+      let userName = 'Jamlyan Analytics Operator';
+      let userRole = 'jamlyan_analytics';
+      if (storedUser) {
+        try {
+          const userObj = JSON.parse(storedUser);
+          userName = userObj.name || userObj.username || userObj.email || userName;
+          userRole = userObj.role || userRole;
+        } catch {
+          userName = storedUser;
+        }
       }
 
-      setSessions(parsed);
+      const currentOperatorSession: ActiveSession = {
+        sessionId: currentId,
+        deviceId,
+        name: userName,
+        role: userRole,
+        deviceType: navigator.userAgent.includes('Mobile') ? 'Mobile / Tablet' : 'Desktop Browser',
+        connectionType: localStorage.getItem('munyaka_lan_server_url') ? 'LAN' : (localStorage.getItem('munyaka_use_firestore') ? 'Firestore' : 'Local'),
+        currentScreen: window.location.hash || window.location.pathname,
+        lastSeenAt: Date.now()
+      };
+
+      // Upsert current operator session
+      const existingIdx = parsed.findIndex(s => s.sessionId === currentId);
+      if (existingIdx >= 0) {
+        parsed[existingIdx] = currentOperatorSession;
+      } else {
+        parsed.unshift(currentOperatorSession);
+      }
+
+      // Filter out stale sessions older than 2 minutes (120,000 ms)
+      const now = Date.now();
+      const activeOnly = parsed.filter(s => {
+        const isStale = (now - (s.lastSeenAt || 0)) > 120000;
+        const isRevoked = localStorage.getItem(`revoked_${s.sessionId}`) === 'true';
+        return !isStale && !isRevoked;
+      });
+
+      // Save back filtered list
+      localStorage.setItem('munyaka_active_sessions', JSON.stringify(activeOnly));
+      setSessions(activeOnly);
     } catch (e) {
-      console.error(e);
+      console.error('Error loading active sessions:', e);
     } finally {
-      setTimeout(() => setIsRefreshing(false), 400);
+      setTimeout(() => setIsRefreshing(false), 300);
     }
   };
 
   useEffect(() => {
     loadSessions();
     const interval = setInterval(loadSessions, 10000);
-    return () => clearInterval(interval);
+    const handleStorage = () => loadSessions();
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   const handleForceSignOut = (sessionId: string, name: string) => {
+    // Mark session as revoked in localStorage so other tabs/devices honor it
+    localStorage.setItem(`revoked_${sessionId}`, 'true');
     const updated = sessions.filter(s => s.sessionId !== sessionId);
     setSessions(updated);
     localStorage.setItem('munyaka_active_sessions', JSON.stringify(updated));
     showSuccess(`Successfully revoked session and forced sign out for ${name}.`);
   };
 
-  // Metrics calculations
+  // Live Presence Metrics calculations (Strictly from real active sessions)
   const totalOnline = sessions.length;
-  const staffOnline = sessions.filter(s => ['staff', 'teacher', 'admin'].includes(s.role)).length;
-  const adminsOnline = sessions.filter(s => ['admin', 'jamlyan_analytics'].includes(s.role)).length;
-  const studentsOnline = sessions.filter(s => s.role === 'student' || s.role === 'learner').length;
+  const staffOnline = sessions.filter(s => ['staff', 'teacher', 'instructor'].includes(s.role)).length;
+  const adminsOnline = sessions.filter(s => ['admin', 'jamlyan_analytics', 'platform_owner', 'owner', 'super_admin'].includes(s.role)).length;
+  const studentsOnline = sessions.filter(s => ['student', 'learner', 'pupil'].includes(s.role)).length;
 
   const filteredSessions = sessions.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          s.deviceId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          s.currentScreen.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (s.deviceId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (s.currentScreen || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === 'all' || 
-                        (roleFilter === 'staff' && ['staff', 'teacher'].includes(s.role)) ||
-                        (roleFilter === 'admin' && ['admin', 'jamlyan_analytics'].includes(s.role)) ||
-                        (roleFilter === 'student' && ['student', 'learner'].includes(s.role));
+                        (roleFilter === 'admin' && ['admin', 'jamlyan_analytics', 'platform_owner', 'owner', 'super_admin'].includes(s.role)) ||
+                        (roleFilter === 'staff' && ['staff', 'teacher', 'instructor'].includes(s.role)) ||
+                        (roleFilter === 'student' && ['student', 'learner', 'pupil'].includes(s.role));
     return matchesSearch && matchesRole;
   });
 
   const formatLastSeen = (timestamp: number) => {
+    if (!timestamp) return 'Just now';
     const diffSec = Math.floor((Date.now() - timestamp) / 1000);
     if (diffSec < 10) return 'Just now';
     if (diffSec < 60) return `${diffSec}s ago`;
     const diffMin = Math.floor(diffSec / 60);
-    return `${diffMin}m ago`;
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHour = Math.floor(diffMin / 60);
+    return `${diffHour}h ago`;
   };
 
   return (
@@ -303,8 +316,12 @@ export function ConnectedActiveUsersMonitor() {
               <tbody className="divide-y divide-slate-800/60 text-xs font-medium">
                 {filteredSessions.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
-                      No active sessions found matching your filter.
+                    <td colSpan={7} className="py-16 text-center text-slate-400">
+                      <div className="max-w-sm mx-auto space-y-3">
+                        <Users size={32} className="mx-auto text-slate-600" />
+                        <p className="text-sm font-bold text-slate-300">No active sessions found</p>
+                        <p className="text-xs text-slate-500">Your current browser session is recording heartbeat presence. Other connected users will appear here live as they connect.</p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -324,9 +341,9 @@ export function ConnectedActiveUsersMonitor() {
                       <td className="py-4 px-6 whitespace-nowrap">
                         <Badge className={`
                           font-bold text-[10px] px-2.5 py-0.5 rounded-full inline-block
-                          ${session.role === 'admin' || session.role === 'jamlyan_analytics' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : ''}
-                          ${session.role === 'teacher' || session.role === 'staff' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : ''}
-                          ${session.role === 'student' || session.role === 'learner' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : ''}
+                          ${['admin', 'jamlyan_analytics', 'platform_owner', 'owner', 'super_admin'].includes(session.role) ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : ''}
+                          {['staff', 'teacher', 'instructor'].includes(session.role) ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : ''}
+                          {['student', 'learner', 'pupil'].includes(session.role) ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : ''}
                         `}>
                           {(session.role || 'user').toUpperCase()}
                         </Badge>
@@ -342,7 +359,7 @@ export function ConnectedActiveUsersMonitor() {
                           session.connectionType === 'LAN' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
                         }`}>
                           {session.connectionType === 'LAN' ? <Wifi size={12} className="shrink-0" /> : <Globe size={12} className="shrink-0" />}
-                          <span>{session.connectionType === 'LAN' ? 'Standalone Local' : 'Firestore'}</span>
+                          <span>{session.connectionType === 'LAN' ? 'Standalone Local' : session.connectionType}</span>
                         </span>
                       </td>
                       <td className="py-4 px-6 text-slate-300 font-mono text-[11px] whitespace-nowrap max-w-[150px] truncate" title={session.currentScreen || 'Dashboard'}>
