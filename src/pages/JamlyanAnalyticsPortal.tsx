@@ -31,43 +31,22 @@ export default function JamlyanAnalyticsPortal() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions' | 'locks' | 'updates' | 'diagnostics' | 'lan' | 'users'>('overview');
 
-  // Dynamic Subscription & Lock State (Single Declaration)
-  const [licenseInfo, setLicenseInfo] = useState({
-    badgeText: 'LICENSED · 8D LEFT',
-    badgeVariant: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+  // Dynamic Subscription & Lock State using unified utility
+  const [licenseInfo, setLicenseInfo] = useState(() => {
+    const info = getUnifiedLicenseInfo();
+    return {
+      badgeText: info.badgeText,
+      badgeVariant: info.badgeVariant
+    };
   });
 
   const updateLicenseBadge = () => {
     try {
-      const isLocked = localStorage.getItem('munyaka_teacher_app_locked') === 'true' || localStorage.getItem('munyaka_system_locked') === 'true';
-      const status = (localStorage.getItem('munyaka_billing_status') || 'Paid').toUpperCase();
-      const dueDateStr = localStorage.getItem('munyaka_billing_due_date') || new Date(Date.now() + 8 * 86400000).toISOString().split('T')[0];
-
-      const dueTimestamp = new Date(dueDateStr).getTime();
-      const daysRemaining = Math.ceil((dueTimestamp - Date.now()) / (1000 * 60 * 60 * 24));
-
-      if (isLocked) {
-        setLicenseInfo({
-          badgeText: 'LOCKED · SUSPENDED',
-          badgeVariant: 'bg-red-500/20 text-red-400 border-red-500/30'
-        });
-      } else if (status === 'OVERDUE' || daysRemaining < 0) {
-        const pastDays = Math.abs(daysRemaining);
-        setLicenseInfo({
-          badgeText: `OVERDUE · ${pastDays}D PAST DUE`,
-          badgeVariant: 'bg-rose-500/20 text-rose-400 border-rose-500/30'
-        });
-      } else if (daysRemaining === 0) {
-        setLicenseInfo({
-          badgeText: 'LICENSED · DUE TODAY',
-          badgeVariant: 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-        });
-      } else {
-        setLicenseInfo({
-          badgeText: `LICENSED · ${daysRemaining}D LEFT`,
-          badgeVariant: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-        });
-      }
+      const info = getUnifiedLicenseInfo();
+      setLicenseInfo({
+        badgeText: info.badgeText,
+        badgeVariant: info.badgeVariant
+      });
     } catch (e) {
       console.error('Error updating license badge:', e);
     }
@@ -75,12 +54,14 @@ export default function JamlyanAnalyticsPortal() {
 
   useEffect(() => {
     updateLicenseBadge();
-    const interval = setInterval(updateLicenseBadge, 5000);
+    const interval = setInterval(updateLicenseBadge, 3000);
     const handleStorage = () => updateLicenseBadge();
     window.addEventListener('storage', handleStorage);
+    window.addEventListener('billing_invoices_updated', handleStorage);
     return () => {
       clearInterval(interval);
       window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('billing_invoices_updated', handleStorage);
     };
   }, []);
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useUnifiedLicense } from '../utils/subscriptionUtils';
 import {
   LayoutDashboard,
   Users,
@@ -655,9 +656,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap justify-end ml-auto">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-black tracking-wide shrink-0 whitespace-nowrap shadow-sm">
-              <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
-              <span>LICENSED · 8D LEFT</span>
+            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-black tracking-wide shrink-0 whitespace-nowrap shadow-sm ${licenseInfo.badgeVariant}`}>
+              <ShieldCheck size={14} className="shrink-0" />
+              <span>{licenseInfo.badgeText}</span>
             </div>
             <div className="shrink-0 whitespace-nowrap">
               <SyncButton />
