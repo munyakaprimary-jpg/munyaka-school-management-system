@@ -117,6 +117,7 @@ import CentralDataService from "./pages/CentralDataService";
 import PaymentManagement from "./pages/PaymentManagement";
 import OwnersDashboard from "./pages/ownersDashboard";
 import GamesHub from "./pages/GamesHub";
+import StudyCorner from "./pages/StudyCorner";
 import AppUnlock from "./components/AppUnlock";
 import ProfileSettings from "./pages/ProfileSettings";
 import AdminControlCenter from "./pages/AdminControlCenter";
