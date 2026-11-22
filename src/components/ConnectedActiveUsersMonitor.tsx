@@ -123,11 +123,20 @@ export function ConnectedActiveUsersMonitor() {
     showSuccess(`Successfully revoked session and forced sign out for ${name}.`);
   };
 
-  // Live Presence Metrics calculations (Strictly from real active sessions)
-  const totalOnline = sessions.length;
-  const staffOnline = sessions.filter(s => ['staff', 'teacher', 'instructor'].includes(s.role)).length;
-  const adminsOnline = sessions.filter(s => ['admin', 'jamlyan_analytics', 'platform_owner', 'owner', 'super_admin'].includes(s.role)).length;
-  const studentsOnline = sessions.filter(s => ['student', 'learner', 'pupil'].includes(s.role)).length;
+  // Live Presence Metrics calculations (Strictly separating role === 'admin' from 'jamlyan_analytics' and enforcing 90s freshness)
+  const nowTime = Date.now();
+  const activeSessionsList = sessions.filter(s => {
+    const ageMs = nowTime - (s.lastSeenAt || 0);
+    const isRecent = ageMs < 90000; // 90 seconds freshness threshold
+    const isRevoked = localStorage.getItem(`revoked_${s.sessionId}`) === 'true';
+    return isRecent && !isRevoked;
+  });
+
+  const totalOnline = activeSessionsList.length;
+  const staffOnline = activeSessionsList.filter(s => ['staff', 'teacher', 'instructor'].includes((s.role || '').toLowerCase())).length;
+  // Strict separation: ADMINS ONLINE counts ONLY role === 'admin'
+  const adminsOnline = activeSessionsList.filter(s => (s.role || '').toLowerCase() === 'admin').length;
+  const studentsOnline = activeSessionsList.filter(s => ['student', 'learner', 'pupil'].includes((s.role || '').toLowerCase())).length;
 
   const filteredSessions = sessions.filter(s => {
     const matchesSearch = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
