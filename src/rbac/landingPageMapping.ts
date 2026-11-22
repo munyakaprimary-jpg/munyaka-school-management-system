@@ -1,67 +1,34 @@
-import { getPermissionsMatrix, getDefaultLandingPage } from './permissionMatrix';
+/**
+ * Landing Page Mapping Utility
+ * Determines the correct default dashboard/landing route for each user role.
+ */
 
-export function getRoleLandingPage(role: string, customPermissions?: Record<string, boolean>, staffMember?: { title?: string; category?: string; assignedClass?: string; role?: string }): string {
-  const normRole = String(role || staffMember?.role || '').trim();
-  const lowerRole = normRole.toLowerCase();
-  const title = String(staffMember?.title || staffMember?.category || '').trim().toLowerCase();
-
-  // Route based on assigned role / title
-  if (lowerRole.includes('bursar') || title.includes('bursar') || title.includes('accountant')) {
+export function getRoleLandingPage(role: string | undefined | null): string {
+  const norm = String(role || '').trim().toLowerCase();
+  
+  if (norm === 'platform_owner' || norm === 'owner' || norm === 'super_admin' || norm === 'superadmin') {
+    return '/jamlyan-analytics';
+  }
+  
+  if (norm === 'admin' || norm === 'school_admin' || norm === 'administrator' || norm === 'hoi' || norm === 'dhoi') {
+    return '/dashboard';
+  }
+  
+  if (norm === 'bursar' || norm === 'accountant' || norm === 'finance') {
     return '/fees';
   }
-  if (lowerRole === 'ict_teacher' || lowerRole === 'ict_technician' || normRole === 'ICT_TEACHER' || lowerRole.includes('ict') || lowerRole.includes('lab') || title.includes('ict') || title.includes('computer') || title.includes('lab')) {
-    return '/ict';
-  }
-  if (lowerRole.includes('store') || title.includes('store')) {
-    return '/payments';
-  }
-  if (lowerRole.includes('library') || title.includes('library') || title.includes('librarian')) {
-    return '/dashboard';
-  }
-  if (lowerRole.includes('hoi') || lowerRole.includes('dhoi') || title.includes('hoi') || title.includes('head')) {
-    return '/dashboard';
-  }
-  if (lowerRole.includes('teacher') || lowerRole.includes('staff') || normRole === 'Class Teacher') {
-    return '/roll-call';
-  }
-
-  // Check specialized staff titles / roles first
-  if (title.includes('library') || title.includes('librarian')) {
+  
+  if (norm === 'librarian' || norm === 'library_teacher') {
     return '/library';
   }
-  if (title.includes('ict') || title.includes('computer') || title.includes('lab')) {
-    return '/server';
-  }
-  if (title.includes('bursar') || title.includes('accountant')) {
-    return '/fees';
-  }
-  // Staff always land on dashboard; assignedClass no longer redirects to /portal
-    if (normRole === 'STAFF' || normRole === 'STAFF_MEMBER') {
-      return '/dashboard';
-    }
-    if (staffMember?.assignedClass) {
-      // Fallback only for non-staff roles that still have assignedClass
-      return '/dashboard';
-    }
   
-    if (customPermissions) {
-    const modules = [
-      { key: 'dashboard', path: '/dashboard' },
-      { key: 'assessments', path: '/assessments' },
-      { key: 'fees', path: '/fees' },
-      { key: 'learners', path: '/learners' },
-      { key: 'inventory', path: '/inventory' },
-      { key: 'library', path: '/library' },
-      { key: 'communication', path: '/communication' },
-      { key: 'settings', path: '/settings' },
-    ];
-
-    for (const mod of modules) {
-      if (customPermissions[mod.key]) {
-        return mod.path;
-      }
-    }
+  if (norm.includes('ict') || norm.includes('tech')) {
+    return '/ict';
   }
-
-  return getDefaultLandingPage(normRole.toUpperCase());
+  
+  if (norm === 'student' || norm === 'learner' || norm === 'pupil') {
+    return '/student-assessment';
+  }
+  
+  return '/dashboard';
 }

@@ -11,9 +11,17 @@ export function normalizeSystemRole(rawRole: string | undefined | null): string 
   if (!norm) return 'staff';
 
   if (
+    norm === 'platform_owner' ||
+    norm === 'super_owner' ||
+    norm === 'jamlyan_admin' ||
     norm === 'owner' ||
     norm === 'super_admin' ||
-    norm === 'superadmin' ||
+    norm === 'superadmin'
+  ) {
+    return 'platform_owner';
+  }
+
+  if (
     norm === 'school_admin' ||
     norm === 'administrator' ||
     norm === 'admin' ||
@@ -44,7 +52,13 @@ export function normalizeSystemRole(rawRole: string | undefined | null): string 
 export function isAdminRole(roleOrUser: any): boolean {
   const raw = typeof roleOrUser === 'string' ? roleOrUser : (roleOrUser?.role || roleOrUser?.systemRole || roleOrUser?.userType || '');
   const norm = normalizeSystemRole(raw);
-  return norm === 'admin';
+  return norm === 'admin' || norm === 'platform_owner';
+}
+
+export function isPlatformOwnerRole(roleOrUser: any): boolean {
+  const raw = typeof roleOrUser === 'string' ? roleOrUser : (roleOrUser?.role || roleOrUser?.systemRole || roleOrUser?.userType || '');
+  const norm = normalizeSystemRole(raw);
+  return norm === 'platform_owner';
 }
 
 export function isBursarRole(roleOrUser: any): boolean {
