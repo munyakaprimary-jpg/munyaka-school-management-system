@@ -113,6 +113,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   // ── Strict RBAC: STUDENT users must never see Teacher Portal navigation ──
   const isStudentUser = isStudentRole(user);
   const studentMenuItems: NavItem[] = [
+    { name: 'Student Dashboard', href: '/student-dashboard', icon: GraduationCap, allowedRoles: ['all'] },
     { name: 'My Assessment', href: '/student-assessment', icon: BookOpen, allowedRoles: ['all'] },
     { name: 'All Set Exams', href: '/assessments/list', icon: BookOpenCheck, allowedRoles: ['all'] },
   ];

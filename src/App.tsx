@@ -112,7 +112,7 @@ import DigitalSkillsAssessment from "./pages/DigitalSkillsAssessment";
 import PracticalCompetencies from "./pages/PracticalCompetencies";
 import { safeWrite } from "@/utils/storageUtils";
 import ScienceLab from "./pages/ScienceLab";
-import StudyCorner from "./pages/StudyCorner";
+import StudentDashboard from "./pages/StudentDashboard";
 import CentralDataService from "./pages/CentralDataService";
 import PaymentManagement from "./pages/PaymentManagement";
 import OwnersDashboard from "./pages/ownersDashboard";
@@ -135,6 +135,7 @@ import SecurityPortalView from "./pages/SecurityPortalView";
 import AssessmentSettings from "./pages/AssessmentSettings";
 import QuestionCreator from "./pages/QuestionCreator";
 import LearnerAssessment from "./pages/LearnerAssessment";
+import StudentDashboard from "./pages/StudentDashboard";
 import GradingReview from "./pages/GradingReview";
 import AssessmentImport from "./pages/AssessmentImport";
 import LearnerAssessmentPage from "./pages/LearnerAssessmentPage";
@@ -558,6 +559,7 @@ const App = () => {
                       <Route path="/payment-management" element={<ProtectedRoute allowedRoles={['jamlyan_analytics', 'platform_owner', 'owner', 'super_admin']}><PaymentManagement /></ProtectedRoute>} />
                       <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/student-dashboard" element={<ProtectedRoute><AppUnlock><Layout><StudentDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'owner', 'developer', 'super_admin', 'school_admin']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/learners" element={<ProtectedRoute><AppUnlock><Layout><Learners /></Layout></AppUnlock></ProtectedRoute>} />
@@ -595,6 +597,7 @@ const App = () => {
                                             <Route path="/security/portal" element={<ProtectedRoute allowedRoles={['security', 'guard', 'admin', 'owner', 'developer']}><AppUnlock><Layout><SecurityPortalView /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/question-creator" element={<ProtectedRoute allowedRoles={['admin', 'owner', 'developer', 'teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'senior_teacher']}><AppUnlock><Layout><QuestionCreator /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/student-assessment" element={<ProtectedRoute><AppUnlock><Layout><LearnerAssessment /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/student-dashboard" element={<ProtectedRoute><AppUnlock><Layout><StudentDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/grading" element={<ProtectedRoute allowedRoles={['admin', 'owner', 'developer', 'teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'senior_teacher']}><AppUnlock><Layout><GradingReview /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/assessments/import" element={<ProtectedRoute allowedRoles={['admin', 'owner', 'developer', 'teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'senior_teacher']}><AppUnlock><Layout><AssessmentImport /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/assessments/student" element={<LearnerAssessmentPage />} />

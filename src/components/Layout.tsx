@@ -496,7 +496,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   // never see Teacher Dashboard, My Classes & Learners, Roll Call / Attendance,
   // Daily Check-In, Enter Marks, or Results Analysis.
   const studentMenuItems = [
-    { icon: GraduationCap, label: 'My Assessment', path: '/student-assessment' },
+    { icon: GraduationCap, label: 'Student Dashboard', path: '/student-dashboard' },
+    { icon: BookOpen, label: 'My Assessment', path: '/student-assessment' },
     { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list' },
   ];
 

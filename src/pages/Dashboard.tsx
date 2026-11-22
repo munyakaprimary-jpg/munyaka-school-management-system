@@ -43,7 +43,7 @@ const Dashboard: React.FC = () => {
   // Defense in depth: ProtectedRoute already blocks students from /dashboard,
   // but if a student session ever reaches here, send them to their assessment view.
   if (isStudentRole(user) || isStudentRole(storedUser) || normalizedRole === 'student' || normalizedRole.includes('student') || normalizedRole.includes('learner')) {
-    return <Navigate to="/student-assessment" replace />;
+    return <Navigate to="/student-dashboard" replace />;
   }
 
   // Admin/owner roles get Admin Dashboard

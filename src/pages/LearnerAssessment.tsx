@@ -274,13 +274,13 @@ export default function StudentAssessment() {
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2">No Active Assessment</h2>
           <p className="text-slate-500 mb-6">
-            Please create questions using the Question Creator first before opening the Student Test View.
+            No active assessment is scheduled for your grade/stream right now. Check back later or view your completed results.
           </p>
           <Button
-            onClick={() => (window.location.href = "/question-creator")}
-            className="w-full h-12 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 font-semibold"
+            onClick={() => (window.location.href = "/student-assessment")}
+            className="w-full h-12 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 font-semibold text-white"
           >
-            Go to Question Creator
+            Return to Student Portal
           </Button>
         </Card>
       </div>

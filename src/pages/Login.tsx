@@ -402,7 +402,7 @@ const Login: React.FC = () => {
           role: 'student'
         });
         setStudentLoginError(null);
-        navigate('/student-assessment');
+        navigate('/student-dashboard');
       } else {
         setStudentLoginError("No matching record found. Please verify your Admission Number or Assessment Number.");
       }
@@ -432,7 +432,7 @@ const Login: React.FC = () => {
             const parsed = JSON.parse(session);
             const userRole = String(parsed.role || '').toLowerCase();
             if (userRole === 'student' || userRole === 'learner') {
-              navigate('/student-assessment', { replace: true });
+              navigate('/student-dashboard', { replace: true });
             } else {
               // Original: all authenticated users land on /dashboard
               if (!window.location.hash.includes('dashboard')) {
