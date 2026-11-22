@@ -392,6 +392,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
+  const licenseInfo = useUnifiedLicense();
   const location = useLocation();
   const navigate = useNavigate();
 
