@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getRoleLandingPage } from '@/rbac/landingPageMapping';
+import { isStudentRole } from '@/utils/roleGuard';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -256,7 +257,8 @@ const RoleCard: React.FC<RoleCardProps> = ({
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated, user, setUser } = useAuth();
+  const location = useLocation();
+  const { login, isAuthenticated, user, setUser, logout } = useAuth();
 
   // ── Cover page state (default to false so login page appears directly) ────────────────────────────────────────────────────
   const [showCover, setShowCover] = useState(false);
@@ -291,7 +293,10 @@ const Login: React.FC = () => {
   }, []);
 
   // ── Forgot password modal ───────────────────────────────────────────────
-  const [forgotModalOpen, setForgotModalOpen] = useState(false);
+    const [forgotModalOpen, setForgotModalOpen] = useState(false);
+  
+    // ── Blocked-student banner ─────────────────────────────────────────────
+    const [showBlockedBanner, setShowBlockedBanner] = useState(false);
 
   // Student / Parent Portal login state & handler
   const [studentPortalInput, setStudentPortalInput] = useState("");
@@ -373,7 +378,7 @@ const Login: React.FC = () => {
           role: 'student'
         });
         setStudentLoginError(null);
-        navigate('/student-dashboard');
+        navigate('/student-assessment');
       } else {
         setStudentLoginError("No matching record found. Please verify your Admission Number or Assessment Number.");
       }
@@ -384,13 +389,37 @@ const Login: React.FC = () => {
   };
 
   // ── Redirect already-authenticated users straight to the dashboard (Once only) ─────────
-    useEffect(() => {
-      const isAuth = localStorage.getItem('isAuthenticated') === 'true';
-      const session = localStorage.getItem('munyaka_session');
-      if (isAuth && session && !window.location.hash.includes('dashboard')) {
-        navigate('/dashboard', { replace: true });
-      }
-    }, [navigate]);
+      useEffect(() => {
+        const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+        const session = localStorage.getItem('munyaka_session');
+        const blocked = (location.state as any)?.blocked;
+  
+        // If we just came from a blocked-student redirect, sign out and show message
+        if (blocked === 'student') {
+          setShowBlockedBanner(true);
+          logout();
+          setUser(null);
+          return;
+        }
+  
+        if (isAuth && session) {
+          // Determine the user's role from the session to route them correctly
+          try {
+            const parsed = JSON.parse(session);
+            const userRole = String(parsed.role || '').toLowerCase();
+            if (userRole === 'student' || userRole === 'learner') {
+              navigate('/student-assessment', { replace: true });
+            } else {
+              // Original: all authenticated users land on /dashboard
+              if (!window.location.hash.includes('dashboard')) {
+                navigate('/dashboard', { replace: true });
+              }
+            }
+          } catch {
+            navigate('/dashboard', { replace: true });
+          }
+        }
+      }, [navigate, location]);
 
   // ── Admin handlers ────────────────────────────────────────────────────────
   const handleRoleSelect = (role: AdminRole) => {
@@ -626,8 +655,19 @@ const Login: React.FC = () => {
                               Select your role to access the appropriate portal
                             </p>
                           </div>
-
-                      {/* Dynamic Quote Banner */}
+                          
+                                    {showBlockedBanner && (
+                                      <div className="w-full max-w-2xl bg-rose-950/80 border border-rose-800/50 rounded-2xl p-6 text-center mb-6 animate-in slide-in-from-top-2">
+                                        <p className="text-xs font-bold text-rose-400 uppercase tracking-wider mb-2">
+                                          Access Restricted
+                                        </p>
+                                        <p className="text-slate-300">
+                                          Student accounts are not permitted to access the Teacher Portal. You have been signed out. Please sign in with a staff account or use your Admission Number for the Student Portal.
+                                        </p>
+                                      </div>
+                                    )}
+                          
+                                                {/* Dynamic Quote Banner */}
                                             {(() => {
                                               const getQuoteConfig = () => {
                                                                         try {

@@ -2,6 +2,21 @@ import { getPermissionsMatrix } from './permissionMatrix';
 
 export function roleHasModulePermission(role: string, moduleKey: string): boolean {
   const normRole = String(role || '').trim().toUpperCase();
+
+  // ── Strict RBAC: STUDENT / learner / pupil roles are denied all staff modules ──
+  if (
+    normRole === 'STUDENT' ||
+    normRole === 'LEARNER' ||
+    normRole === 'LEARNERS' ||
+    normRole === 'PUPIL' ||
+    normRole === 'PUPILS' ||
+    normRole.includes('STUDENT') ||
+    normRole.includes('LEARNER') ||
+    normRole.includes('PUPIL')
+  ) {
+    return false;
+  }
+
   if (normRole === 'ADMIN' || normRole === 'SUPER_ADMIN' || normRole === 'OWNER' || normRole === 'HOI') return true;
   if (moduleKey === 'daily_checkin') return true;
   if (normRole.includes('ICT') || normRole.includes('TECH') || normRole === 'ICT_TEACHER' || normRole === 'ICT_TECHNICIAN' || normRole === 'SUBJECT_TEACHER' || normRole === 'TEACHER') {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import OwnerDashboard from "@/components/dashboards/OwnerDashboard";
 import AdminDashboard from "@/components/dashboards/AdminDashboard";
 import TeacherDashboard from "@/components/dashboards/TeacherDashboard";
@@ -14,6 +15,7 @@ import {
   isLibrarianRole,
   isBursarRole,
 } from "@/utils/roleNormalizer";
+import { isStudentRole } from "@/utils/roleGuard";
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -36,6 +38,13 @@ const Dashboard: React.FC = () => {
   );
 
   const userName = String(storedUser.name || storedUser.fullName || user?.name || '').toUpperCase();
+
+  // ── Strict RBAC: STUDENT / learner users must never render a staff dashboard ──
+  // Defense in depth: ProtectedRoute already blocks students from /dashboard,
+  // but if a student session ever reaches here, send them to their assessment view.
+  if (isStudentRole(user) || isStudentRole(storedUser) || normalizedRole === 'student' || normalizedRole.includes('student') || normalizedRole.includes('learner')) {
+    return <Navigate to="/student-assessment" replace />;
+  }
 
   // Admin/owner roles get Admin Dashboard
   if (isAdminRole(normalizedRole) || normalizedRole === 'admin' || normalizedRole === 'owner') {

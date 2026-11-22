@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { mapRoleLabelToRbacKey, getExactStaffRoleTitle } from '@/constants/roles';
+import { isStudentRole } from '@/utils/roleGuard';
 import {
   LayoutDashboard,
   Users,
@@ -107,14 +108,21 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   const activeRole = getActiveUserRole();
   const isAdminOrOwner = true; // Admin/staff should have access to all menus as requested
-  const isStaffOnly = false;
+  const isStaffOnly = true;
+
+  // ── Strict RBAC: STUDENT users must never see Teacher Portal navigation ──
+  const isStudentUser = isStudentRole(user);
+  const studentMenuItems: NavItem[] = [
+    { name: 'My Assessment', href: '/student-assessment', icon: BookOpen, allowedRoles: ['all'] },
+    { name: 'All Set Exams', href: '/assessments/list', icon: BookOpenCheck, allowedRoles: ['all'] },
+  ];
 
   const displayName = currentStaff.name || currentStaff.fullName || user?.name || (user as any)?.username || 'Staff Member';
   const profileName = displayName;
   const profileRole = activeRole;
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
 
-  const navigationItems: NavItem[] = isStaffOnly ? [
+  const navigationItems: NavItem[] = isStudentUser ? studentMenuItems : isStaffOnly ? [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard, allowedRoles: ['all'] },
     { name: 'My Learners', href: '/learners', icon: Users, allowedRoles: ['all'] },
     { name: 'Roll Call / Attendance', href: '/attendance', icon: CheckSquare, allowedRoles: ['all'] },

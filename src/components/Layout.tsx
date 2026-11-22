@@ -56,6 +56,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
+import { isStudentRole } from '@/utils/roleGuard';
 
 // ── Notification Bell Component ───────────────────────────────────────────────
 export const NotificationBell: React.FC = () => {
@@ -406,6 +407,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   // Strict role precedence: Teacher/Bursar/Librarian roles MUST NEVER be treated as Admin
   const isActuallyAdmin = isAdminRole && !isTeacherRole && !isBursarRole && !isLibrarianRole;
 
+  // STUDENT / learner users must never see the Teacher Portal navigation.
+  const isStudentUser = isStudentRole(user) || normalizedRole.includes('student') || normalizedRole.includes('learner') || normalizedRole.includes('pupil');
+
   // Exact 42 Admin items in order without duplicates, plus Section Header ASSESSMENTS & EXAMS before item #26
   const adminMenuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -488,12 +492,23 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: BookOpen, label: 'Study Corner', path: '/study-corner' },
   ];
 
+  // ── Student Portal menu (learners only) ─────────────────────────────────────
+  // Students are strictly limited to their own assessment views. They must
+  // never see Teacher Dashboard, My Classes & Learners, Roll Call / Attendance,
+  // Daily Check-In, Enter Marks, or Results Analysis.
+  const studentMenuItems = [
+    { icon: GraduationCap, label: 'My Assessment', path: '/student-assessment' },
+    { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list' },
+  ];
+
   const activeMenu = isActuallyAdmin
     ? adminMenuItems
     : isBursarRole
     ? bursarMenuItems
     : isLibrarianRole
     ? librarianMenuItems
+    : isStudentUser
+    ? studentMenuItems
     : teacherMenuItems;
 
   return (
