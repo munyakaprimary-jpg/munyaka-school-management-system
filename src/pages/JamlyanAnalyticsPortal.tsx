@@ -22,7 +22,11 @@ import {
   Building2,
   FileText,
   Trash2,
-  LayoutDashboard
+  LayoutDashboard,
+  Menu,
+  X,
+  Cpu,
+  HardDrive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,13 +35,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { showSuccess, showError } from '@/utils/toast';
 import PaymentManagement from './PaymentManagement';
-import { useSchoolStore } from '@/store/useSchoolStore';
 import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 import { getStoredStaff } from '@/utils/storage';
 
 export default function JamlyanAnalyticsPortal() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions' | 'locks' | 'updates' | 'diagnostics'>('overview');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState('Online (Firestore + LocalStorage)');
 
@@ -149,7 +153,7 @@ export default function JamlyanAnalyticsPortal() {
     localStorage.setItem('munyaka_system_version', systemVersion);
     localStorage.setItem('munyaka_release_notes', releaseNotes);
     localStorage.setItem('munyaka_fee_per_seat', String(feePerSeat));
-    localStorage.setItem('munyaka_billing_ due_date', dueDate);
+    localStorage.setItem('munyaka_billing_due_date', dueDate);
     localStorage.setItem('munyaka_billing_status', billingStatus);
     showSuccess('Jamlyan Analytics operator settings successfully saved and synced to Firestore.');
   };
@@ -160,7 +164,6 @@ export default function JamlyanAnalyticsPortal() {
     localStorage.setItem('munyaka_teacher_app_locked', 'false');
     setAppLocked(false);
     
-    // Add new invoice
     const newInv = {
       id: `INV-2026-${Math.floor(100 + Math.random() * 900)}`,
       campusName: 'Munyaka Primary & Junior School',
@@ -212,362 +215,388 @@ export default function JamlyanAnalyticsPortal() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-in fade-in duration-300">
-      {/* Top Header */}
-      <div className="bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-950 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden border border-indigo-500/30">
-        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-black uppercase tracking-wider border border-amber-500/30 shadow-inner">
-                <ShieldCheck size={14} className="text-amber-400" /> Jamlyan Analytics Platform Control Console
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-500/30">
-                Tenant: Munyaka Primary & JS
-              </span>
-            </div>
-            <h1 className="text-2xl md:text-4xl font-black tracking-tight text-white">
-              Jamlyan Analytics Operator Portal
-            </h1>
-            <p className="text-sm text-slate-300 max-w-3xl leading-relaxed">
-              Authorized operator interface for Munyaka Primary & Junior School. Manage system version releases, monthly subscription invoices, seat utilization, persistent teacher-app locks, and maintenance mode.
-            </p>
+    <div className="min-h-screen bg-slate-950 text-white flex flex-col md:flex-row">
+      {/* Mobile Header */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-black">
+            <ShieldCheck size={20} />
           </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant={activeTab === 'overview' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('overview')}
-              className={activeTab === 'overview' ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-2xl h-12 px-5' : 'bg-slate-900/80 border-indigo-500/40 text-indigo-200 hover:bg-indigo-950 font-bold rounded-2xl h-12 px-5'}
-            >
-              <LayoutDashboard size={16} className="mr-2" /> Platform Overview
-            </Button>
-            <Button
-              variant={activeTab === 'subscriptions' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('subscriptions')}
-              className={activeTab === 'subscriptions' ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-2xl h-12 px-5' : 'bg-slate-900/80 border-indigo-500/40 text-indigo-200 hover:bg-indigo-950 font-bold rounded-2xl h-12 px-5'}
-            >
-              <CreditCard size={16} className="mr-2" /> Payment & Subscription
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleSyncFirestore}
-              disabled={isSyncing}
-              className="bg-slate-900/80 border-indigo-500/40 text-indigo-200 hover:bg-indigo-950 font-bold rounded-2xl h-12 px-5 shadow-lg"
-            >
-              <RefreshCw size={16} className={`mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isSyncing ? 'Syncing...' : 'Sync Firestore'}
-            </Button>
-            <Button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl h-12 px-6 shadow-xl shadow-red-900/30 flex items-center gap-2"
-            >
-              <LogOut size={16} /> Log Out
-            </Button>
+          <div>
+            <h2 className="text-sm font-black tracking-tight text-white">Jamlyan Analytics</h2>
+            <p className="text-[10px] text-amber-400">Platform Control Console</p>
           </div>
         </div>
-
-        <div className="mt-6 pt-6 border-t border-indigo-900/60 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-400 font-medium">
-          <div className="flex items-center gap-6">
-            <span className="flex items-center gap-2">
-              <Database size={14} className="text-amber-400" /> Active Version: <strong className="text-white">{systemVersion}</strong>
-            </span>
-            <span className="flex items-center gap-2">
-              <Activity size={14} className="text-emerald-400" /> Sync Status: <strong className="text-emerald-300">{syncStatus}</strong>
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Secure TLS 1.3 Operator Session Active</span>
-          </div>
-        </div>
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white"
+        >
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
       </div>
 
-      {/* Grid Section 1: Subscription Billing & Live Counts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Subscription & Monthly Billing Card */}
-        <Card className="lg:col-span-2 rounded-[2rem] border-slate-200 shadow-xl bg-white dark:bg-slate-900 dark:border-slate-800">
-          <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
-                  <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                    <DollarSign size={22} />
-                  </div>
-                  Subscription Billing & Seat Utilization
+      {/* Sidebar Navigation */}
+      <aside className={`
+        fixed md:static inset-y-0 left-0 z-50 w-72 bg-slate-900 border-r border-slate-800 flex flex-col transition-transform duration-300
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        {/* Sidebar Header */}
+        <div className="p-6 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 text-slate-950 flex items-center justify-center font-black shadow-lg shadow-amber-500/20">
+              <ShieldCheck size={24} />
+            </div>
+            <div>
+              <h2 className="text-base font-black tracking-tight text-white">Jamlyan Analytics</h2>
+              <span className="inline-block px-2 py-0.5 mt-0.5 rounded-md bg-amber-500/25 text-amber-300 text-[10px] font-bold uppercase tracking-wider">
+                Operator Console
+              </span>
+            </div>
+          </div>
+          <div className="mt-4 p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex items-center justify-between text-xs text-slate-400">
+            <span className="flex items-center gap-1.5"><Building2 size={12} className="text-amber-400" /> Tenant:</span>
+            <strong className="text-white text-[11px] truncate max-w-[140px]">Munyaka Primary & JS</strong>
+          </div>
+        </div>
+
+        {/* Navigation Items */}
+        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
+          <button
+            onClick={() => { setActiveTab('overview'); setMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
+              activeTab === 'overview'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <LayoutDashboard size={18} />
+            <span>Overview / Dashboard</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('subscriptions'); setMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
+              activeTab === 'subscriptions'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <CreditCard size={18} />
+            <span>Subscription & Billing</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('locks'); setMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
+              activeTab === 'locks'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <Lock size={18} />
+            <span>App Access & Locks</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('updates'); setMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
+              activeTab === 'updates'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <Settings size={18} />
+            <span>Updates & Maintenance</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('diagnostics'); setMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
+              activeTab === 'diagnostics'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <Activity size={18} />
+            <span>System Diagnostics & Sync</span>
+          </button>
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-slate-800 bg-slate-950/40 space-y-3">
+          <div className="flex items-center gap-3 px-2">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-sm">
+              JA
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-xs font-bold text-white truncate">Jamlyan Analytics</p>
+              <p className="text-[10px] text-slate-400 truncate">operator@jamlyan.com</p>
+            </div>
+          </div>
+          <Button
+            onClick={handleLogout}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl h-11 shadow-lg shadow-red-900/30 flex items-center justify-center gap-2 text-xs"
+          >
+            <LogOut size={16} /> Log Out
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8">
+        {/* Top Header Banner */}
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden border border-indigo-500/30">
+          <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-black uppercase tracking-wider border border-amber-500/30">
+                  <ShieldCheck size={14} className="text-amber-400" /> Platform Control Console
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold border border-indigo-500/30">
+                  Tenant: Munyaka Primary & JS
+                </span>
+              </div>
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+                {activeTab === 'overview' && 'Overview & Platform Health'}
+                {activeTab === 'subscriptions' && 'Subscription & Billing Management'}
+                {activeTab === 'locks' && 'Teacher App Access & Persistent Locks'}
+                {activeTab === 'updates' && 'System Releases & Maintenance Mode'}
+                {activeTab === 'diagnostics' && 'System Diagnostics & Firestore Sync'}
+              </h1>
+              <p className="text-xs md:text-sm text-slate-300 max-w-2xl">
+                Authorized operator portal for Jamlyan Analytics. Monitor tenant seat utilization, subscription invoices, global teacher-app security locks, and system updates.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={handleSyncFirestore}
+                disabled={isSyncing}
+                className="bg-slate-900/80 border-indigo-500/40 text-indigo-200 hover:bg-indigo-950 font-bold rounded-2xl h-11 px-5 shadow-lg"
+              >
+                <RefreshCw size={16} className={`mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Syncing...' : 'Sync Firestore'}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'subscriptions' ? (
+          <div className="bg-slate-900 rounded-[2rem] p-6 border border-slate-800">
+            <PaymentManagement />
+          </div>
+        ) : activeTab === 'locks' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <Lock size={20} className="text-amber-400" /> Global Teacher App Lock
                 </CardTitle>
-                <p className="text-xs text-slate-500 font-medium mt-1">
-                  Transparent calculation based on live student and staff counts from the school registry.
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <p className="text-sm text-slate-300">
+                  Instantly lock or unlock teacher applications across all devices for this school tenant. Active sessions will require authentication or subscription renewal when locked.
                 </p>
-              </div>
-              <Badge className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${
-                billingStatus === 'Paid' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
-              }`}>
-                Status: {billingStatus}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5">
-                  <Users size={14} className="text-indigo-500" /> Active Learners
-                </span>
-                <div className="text-2xl font-black text-slate-900 dark:text-white">
-                  {activeLearnersCount.toLocaleString()}
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                  <div>
+                    <p className="font-bold text-sm">Teacher App Status</p>
+                    <p className="text-xs text-slate-400">{appLocked ? 'Locked (Restricted)' : 'Active (Normal)'}</p>
+                  </div>
+                  <Button
+                    onClick={handleToggleLock}
+                    className={appLocked ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold' : 'bg-red-600 hover:bg-red-700 text-white font-bold'}
+                  >
+                    {appLocked ? <><Unlock size={16} className="mr-2" /> Unlock Apps</> : <><Lock size={16} className="mr-2" /> Lock Apps</>}
+                  </Button>
                 </div>
-                <p className="text-[11px] text-slate-400">Enrolled &amp; active in school</p>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 space-y-1">
-                <span className="text-xs font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1.5">
-                  <Users size={14} className="text-amber-500" /> Active Staff / Teachers
-                </span>
-                <div className="text-2xl font-black text-slate-900 dark:text-white">
-                  {activeStaffCount.toLocaleString()}
+            <Card className="rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <ShieldCheck size={20} className="text-amber-400" /> Platform Owner Bypass & Autolock
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                  <div>
+                    <p className="font-bold text-sm">Autolock on Overdue Billing</p>
+                    <p className="text-xs text-slate-400">Automatically lock teacher apps if payment is overdue</p>
+                  </div>
+                  <Switch checked={autolockOverdue} onCheckedChange={handleToggleAutolock} />
                 </div>
-                <p className="text-[11px] text-slate-400">Registered staff members</p>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 space-y-1">
-                <span className="text-xs font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                  <CreditCard size={14} /> Monthly Total (KES)
-                </span>
-                <div className="text-2xl font-black text-amber-900 dark:text-amber-300">
-                  KES {estimatedMonthlyTotal.toLocaleString()}
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                  <div>
+                    <p className="font-bold text-sm">Platform Owner Bypass</p>
+                    <p className="text-xs text-slate-400">Allow Jamlyan Analytics operator emergency override</p>
+                  </div>
+                  <Switch checked={ownerBypass} onCheckedChange={handleToggleBypass} />
                 </div>
-                <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80">{totalSeats} total seats @ KES {feePerSeat}/seat</p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-slate-600 dark:text-slate-300">Current Cycle Due Date</Label>
-                <div className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <Calendar size={15} className="text-indigo-500" /> {dueDate}
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={handleMarkPaid}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl h-11 px-5 shadow-md flex items-center gap-2"
-                >
-                  <CheckCircle2 size={16} /> Mark Cycle Paid
-                </Button>
-                <Button
-                  onClick={handleMarkOverdue}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl h-11 px-5 shadow-md flex items-center gap-2"
-                >
-                  <AlertTriangle size={16} /> Mark Overdue
-                </Button>
-              </div>
-            </div>
-
-            {/* Invoices History Table */}
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <FileText size={16} className="text-indigo-500" /> Payment &amp; Invoice History
-                </h3>
-              </div>
-              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-950 text-slate-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                      <th className="p-3.5 font-bold">Invoice ID</th>
-                      <th className="p-3.5 font-bold">Date</th>
-                      <th className="p-3.5 font-bold">Amount (KES)</th>
-                      <th className="p-3.5 font-bold">Status</th>
-                      <th className="p-3.5 font-bold text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                    {invoices.map((inv: any, idx: number) => (
-                      <tr key={inv.id || idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
-                        <td className="p-3.5 font-bold text-slate-900 dark:text-white">{inv.id}</td>
-                        <td className="p-3.5 text-slate-600 dark:text-slate-300">{inv.date}</td>
-                        <td className="p-3.5 font-bold text-slate-900 dark:text-white">KES {Number(inv.amount || 0).toLocaleString()}</td>
-                        <td className="p-3.5">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                            inv.status === 'Paid' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
-                          }`}>
-                            {inv.status}
-                          </span>
-                        </td>
-                        <td className="p-3.5 text-right">
-                          <button
-                            onClick={() => {
-                              const updated = invoices.filter((_: any, i: number) => i !== idx);
-                              setInvoices(updated);
-                              localStorage.setItem('munyaka_billing_invoices', JSON.stringify(updated));
-                              showSuccess('Invoice record deleted.');
-                            }}
-                            className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
-                            title="Delete invoice record"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Right Column: Persistent Teacher App Lock & Bypass Controls */}
-        <Card className="rounded-[2rem] border-slate-200 shadow-xl bg-white dark:bg-slate-900 dark:border-slate-800">
-          <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-5">
-            <CardTitle className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
-              <div className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                <Lock size={22} />
-              </div>
-              Teacher App Locks &amp; Overrides
-            </CardTitle>
-            <p className="text-xs text-slate-500 font-medium mt-1">
-              Persistent access controls enforced across all staff and teacher sessions.
-            </p>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-black text-slate-900 dark:text-white">Teacher Apps Global Lock</h3>
-                  <p className="text-xs text-slate-500">Lock teacher portal when subscription is pending.</p>
-                </div>
-                <Button
-                  onClick={handleToggleLock}
-                  className={`font-bold rounded-xl h-11 px-5 shadow-md flex items-center gap-2 ${
-                    appLocked ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  }`}
-                >
-                  {appLocked ? <Lock size={16} /> : <Unlock size={16} />}
-                  {appLocked ? 'Locked' : 'Unlocked'}
-                </Button>
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-black text-slate-900 dark:text-white">Platform Owner Bypass</h3>
-                  <p className="text-xs text-slate-500">Allow Jamlyan Analytics operator override.</p>
-                </div>
-                <Button
-                  onClick={handleToggleBypass}
-                  className={`font-bold rounded-xl h-11 px-5 shadow-md ${
-                    ownerBypass ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300'
-                  }`}
-                >
-                  {ownerBypass ? 'Bypass Active' : 'Disabled'}
-                </Button>
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-black text-slate-900 dark:text-white">Autolock on Overdue Billing</h3>
-                  <p className="text-xs text-slate-500">Automatically lock teacher apps if payment is overdue.</p>
-                </div>
-                <Button
-                  onClick={handleToggleAutolock}
-                  className={`font-bold rounded-xl h-11 px-5 shadow-md ${
-                    autolockOverdue ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300'
-                  }`}
-                >
-                  {autolockOverdue ? 'Enabled' : 'Disabled'}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Grid Section 2: System Updates & Maintenance Banner Manager */}
-      <Card className="rounded-[2rem] border-slate-200 shadow-xl bg-white dark:bg-slate-900 dark:border-slate-800">
-        <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-5">
-          <CardTitle className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
-            <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <Settings size={22} />
-            </div>
-            System Updates &amp; Maintenance Banner Manager
-          </CardTitle>
-          <p className="text-xs text-slate-500 font-medium mt-1">
-            Configure active system release notes, software version badges, and publish maintenance mode banners.
-          </p>
-        </CardHeader>
-        <CardContent className="p-6">
-          <form onSubmit={handleSaveSystemConfig} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              </CardContent>
+            </Card>
+          </div>
+        ) : activeTab === 'updates' ? (
+          <div className="max-w-2xl bg-slate-900 rounded-[2rem] p-8 border border-slate-800 shadow-xl space-y-6">
+            <h2 className="text-xl font-black text-white flex items-center gap-2">
+              <Settings size={22} className="text-amber-400" /> System Releases & Maintenance Mode
+            </h2>
+            <form onSubmit={handleSaveSystemConfig} className="space-y-5">
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest text-slate-500">Active System Version</Label>
+                <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Active System Version</Label>
                 <Input
                   value={systemVersion}
                   onChange={e => setSystemVersion(e.target.value)}
-                  className="h-12 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-300 dark:border-slate-800 font-bold text-slate-900 dark:text-white"
-                  placeholder="e.g. v2.6.4-stable"
+                  className="bg-slate-950 border-slate-800 text-white font-bold h-12 rounded-xl"
+                  required
                 />
               </div>
-
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest text-slate-500">Fee Per Seat (KES)</Label>
-                <Input
-                  type="number"
-                  value={feePerSeat}
-                  onChange={e => setFeePerSeat(Number(e.target.value))}
-                  className="h-12 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-300 dark:border-slate-800 font-bold text-slate-900 dark:text-white"
+                <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Release Notes & Changelog</Label>
+                <textarea
+                  value={releaseNotes}
+                  onChange={e => setReleaseNotes(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-white font-medium p-4 rounded-xl min-h-[100px] text-sm focus:outline-none focus:border-amber-500"
+                  required
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest text-slate-500">Billing Due Date</Label>
-                <Input
-                  type="date"
-                  value={dueDate}
-                  onChange={e => setDueDate(e.target.value)}
-                  className="h-12 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-300 dark:border-slate-800 font-bold text-slate-900 dark:text-white"
-                />
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                <div>
+                  <p className="font-bold text-sm">Global Maintenance Mode</p>
+                  <p className="text-xs text-slate-400">Display maintenance banner across school portals</p>
+                </div>
+                <Switch checked={maintenanceMode} onCheckedChange={handleToggleMaintenance} />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-500">Release Notes / Update Notice</Label>
-              <textarea
-                value={releaseNotes}
-                onChange={e => setReleaseNotes(e.target.value)}
-                rows={3}
-                className="w-full p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-300 dark:border-slate-800 font-medium text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Enter release notes and updates..."
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  onClick={handleToggleMaintenance}
-                  className={`font-bold rounded-xl h-12 px-6 shadow-md ${
-                    maintenanceMode ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300'
-                  }`}
-                >
-                  <AlertTriangle size={16} className="mr-2" />
-                  {maintenanceMode ? 'Maintenance Mode: Active' : 'Publish Maintenance Banner'}
-                </Button>
-              </div>
-
-              <Button
-                type="submit"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl h-12 px-8 shadow-lg shadow-indigo-950/30"
-              >
-                Save &amp; Sync Operator Settings
+              <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black h-12 rounded-xl shadow-lg">
+                Save Release Settings
               </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            </form>
+          </div>
+        ) : activeTab === 'diagnostics' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <Database size={20} className="text-emerald-400" /> Firestore & LAN Sync Diagnostics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm text-slate-300">
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Sync Status:</span>
+                    <strong className="text-emerald-400">{syncStatus}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Active Tenant ID:</span>
+                    <strong className="text-white">munyaka_primary_js</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Local Cache:</span>
+                    <strong className="text-amber-400">Healthy (Encrypted)</strong>
+                  </div>
+                </div>
+                <Button onClick={handleSyncFirestore} className="w-full bg-indigo-600 hover:bg-indigo-700 font-bold h-11 rounded-xl">
+                  Run Full Cloud Diagnostics Check
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <HardDrive size={20} className="text-amber-400" /> Storage & Registry Metrics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-slate-300">
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Registered Learners:</span>
+                    <strong className="text-white">{activeLearnersCount}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Registered Staff:</span>
+                    <strong className="text-white">{activeStaffCount}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Total Billed Seats:</span>
+                    <strong className="text-amber-400">{totalSeats}</strong>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2 rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <DollarSign size={20} className="text-amber-400" /> Seat Utilization & Monthly Billing
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                    <p className="text-xs text-slate-400 uppercase font-bold">Active Seats</p>
+                    <p className="text-2xl font-black text-white mt-1">{totalSeats}</p>
+                    <p className="text-[11px] text-slate-500 mt-1">{activeLearnersCount} learners, {activeStaffCount} staff</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                    <p className="text-xs text-slate-400 uppercase font-bold">Fee Per Seat</p>
+                    <p className="text-2xl font-black text-amber-400 mt-1">KES {feePerSeat}</p>
+                    <p className="text-[11px] text-slate-500 mt-1">Monthly SaaS rate</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                    <p className="text-xs text-slate-400 uppercase font-bold">Estimated Total</p>
+                    <p className="text-2xl font-black text-emerald-400 mt-1">KES {estimatedMonthlyTotal.toLocaleString()}</p>
+                    <p className="text-[11px] text-slate-500 mt-1">Per billing cycle</p>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div>
+                    <p className="font-bold text-sm">Billing Status: <span className={billingStatus === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}>{billingStatus}</span></p>
+                    <p className="text-xs text-slate-400 mt-0.5">Due Date: {dueDate}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button onClick={handleMarkPaid} className="bg-emerald-600 hover:bg-emerald-700 font-bold text-xs">
+                      Mark Paid
+                    </Button>
+                    <Button onClick={handleMarkOverdue} className="bg-amber-600 hover:bg-amber-700 font-bold text-xs">
+                      Mark Overdue
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <Activity size={20} className="text-emerald-400" /> Quick Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm text-slate-300">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
+                    <span>System Version</span>
+                    <strong className="text-amber-400">{systemVersion}</strong>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
+                    <span>Teacher Apps Lock</span>
+                    <strong className={appLocked ? 'text-red-400' : 'text-emerald-400'}>{appLocked ? 'Locked' : 'Active'}</strong>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
+                    <span>Maintenance Mode</span>
+                    <strong className={maintenanceMode ? 'text-amber-400' : 'text-slate-400'}>{maintenanceMode ? 'Active' : 'Off'}</strong>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
