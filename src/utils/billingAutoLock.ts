@@ -202,7 +202,7 @@ function getCurrentMonthDeadline(): Date {
  * Check if auto-lock should be triggered using authoritative time
  */
 export function shouldAutoLock(): boolean {
-  // If Owner Bypass is active, never trigger auto-lock
+  // If Admin Bypass is active, never trigger auto-lock
   try {
     if (localStorage.getItem('munyaka_lock_bypass') === 'true') {
       return false;
@@ -229,7 +229,7 @@ export function shouldAutoLock(): boolean {
  * unless explicitly overdue and no manual override is active.
  */
 export function applyAutoLock(): boolean {
-  // If owner bypass is active, ensure locked is false
+  // If admin bypass is active, ensure locked is false
   try {
     if (localStorage.getItem('munyaka_lock_bypass') === 'true') {
       return false;

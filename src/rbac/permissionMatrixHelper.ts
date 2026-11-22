@@ -17,7 +17,7 @@ export function roleHasModulePermission(role: string, moduleKey: string): boolea
     return false;
   }
 
-  if (normRole === 'ADMIN' || normRole === 'SUPER_ADMIN' || normRole === 'OWNER' || normRole === 'HOI') return true;
+  if (normRole === 'ADMIN' || normRole === 'SUPER_ADMIN' || normRole === 'SUPERADMIN' || normRole === 'OWNER' || normRole === 'HOI' || normRole === 'SCHOOL_ADMIN') return true;
   if (moduleKey === 'daily_checkin') return true;
   if (normRole.includes('ICT') || normRole.includes('TECH') || normRole === 'ICT_TEACHER' || normRole === 'ICT_TECHNICIAN' || normRole === 'SUBJECT_TEACHER' || normRole === 'TEACHER') {
     return true;

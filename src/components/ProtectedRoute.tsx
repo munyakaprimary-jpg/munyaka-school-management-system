@@ -92,10 +92,10 @@ const ProtectedRoute = ({
   const rawRole = String(user.role || '').toLowerCase().trim();
   const upperRole = rawRole.toUpperCase();
 
-  // Strict check: subject teachers, class teachers, and teachers must never be treated as admin or owner
+  // Strict check: subject teachers, class teachers, and teachers must never be treated as admin
   const isTeacherRole = rawRole.includes('teacher') || rawRole === 'staff' || rawRole === 'subject_teacher' || rawRole === 'class_teacher' || rawRole === 'senior_teacher';
-  const isOwnerOrSuper = !isTeacherRole && (upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN' || upperRole === 'SUPER');
-  const isAdmin = !isTeacherRole && (upperRole === 'ADMIN' || upperRole === 'HOI' || upperRole === 'DHOI' || upperRole === 'ADMINISTRATOR');
+  const isOwnerOrSuper = !isTeacherRole && (upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN' || upperRole === 'SUPER' || upperRole === 'SUPERADMIN' || upperRole === 'SCHOOL_ADMIN');
+  const isAdmin = !isTeacherRole && (upperRole === 'ADMIN' || upperRole === 'HOI' || upperRole === 'DHOI' || upperRole === 'ADMINISTRATOR' || upperRole === 'SCHOOL_ADMIN' || upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN');
 
   // Determine corresponding module key from pathname if not explicitly provided
   let targetModuleKey = moduleKey;
