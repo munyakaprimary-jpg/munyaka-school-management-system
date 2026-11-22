@@ -46,3 +46,42 @@ export function isAdminRole(roleOrUser: any): boolean {
   const norm = normalizeSystemRole(raw);
   return norm === 'admin';
 }
+
+export function isBursarRole(roleOrUser: any): boolean {
+  const raw = typeof roleOrUser === 'string' ? roleOrUser : (roleOrUser?.role || roleOrUser?.systemRole || roleOrUser?.userType || '');
+  const norm = normalizeSystemRole(raw);
+  return norm === 'bursar';
+}
+
+export function isLibrarianRole(roleOrUser: any): boolean {
+  const raw = typeof roleOrUser === 'string' ? roleOrUser : (roleOrUser?.role || roleOrUser?.systemRole || roleOrUser?.userType || '');
+  const norm = normalizeSystemRole(raw);
+  return norm === 'librarian';
+}
+
+export function isClassTeacherRole(roleOrUser: any): boolean {
+  const raw = typeof roleOrUser === 'string' ? roleOrUser : (roleOrUser?.role || roleOrUser?.systemRole || roleOrUser?.userType || '');
+  const norm = normalizeSystemRole(raw);
+  return norm === 'teacher';
+}
+
+export function isSubjectTeacherRole(roleOrUser: any): boolean {
+  const raw = typeof roleOrUser === 'string' ? roleOrUser : (roleOrUser?.role || roleOrUser?.systemRole || roleOrUser?.userType || '');
+  const norm = normalizeSystemRole(raw);
+  return norm === 'teacher';
+}
+
+export function isIctTeacherRole(roleOrUser: any): boolean {
+  const raw = typeof roleOrUser === 'string' ? roleOrUser : (roleOrUser?.role || roleOrUser?.systemRole || roleOrUser?.userType || '');
+  const norm = String(raw || '').trim().toLowerCase();
+  return norm.includes('ict');
+}
+
+export function normalizeStaffRole(...args: any[]): string {
+  for (const arg of args) {
+    const norm = normalizeSystemRole(arg);
+    if (norm) return norm;
+  }
+  return 'staff';
+}
+
