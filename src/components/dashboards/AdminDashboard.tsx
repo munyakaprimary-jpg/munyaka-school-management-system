@@ -641,41 +641,65 @@ export const AdminDashboardComponent: React.FC = () => {
                   let morningRecorded = false;
                   let afternoonRecorded = false;
 
-                  Object.values(attendanceLogs).forEach((record: any) => {
+                  Object.entries(attendanceLogs).forEach(([logKey, record]: [string, any]) => {
                     if (!record) return;
                     const rGrade = String(record.grade || '').trim().toLowerCase();
                     const rStream = String(record.stream || '').trim().toLowerCase();
-                    if (rGrade === gradeName.toLowerCase() && rStream === streamName.toLowerCase()) {
+                    const logKeyLower = logKey.toLowerCase();
+                    
+                    const matchesStream = (rGrade === gradeName.toLowerCase() && rStream === streamName.toLowerCase()) ||
+                                          logKeyLower.includes(gradeName.toLowerCase()) && logKeyLower.includes(streamName.toLowerCase());
+
+                    if (matchesStream) {
                       const studentsObj = record.students || record.learners || {};
-                      
-                      // Check if record has session indicators or student status
-                      const recSession = String(record.session || '').toLowerCase();
-                      
-                      Object.values(studentsObj).forEach((st: any) => {
-                        if (st) {
-                          const mStatus = String(st.morning || st.status || '').toLowerCase();
-                          const aStatus = String(st.afternoon || st.status || '').toLowerCase();
+                      const recSession = String(record.session || '').trim().toLowerCase();
 
-                          if (recSession === 'morning' || mStatus === 'present' || mStatus === 'late' || mStatus === 'absent') {
-                            morningRecorded = true;
-                          }
-                          if (recSession === 'afternoon' || aStatus === 'present' || aStatus === 'late' || aStatus === 'absent') {
-                            afternoonRecorded = true;
-                          }
-
-                          if (mStatus === 'present' || mStatus === 'late') morningPresent++;
-                          if (aStatus === 'present' || aStatus === 'late') afternoonPresent++;
-                        }
-                      });
-
-                      // If record exists for the date without explicit student map keys but marked present count
-                      if (record.morningPresentCount !== undefined) {
+                      // If record has top-level present counts or status
+                      if (typeof record.morningPresentCount === 'number') {
                         morningRecorded = true;
-                        morningPresent = Number(record.morningPresentCount) || 0;
+                        morningPresent = Math.max(morningPresent, record.morningPresentCount);
                       }
-                      if (record.afternoonPresentCount !== undefined) {
+                      if (typeof record.afternoonPresentCount === 'number') {
                         afternoonRecorded = true;
-                        afternoonPresent = Number(record.afternoonPresentCount) || 0;
+                        afternoonPresent = Math.max(afternoonPresent, record.afternoonPresentCount);
+                      }
+
+                      // Inspect individual student records
+                      if (studentsObj && typeof studentsObj === 'object') {
+                        Object.values(studentsObj).forEach((st: any) => {
+                          if (st) {
+                            const mStatus = String(st.morning || st.status || st.morningStatus || '').trim().toUpperCase();
+                            const aStatus = String(st.afternoon || st.status || st.afternoonStatus || '').trim().toUpperCase();
+
+                            if (recSession === 'morning' || mStatus === 'P' || mStatus === 'PRESENT' || mStatus === 'L' || mStatus === 'LATE' || mStatus === 'A' || mStatus === 'ABSENT' || mStatus === 'E' || mStatus === 'EXCUSED') {
+                              morningRecorded = true;
+                            }
+                            if (recSession === 'afternoon' || aStatus === 'P' || aStatus === 'PRESENT' || aStatus === 'L' || aStatus === 'LATE' || aStatus === 'A' || aStatus === 'ABSENT' || aStatus === 'E' || aStatus === 'EXCUSED') {
+                              afternoonRecorded = true;
+                            }
+
+                            if (mStatus === 'P' || mStatus === 'PRESENT' || mStatus === 'L' || mStatus === 'LATE') {
+                              morningPresent++;
+                            }
+                            if (aStatus === 'P' || aStatus === 'PRESENT' || aStatus === 'L' || aStatus === 'LATE') {
+                              afternoonPresent++;
+                            }
+                          }
+                        });
+                      }
+
+                      // If record has status array or list
+                      if (Array.isArray(record.attendanceList)) {
+                        record.attendanceList.forEach((st: any) => {
+                          if (st) {
+                            const mStatus = String(st.morning || st.status || '').trim().toUpperCase();
+                            const aStatus = String(st.afternoon || st.status || '').trim().toUpperCase();
+                            if (mStatus) morningRecorded = true;
+                            if (aStatus) afternoonRecorded = true;
+                            if (mStatus === 'P' || mStatus === 'PRESENT' || mStatus === 'L' || mStatus === 'LATE') morningPresent++;
+                            if (aStatus === 'P' || aStatus === 'PRESENT' || aStatus === 'L' || aStatus === 'LATE') afternoonPresent++;
+                          }
+                        });
                       }
                     }
                   });
