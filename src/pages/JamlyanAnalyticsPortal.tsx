@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getUnifiedLicenseInfo, useUnifiedLicense } from '../utils/subscriptionUtils';
 import {
   ShieldCheck,
   LayoutDashboard,
