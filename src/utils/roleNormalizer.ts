@@ -11,6 +11,14 @@ export function normalizeSystemRole(rawRole: string | undefined | null): string 
   if (!norm) return 'staff';
 
   if (
+    norm === 'jamlyan_analytics' ||
+    norm === 'jamlyan' ||
+    norm === 'analytics'
+  ) {
+    return 'jamlyan_analytics';
+  }
+
+  if (
     norm === 'platform_owner' ||
     norm === 'super_owner' ||
     norm === 'jamlyan_admin' ||
@@ -47,6 +55,12 @@ export function normalizeSystemRole(rawRole: string | undefined | null): string 
   }
 
   return norm;
+}
+
+export function isJamlyanAnalyticsRole(roleOrUser: any): boolean {
+  const raw = typeof roleOrUser === 'string' ? roleOrUser : (roleOrUser?.role || roleOrUser?.systemRole || roleOrUser?.userType || '');
+  const norm = normalizeSystemRole(raw);
+  return norm === 'jamlyan_analytics';
 }
 
 export function isAdminRole(roleOrUser: any): boolean {

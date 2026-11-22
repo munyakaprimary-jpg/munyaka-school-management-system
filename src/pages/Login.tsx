@@ -130,7 +130,7 @@ const hasCustomAdminPassword = (): boolean => {
 // so they can both authenticate when the lock screen is active, but they have
 // entirely separate permission matrices.
 
-type AdminRole = 'admin' | 'owner';
+type AdminRole = 'admin' | 'owner' | 'jamlyan_analytics';
 
 interface RoleConfig {
   id: AdminRole;
@@ -160,13 +160,26 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     primaryColor: 'indigo',
     defaultPassword: DEFAULT_ADMIN_PASSWORD,
   },
-  owner: {
-    id: 'owner',
+  jamlyan_analytics: {
+    id: 'jamlyan_analytics',
     label: 'Jamlyan Analytics',
     description: 'Jamlyan Analytics Operator Console — System Updates, Subscriptions & App-Lock Controls',
     fullDescription: 'Authorized Jamlyan Analytics operator access for system updates, maintenance, subscription billing, and persistent teacher-app lock controls. Strictly restricted to Jamlyan Analytics operators.',
     email: 'operator@jamlyan.com',
     userName: 'Jamlyan Analytics Operator',
+    userRole: 'jamlyan_analytics' as any,
+    redirectPath: '/jamlyan-analytics',
+    icon: Crown,
+    primaryColor: 'amber',
+    defaultPassword: 'munyaka2026',
+  },
+  owner: {
+    id: 'owner',
+    label: 'School Owner',
+    description: 'School Owner Portal — Financial Overview & Executive Controls',
+    fullDescription: 'Authorized School Owner portal access for financial overview and executive controls.',
+    email: 'jamesndiki@gmail.com',
+    userName: 'School Owner',
     userRole: 'owner',
     redirectPath: '/dashboard',
     icon: Crown,
@@ -260,11 +273,20 @@ const Login: React.FC = () => {
   const location = useLocation();
   const { login, isAuthenticated, user, setUser, logout } = useAuth();
 
-  // ── Cover page state (default to false so login page appears directly) ────────────────────────────────────────────────────
-  const [showCover, setShowCover] = useState(false);
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes('role=jamlyan_analytics') || hash.includes('tab=super')) {
+      setSelectedAdminRole('jamlyan_analytics');
+    }
+  }, []);
 
-  // ── Admin state ──────────────────────────────────────────────────────────
-  const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>(null);
+  // Admin state
+  const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>(() => {
+    const searchParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+    const r = searchParams.get('role') || searchParams.get('tab');
+    if (r === 'jamlyan_analytics' || r === 'jamlyan' || r === 'analytics') return 'jamlyan_analytics';
+    return null;
+  });
   const [adminPassword, setAdminPassword] = useState('');
   const [ownerEmailInput, setOwnerEmailInput] = useState('operator@jamlyan.com');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
@@ -454,11 +476,16 @@ const Login: React.FC = () => {
       const officialPassword = getActiveAdminPassword();
       const savedAdminPin = localStorage.getItem('admin_pin') || localStorage.getItem('munyaka_admin_password') || officialPassword;
       const savedOwnerPin = localStorage.getItem('owner_pin') || localStorage.getItem('munyaka_owner_password') || officialPassword;
-      const expectedPin = selectedAdminRole === 'owner' ? (localStorage.getItem('munyaka_owner_password') || officialPassword) : officialPassword;
+      let expectedPin = officialPassword;
+      if (selectedAdminRole === 'owner') {
+        expectedPin = localStorage.getItem('munyaka_owner_password') || officialPassword;
+      } else if (selectedAdminRole === 'jamlyan_analytics') {
+        expectedPin = 'munyaka2026';
+      }
 
       if (entered === expectedPin || entered === officialPassword || entered === 'munyaka' || entered === 'munyaka2026' || entered === savedAdminPin || entered === savedOwnerPin) {
         const userData = {
-          id: selectedAdminRole === 'owner' ? 'owner-1' : 'admin-1',
+          id: selectedAdminRole === 'owner' ? 'owner-1' : selectedAdminRole === 'jamlyan_analytics' ? 'jamlyan-1' : 'admin-1',
           name: config.userName,
           email: config.email,
           role: selectedAdminRole,
@@ -476,15 +503,18 @@ const Login: React.FC = () => {
           const adminSession = {
             role: selectedAdminRole,
             roleLabel: config.label,
-            roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
+            roleIcon: selectedAdminRole === 'owner' ? 'crown' : selectedAdminRole === 'jamlyan_analytics' ? 'shield' : 'settings',
             timestamp: Date.now(),
           };
           localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
           localStorage.setItem('isAuthenticated', 'true');
           localStorage.setItem('userRole', selectedAdminRole);
+          if (selectedAdminRole === 'jamlyan_analytics') {
+            localStorage.setItem('jamlyan_operator_session', JSON.stringify({ active: true, email: config.email, timestamp: Date.now() }));
+          }
           showSuccess(`Welcome, ${config.userName}!`);
           setIsAdminVerifying(false);
-          let redirectTarget = '/dashboard';
+          let redirectTarget = config.redirectPath || '/dashboard';
           if ((selectedAdminRole as string) === 'bursar') redirectTarget = '/fees';
           else if ((selectedAdminRole as string) === 'ict' || (selectedAdminRole as string) === 'lab') redirectTarget = '/server';
           navigate(redirectTarget, { replace: true });
@@ -836,16 +866,16 @@ const Login: React.FC = () => {
                                   Jamlyan Analytics Operator
                                 </h2>
                                 <p className="text-xs md:text-sm text-slate-400 font-medium mt-1">
-                                  {ROLE_CONFIGS.owner.fullDescription}
+                                  {ROLE_CONFIGS.jamlyan_analytics.fullDescription}
                                 </p>
                               </div>
-                              {adminAuthError && selectedAdminRole === 'owner' && (
+                              {adminAuthError && selectedAdminRole === 'jamlyan_analytics' && (
                                 <div className="p-4 bg-rose-900/20 border border-rose-800/50 rounded-2xl flex items-center gap-3 text-rose-400 text-xs font-bold animate-in slide-in-from-top-2">
                                   <ShieldAlert size={18} className="shrink-0" />
                                   <span>{adminAuthError}</span>
                                 </div>
                               )}
-                              <form onSubmit={(e) => { setSelectedAdminRole('owner'); handleAdminLogin(e); }} className="space-y-5">
+                              <form onSubmit={(e) => { setSelectedAdminRole('jamlyan_analytics'); handleAdminLogin(e); }} className="space-y-5">
                                 <div className="space-y-2">
                                   <Label className="text-xs font-black uppercase tracking-widest text-slate-500">Jamlyan Analytics Operator Email</Label>
                                   <div className="relative">
@@ -866,7 +896,7 @@ const Login: React.FC = () => {
                                     <Input
                                       type={showAdminPassword ? 'text' : 'password'}
                                       value={adminPassword}
-                                      onChange={e => { setSelectedAdminRole('owner'); setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
+                                      onChange={e => { setSelectedAdminRole('jamlyan_analytics'); setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
                                       placeholder="Enter Jamlyan Analytics operator access code"
                                       className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-bold text-base focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder-slate-500"
                                     />
@@ -887,7 +917,7 @@ const Login: React.FC = () => {
                                   disabled={isAdminVerifying || !String(adminPassword || '').trim()}
                                   className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-500"
                                 >
-                                  {isAdminVerifying && selectedAdminRole === 'owner' ? (
+                                  {isAdminVerifying && selectedAdminRole === 'jamlyan_analytics' ? (
                                     <><Loader2 className="animate-spin" size={20} /> Verifying...</>
                                   ) : (
                                     <><Unlock size={20} /> Sign In</>

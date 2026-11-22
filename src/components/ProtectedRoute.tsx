@@ -77,6 +77,12 @@ const ProtectedRoute = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // ── Jamlyan Analytics strict routing check ──
+  const isJamlyanAnalyticsUser = rawRole === 'jamlyan_analytics' || rawRole === 'jamlyan' || rawRole === 'analytics';
+  if (isJamlyanAnalyticsUser && location.pathname !== '/jamlyan-analytics') {
+    return <Navigate to="/jamlyan-analytics" replace />;
+  }
+
   // ── Strict RBAC: STUDENT / non-staff users are blocked from Teacher Portal routes ──
   const isStudentUser = isStudentRole(user);
 
@@ -118,7 +124,9 @@ const ProtectedRoute = ({
   // Check RBAC permission matrix for the module (Daily Check-In & check-in paths are permitted for staff only)
   const isCheckInPath = location.pathname === '/staff/check-in' || location.pathname === '/staff-checkin';
   // Students are only permitted through on student-safe paths (assessments / set exams).
-  const hasRbacPermission = isStudentUser && isStudentSafePath
+  const hasRbacPermission = isJamlyanAnalyticsUser
+    ? location.pathname === '/jamlyan-analytics'
+    : isStudentUser && isStudentSafePath
     ? true
     : isOwnerOrSuper || isAdmin || !targetModuleKey || roleHasModulePermission(user.role, targetModuleKey) || targetModuleKey === 'daily_checkin';
 
@@ -154,6 +162,7 @@ const ProtectedRoute = ({
     const isAllowed = allowedRoles.some(r => {
       const ar = r.toLowerCase().trim();
       if (ar === rawRole) return true;
+      if (isJamlyanAnalyticsUser && (ar === 'jamlyan_analytics' || ar === 'platform_owner' || ar === 'owner')) return true;
       if (ar === 'owner' && isOwnerOrSuper) return true;
       if (ar === 'admin' && (isAdmin || isOwnerOrSuper)) return true;
       if (ar === 'teacher' && (rawRole.includes('teacher') || isAdmin || isOwnerOrSuper)) return true;

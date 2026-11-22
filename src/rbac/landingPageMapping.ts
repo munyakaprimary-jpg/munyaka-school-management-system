@@ -6,6 +6,10 @@
 export function getRoleLandingPage(role: string | undefined | null): string {
   const norm = String(role || '').trim().toLowerCase();
   
+  if (norm === 'jamlyan_analytics' || norm === 'jamlyan' || norm === 'analytics') {
+    return '/jamlyan-analytics';
+  }
+  
   if (norm === 'platform_owner' || norm === 'owner' || norm === 'super_admin' || norm === 'superadmin') {
     return '/jamlyan-analytics';
   }

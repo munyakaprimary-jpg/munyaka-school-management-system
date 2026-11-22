@@ -119,6 +119,7 @@ import GamesHub from "./pages/GamesHub";
 import AppUnlock from "./components/AppUnlock";
 import ProfileSettings from "./pages/ProfileSettings";
 import AdminControlCenter from "./pages/AdminControlCenter";
+import JamlyanAnalyticsPortal from "./pages/JamlyanAnalyticsPortal";
 import MobileSettings from "./pages/MobileSettings";
 import LANServerConfig from "./pages/LANServerConfig";
 import TeacherLanConfig from "./pages/TeacherLanConfig";
@@ -551,6 +552,7 @@ const App = () => {
                       <Route path="/reset-password" element={<PasswordResetCallback />} />
 
                       {/* Protected Routes */}
+                      <Route path="/jamlyan-analytics" element={<ProtectedRoute allowedRoles={['jamlyan_analytics', 'platform_owner', 'owner', 'super_admin']}><JamlyanAnalyticsPortal /></ProtectedRoute>} />
                       <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'owner', 'developer', 'super_admin', 'school_admin']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />

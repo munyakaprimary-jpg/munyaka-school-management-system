@@ -18,7 +18,7 @@ import { startHeartbeatService, stopHeartbeatService } from '@/services/deviceHe
 import { auth } from '@/config/firebase';
 import { signOut } from 'firebase/auth';
 
-export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student' | 'non_teaching' | 'support' | 'driver' | 'owner' | 'parent' | 'support_staff';
+export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student' | 'non_teaching' | 'support' | 'driver' | 'owner' | 'parent' | 'support_staff' | 'jamlyan_analytics';
 
 export const OWNER_LEVEL_ROLE: UserRole = 'librarian';
 
@@ -110,6 +110,10 @@ const STAFF_STORAGE_KEY = 'munyaka_staff';
 const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   const norm = String(systemRole || '').trim().toLowerCase();
   switch (norm) {
+    case 'jamlyan_analytics':
+    case 'jamlyan':
+    case 'analytics':
+      return 'jamlyan_analytics';
     case 'owner':
     case 'super_admin':
     case 'support_admin':
