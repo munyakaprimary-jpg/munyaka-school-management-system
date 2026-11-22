@@ -95,8 +95,8 @@ export interface StaffMember {
   homeroomStream?: string;
   isClassLocked?: boolean;
   allocations?: StaffAllocationRecord[];
-  accessCode: string;
-  teacherCode?: string;
+  accessCode?: string;
+  portalPassword?: string;
   code?: string;
   tempAccessCode?: string;
   fullName?: string;
@@ -104,8 +104,6 @@ export interface StaffMember {
   createdAt?: string;
   // Authentication fields - canonical fields kept in sync
   password?: string;
-  accessCode?: string;
-  portalPassword?: string;
   generatedPassword?: string;
   passwordHash?: string;
   lastPasswordChange?: string;
@@ -876,7 +874,8 @@ export default function StaffRegistry() {
     }
 
     // Also update teachingSubjects/subjects
-    const updatedSubjects = Array.from(new Set(rawAssignments.map((a: any) => typeof a === 'string' ? a : (a.subject || a.name || ''))).filter(Boolean));
+    const subjArr = rawAssignments.map((a: any) => typeof a === 'string' ? a : (a.subject || a.name || ''));
+    const updatedSubjects = Array.from(new Set(subjArr)).filter(Boolean) as string[];
     if (updatedSubjects.length === 0 && fallbackSubjects.length > 0) {
       fallbackSubjects.splice(badgeIndex, 1);
     }

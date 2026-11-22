@@ -28,6 +28,7 @@ import {
   Printer,
   Mail,
   BarChart2,
+  Settings,
   Calendar,
   Package,
   BookCheck,
@@ -265,10 +266,10 @@ export default function LibraryDashboard() {
     
     const csvHeader = getSchoolHeaderCsv(reportTitle, reportDate);
     const csvColumns = 'Book Title,Borrower Name,Grade,Issue Date,Due Date,Days Overdue,Status\n';
-    const csvRows = overdueItems.map(c => {
-      const due = new Date(c.dueDate || c.returnDeadline);
+    const csvRows = overdueItems.map((c: any) => {
+      const due = new Date(c.dueDate || c.returnDeadline || c.issuedDate || c.date_due || Date.now());
       const daysOverdue = Math.ceil((todayDate.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
-      return `"${c.bookTitle || c.title || ''}","${c.borrowerName || c.learnerName || ''}","${c.grade || ''}","${c.issueDate || ''}","${c.dueDate || ''}",${daysOverdue},"${c.status || 'OVERDUE'}"`;
+      return `"${c.bookTitle || c.title || c.book_title || ''}","${c.borrowerName || c.learnerName || c.borrower_name || ''}","${c.grade || ''}","${c.issueDate || c.issuedDate || c.date_issued || ''}","${c.dueDate || c.due_date || ''}",${daysOverdue},"${c.status || 'OVERDUE'}"`;
     }).join('\n');
     
     const csvContent = csvHeader + csvColumns + csvRows;
@@ -304,15 +305,15 @@ export default function LibraryDashboard() {
     // Inventory section
     const invHeader = '\n=== LIBRARY INVENTORY ===\n';
     const invColumns = 'Title,Author,Category,ISBN,Total Copies,Available,Publisher\n';
-    const invRows = books.map(b => 
-      `"${b.title}","${b.author || ''}","${b.category}","${b.isbn || ''}",${b.quantity || b.copies || b.stock || 1},${b.quantity || b.copies || b.stock || 1},"${b.publisher || ''}"`
+    const invRows = books.map((b: any) =>
+      `"${b.title}","${b.author || ''}","${b.category}","${b.isbn || ''}",${b.quantity || b.copies || b.stock || b.totalCopies || 1},${b.quantity || b.copies || b.stock || b.totalCopies || 1},"${b.publisher || ''}"`
     ).join('\n');
     
     // Circulation section
     const circHeader = '\n=== CIRCULATION LOGS ===\n';
     const circColumns = 'Book Title,Borrower Name,Grade,Issue Date,Due Date,Status,Qty Issued,Qty Returned,Qty Lost\n';
-    const circRows = circulation.map(c => 
-      `"${c.bookTitle || c.title || ''}","${c.borrowerName || c.learnerName || ''}","${c.grade || ''}","${c.issueDate || ''}","${c.dueDate || ''}","${c.status || ''}",${c.qty_issued || 1},${c.qty_returned || 0},${c.qty_lost || 0}`
+    const circRows = circulation.map((c: any) =>
+      `"${c.bookTitle || c.title || c.book_title || ''}","${c.borrowerName || c.learnerName || c.borrower_name || ''}","${c.grade || ''}","${c.issueDate || c.issuedDate || c.date_issued || ''}","${c.dueDate || c.due_date || ''}","${c.status || ''}",${c.qty_issued || 1},${c.qty_returned || 0},${c.qty_lost || 0}`
     ).join('\n');
     
     // Allocations section
@@ -1007,8 +1008,8 @@ export default function LibraryDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                   <h5 className="font-bold text-slate-900 text-sm mb-2">Export Format</h5>
-                  <Select defaultValue="csv" className="w-full">
-                    <SelectTrigger className="text-xs h-8">
+                  <Select defaultValue="csv">
+                    <SelectTrigger className="text-xs h-8 w-full">
                       <SelectValue placeholder="Select format" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1020,8 +1021,8 @@ export default function LibraryDashboard() {
                 </div>
                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                   <h5 className="font-bold text-slate-900 text-sm mb-2">Date Range</h5>
-                  <Select defaultValue="all" className="w-full">
-                    <SelectTrigger className="text-xs h-8">
+                  <Select defaultValue="all">
+                    <SelectTrigger className="text-xs h-8 w-full">
                       <SelectValue placeholder="Select range" />
                     </SelectTrigger>
                     <SelectContent>
