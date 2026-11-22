@@ -34,7 +34,6 @@ import PaymentManagement from './PaymentManagement';
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 import { getStoredStaff } from '@/utils/storage';
-import { useNavigate } from 'react-router-dom';
 
 export default function JamlyanAnalyticsPortal() {
   const navigate = useNavigate();
