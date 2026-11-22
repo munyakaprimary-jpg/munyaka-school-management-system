@@ -4,6 +4,7 @@ import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
+import { useSessionPresence } from "@/hooks/useSessionPresence";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { CorruptedLearnerPurgeGuard } from "@/components/common/CorruptedLearnerPurgeGuard";
 import { TooltipProvider } from "@/components/ui/tooltip";

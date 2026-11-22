@@ -43,13 +43,15 @@ import { getStoredStaff } from '@/utils/storage';
 
 export default function JamlyanAnalyticsPortal() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions' | 'locks' | 'updates' | 'diagnostics' | 'lan'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions' | 'locks' | 'updates' | 'diagnostics' | 'lan' | 'users'>('overview');
   const [lanServerUrl, setLanServerUrl] = useState(() => localStorage.getItem('munyaka_lan_server_url') || localStorage.getItem('lan_server_url') || 'http://192.168.1.100:3001');
   const [autoDiscovery, setAutoDiscovery] = useState(() => localStorage.getItem('munyaka_lan_auto_discovery') === 'true');
   const [syncInterval, setSyncInterval] = useState(() => localStorage.getItem('munyaka_lan_sync_interval') || '30');
   const [syncMode, setSyncMode] = useState(() => localStorage.getItem('munyaka_lan_sync_mode') || 'hybrid');
   const [isTestingLan, setIsTestingLan] = useState(false);
   const [lanTestResult, setLanTestResult] = useState<{ success: boolean; message: string; timestamp?: string } | null>(null);
+  const [activeUsersSearch, setActiveUsersSearch] = useState('');
+  const [activeUsersRoleFilter, setActiveUsersRoleFilter] = useState('all');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState('Online (Firestore + LocalStorage)');
@@ -341,6 +343,18 @@ export default function JamlyanAnalyticsPortal() {
             <Wifi size={18} />
             <span>LAN Configuration</span>
           </button>
+
+          <button
+            onClick={() => { setActiveTab('users'); setMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
+              activeTab === 'users'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <Users size={18} />
+            <span>Connected Users</span>
+          </button>
         </nav>
 
         {/* Sidebar Footer */}
@@ -385,6 +399,7 @@ export default function JamlyanAnalyticsPortal() {
                 {activeTab === 'updates' && 'System Releases & Maintenance Mode'}
                 {activeTab === 'diagnostics' && 'System Diagnostics & Firestore Sync'}
                 {activeTab === 'lan' && 'LAN Wi-Fi Server Configuration & Sync'}
+                {activeTab === 'users' && 'Connected Active Users Monitor'}
               </h1>
               <p className="text-xs md:text-sm text-slate-300 max-w-2xl">
                 Authorized operator portal for Jamlyan Analytics. Monitor tenant seat utilization, subscription invoices, global teacher-app security locks, and system updates.
