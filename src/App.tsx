@@ -553,6 +553,8 @@ const App = () => {
 
                       {/* Protected Routes */}
                       <Route path="/jamlyan-analytics" element={<ProtectedRoute allowedRoles={['jamlyan_analytics', 'platform_owner', 'owner', 'super_admin']}><JamlyanAnalyticsPortal /></ProtectedRoute>} />
+                      <Route path="/jamlyan-analytics/subscriptions" element={<ProtectedRoute allowedRoles={['jamlyan_analytics', 'platform_owner', 'owner', 'super_admin']}><JamlyanAnalyticsPortal /></ProtectedRoute>} />
+                      <Route path="/payment-management" element={<ProtectedRoute allowedRoles={['jamlyan_analytics', 'platform_owner', 'owner', 'super_admin']}><PaymentManagement /></ProtectedRoute>} />
                       <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'owner', 'developer', 'super_admin', 'school_admin']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />

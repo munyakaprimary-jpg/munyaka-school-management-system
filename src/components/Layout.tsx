@@ -423,7 +423,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Award, label: 'Exam Types', path: '/exam-types' },
     { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants' },
     { icon: Wifi, label: 'LAN Server Config', path: '/lan-server-config' },
-    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management' },
     { icon: Server, label: 'Admin Control Center', path: '/admin/control-center' },
     { icon: MessageSquare, label: 'Communication', path: '/communication' },
     { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication' },

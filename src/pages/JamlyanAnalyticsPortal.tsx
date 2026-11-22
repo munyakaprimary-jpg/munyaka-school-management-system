@@ -1,26 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ShieldCheck, 
-  Activity, 
-  Database, 
-  Server, 
-  RefreshCw, 
-  Key, 
-  Users, 
-  Settings, 
-  Calendar, 
-  DollarSign, 
-  CreditCard, 
-  Lock, 
-  Unlock, 
-  AlertTriangle, 
-  CheckCircle2, 
-  LogOut, 
-  Bell, 
-  Smartphone, 
+import { useNavigate } from 'react-router-dom';
+import {
+  ShieldCheck,
+  Activity,
+  Database,
+  Server,
+  RefreshCw,
+  Key,
+  Users,
+  Settings,
+  Calendar,
+  DollarSign,
+  CreditCard,
+  Lock,
+  Unlock,
+  AlertTriangle,
+  CheckCircle2,
+  LogOut,
+  Bell,
+  Smartphone,
   Building2,
   FileText,
-  Trash2
+  Trash2,
+  LayoutDashboard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { showSuccess, showError } from '@/utils/toast';
+import PaymentManagement from './PaymentManagement';
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 import { getStoredStaff } from '@/utils/storage';
@@ -35,6 +38,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function JamlyanAnalyticsPortal() {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions'>('overview');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState('Online (Firestore + LocalStorage)');
 
@@ -232,6 +236,20 @@ export default function JamlyanAnalyticsPortal() {
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant={activeTab === 'overview' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('overview')}
+              className={activeTab === 'overview' ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-2xl h-12 px-5' : 'bg-slate-900/80 border-indigo-500/40 text-indigo-200 hover:bg-indigo-950 font-bold rounded-2xl h-12 px-5'}
+            >
+              <LayoutDashboard size={16} className="mr-2" /> Platform Overview
+            </Button>
+            <Button
+              variant={activeTab === 'subscriptions' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('subscriptions')}
+              className={activeTab === 'subscriptions' ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-2xl h-12 px-5' : 'bg-slate-900/80 border-indigo-500/40 text-indigo-200 hover:bg-indigo-950 font-bold rounded-2xl h-12 px-5'}
+            >
+              <CreditCard size={16} className="mr-2" /> Payment & Subscription
+            </Button>
             <Button
               variant="outline"
               onClick={handleSyncFirestore}
