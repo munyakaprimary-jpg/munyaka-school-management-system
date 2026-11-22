@@ -196,8 +196,16 @@ export default function JamlyanAnalyticsPortal() {
   const handleLogout = () => {
     localStorage.removeItem('jamlyan_operator_session');
     localStorage.removeItem('munyaka_user');
+    localStorage.removeItem('munyaka_session');
+    localStorage.removeItem('munyaka_current_user');
+    localStorage.removeItem('munyaka_admin_session');
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userRole');
+    sessionStorage.clear();
     showSuccess('Logged out of Jamlyan Analytics operator session.');
-    navigate('/login');
+    navigate('/login', { replace: true });
+    window.location.hash = '#/login';
+    window.location.reload();
   };
 
   return (
