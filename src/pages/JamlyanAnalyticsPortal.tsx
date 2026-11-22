@@ -40,8 +40,11 @@ import { Switch } from '@/components/ui/switch';
 import PaymentManagement from './PaymentManagement';
 import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 import { getStoredStaff } from '@/utils/storage';
+import { useSessionHeartbeat } from '@/utils/sessionHeartbeat';
+import { ConnectedActiveUsersMonitor } from '@/components/ConnectedActiveUsersMonitor';
 
 export default function JamlyanAnalyticsPortal() {
+  useSessionHeartbeat();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions' | 'locks' | 'updates' | 'diagnostics' | 'lan' | 'users'>('overview');
   const [lanServerUrl, setLanServerUrl] = useState(() => localStorage.getItem('munyaka_lan_server_url') || localStorage.getItem('lan_server_url') || 'http://192.168.1.100:3001');
@@ -424,6 +427,8 @@ export default function JamlyanAnalyticsPortal() {
           <div className="bg-slate-900 rounded-[2rem] p-6 border border-slate-800">
             <PaymentManagement />
           </div>
+        ) : activeTab === 'users' ? (
+          <ConnectedActiveUsersMonitor />
         ) : activeTab === 'locks' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
