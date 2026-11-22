@@ -90,6 +90,10 @@ const ProtectedRoute = ({
   const isTeacherRole = rawRole.includes('teacher') || rawRole === 'staff' || rawRole === 'subject_teacher' || rawRole === 'class_teacher' || rawRole === 'senior_teacher';
   const isOwnerOrSuper = !isTeacherRole && (upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN' || upperRole === 'SUPER' || upperRole === 'SUPERADMIN' || upperRole === 'SCHOOL_ADMIN');
   const isAdmin = !isTeacherRole && (upperRole === 'ADMIN' || upperRole === 'HOI' || upperRole === 'DHOI' || upperRole === 'ADMINISTRATOR' || upperRole === 'SCHOOL_ADMIN' || upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN');
+  const isStudentUser = isStudentRole(user);
+  const isStudentSafePath = STUDENT_ALLOWED_PATHS.some(
+    (p) => location.pathname === p || location.pathname.startsWith(p + '/')
+  );
 
   // Determine corresponding module key from pathname if not explicitly provided
   let targetModuleKey = moduleKey;
