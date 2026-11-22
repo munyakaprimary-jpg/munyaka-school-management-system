@@ -754,38 +754,34 @@ const Login: React.FC = () => {
 
           {/* ── Portal Access Tabs ── */}
                     <Tabs defaultValue="staff" className="w-full">
-                      <TabsList className="grid w-full grid-cols-4 h-12 rounded-2xl bg-amber-950/80 p-1 gap-1 border border-amber-600/30">
+                      <TabsList className="flex flex-wrap sm:flex-nowrap items-stretch gap-1.5 w-full h-auto min-h-12 rounded-2xl bg-amber-950/80 p-1.5 border border-amber-600/30 overflow-hidden">
                         <TabsTrigger
                           value="student"
-                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-indigo-600 data-[state=active]:bg-white data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                          className="min-w-0 flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all truncate"
                         >
-                          <GraduationCap size={12} className="mr-1 shrink-0" />
-                          <span className="hidden sm:inline">Student</span>
-                          <span className="sm:hidden">Student</span>
+                          <GraduationCap size={14} className="shrink-0" />
+                          <span className="truncate">Student</span>
                         </TabsTrigger>
                         <TabsTrigger
                           value="staff"
-                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-amber-500 data-[state=active]:bg-amber-500 data-[state=active]:text-amber-950 data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                          className="min-w-0 flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider data-[state=active]:bg-amber-500 data-[state=active]:text-amber-950 data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all truncate"
                         >
-                          <User size={12} className="mr-1 shrink-0" />
-                          <span className="hidden sm:inline">Staff</span>
-                          <span className="sm:hidden">Staff</span>
+                          <User size={14} className="shrink-0" />
+                          <span className="truncate">Staff</span>
                         </TabsTrigger>
                         <TabsTrigger
                           value="admin"
-                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-indigo-600 data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                          className="min-w-0 flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all truncate"
                         >
-                          <Settings2 size={12} className="mr-1 shrink-0" />
-                          <span className="hidden sm:inline">Admin</span>
-                          <span className="sm:hidden">Admin</span>
+                          <Settings2 size={14} className="shrink-0" />
+                          <span className="truncate">Admin</span>
                         </TabsTrigger>
                         <TabsTrigger
                           value="super"
-                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                          className="min-w-0 flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-wider data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all truncate"
                         >
-                          <Crown size={12} className="mr-1 shrink-0" />
-                          <span className="hidden sm:inline">Jamlyan Analytics</span>
-                          <span className="sm:hidden">Jamlyan Analytics</span>
+                          <Crown size={14} className="shrink-0" />
+                          <span className="truncate">Jamlyan Analytics</span>
                         </TabsTrigger>
                       </TabsList>
 
