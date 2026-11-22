@@ -151,7 +151,7 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     id: 'admin',
     label: 'School Administrator',
     description: 'Full access: Settings, Users, Fees, Academics, RBAC, Security',
-    fullDescription: 'Manage system settings, users, academics, RBAC permissions, and overall school operations.',
+    fullDescription: 'Manage system settings, users, academics, RBAC permissions, and overall school operations. School administrators authenticate strictly to the School Admin Portal and never receive platform subscription or app-lock override controls.',
     email: 'sysadmin@munyaka.sc.ke',
     userName: 'School Administrator',
     userRole: 'admin',
@@ -162,11 +162,11 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
   },
   owner: {
     id: 'owner',
-    label: 'School Owner',
-    description: 'Billing & Subscription Console — Owner Dashboard',
-    fullDescription: 'Dedicated access to subscriptions, payment management, financial health, and seat utilization. No access to operational routes (learners, attendance, settings).',
-    email: 'jamesndiki@gmail.com',
-    userName: 'School Owner',
+    label: 'Jamlyan Analytics',
+    description: 'Jamlyan Analytics Operator Console — System Updates, Subscriptions & App-Lock Controls',
+    fullDescription: 'Authorized Jamlyan Analytics operator access for system updates, maintenance, subscription billing, and persistent teacher-app lock controls. Strictly restricted to Jamlyan Analytics operators.',
+    email: 'operator@jamlyan.com',
+    userName: 'Jamlyan Analytics Operator',
     userRole: 'owner',
     redirectPath: '/dashboard',
     icon: Crown,
@@ -266,6 +266,7 @@ const Login: React.FC = () => {
   // ── Admin state ──────────────────────────────────────────────────────────
   const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>(null);
   const [adminPassword, setAdminPassword] = useState('');
+  const [ownerEmailInput, setOwnerEmailInput] = useState('operator@jamlyan.com');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminAuthError, setAdminAuthError] = useState('');
   const [isAdminVerifying, setIsAdminVerifying] = useState(false);
@@ -749,11 +750,11 @@ const Login: React.FC = () => {
                         </TabsTrigger>
                         <TabsTrigger
                           value="super"
-                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-amber-600 data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
                         >
                           <Crown size={12} className="mr-1 shrink-0" />
-                          <span className="hidden sm:inline">Owner</span>
-                          <span className="sm:hidden">Owner</span>
+                          <span className="hidden sm:inline">Jamlyan Analytics</span>
+                          <span className="sm:hidden">Jamlyan Analytics</span>
                         </TabsTrigger>
                       </TabsList>
 
@@ -832,7 +833,7 @@ const Login: React.FC = () => {
                                   <Crown size={32} />
                                 </div>
                                 <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
-                                  {ROLE_CONFIGS.owner.label}
+                                  Jamlyan Analytics Operator
                                 </h2>
                                 <p className="text-xs md:text-sm text-slate-400 font-medium mt-1">
                                   {ROLE_CONFIGS.owner.fullDescription}
@@ -846,15 +847,28 @@ const Login: React.FC = () => {
                               )}
                               <form onSubmit={(e) => { setSelectedAdminRole('owner'); handleAdminLogin(e); }} className="space-y-5">
                                 <div className="space-y-2">
-                                  <Label className="text-xs font-black uppercase tracking-widest text-slate-500">Password</Label>
+                                  <Label className="text-xs font-black uppercase tracking-widest text-slate-500">Jamlyan Analytics Operator Email</Label>
+                                  <div className="relative">
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                                    <Input
+                                      type="email"
+                                      value={ownerEmailInput}
+                                      onChange={e => { setOwnerEmailInput(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
+                                      placeholder="Enter Jamlyan Analytics operator email"
+                                      className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-bold text-base focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder-slate-500"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-xs font-black uppercase tracking-widest text-slate-500">Jamlyan Analytics Access Code</Label>
                                   <div className="relative">
                                     <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                                     <Input
                                       type={showAdminPassword ? 'text' : 'password'}
                                       value={adminPassword}
                                       onChange={e => { setSelectedAdminRole('owner'); setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
-                                      placeholder="Enter your password"
-                                      className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-bold text-base focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 placeholder-slate-500"
+                                      placeholder="Enter Jamlyan Analytics operator access code"
+                                      className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-bold text-base focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder-slate-500"
                                     />
                                     <button
                                       type="button"
@@ -865,12 +879,7 @@ const Login: React.FC = () => {
                                     </button>
                                   </div>
                                   <p className="text-[10px] text-slate-500 font-medium pt-1">
-                                    {hasCustomAdminPassword() ? (
-                                      <span className="flex items-center gap-1">
-                                        <KeyRound size={9} />
-                                        Custom PIN — set via Configuration → Owner Security
-                                      </span>
-                                    ) : null}
+                                    Authorized Jamlyan Analytics credentials required. School admin credentials are automatically rejected.
                                   </p>
                                 </div>
                                 <Button
