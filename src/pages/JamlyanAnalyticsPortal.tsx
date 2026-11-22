@@ -31,7 +31,7 @@ export default function JamlyanAnalyticsPortal() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions' | 'locks' | 'updates' | 'diagnostics' | 'lan' | 'users'>('overview');
 
-  // Dynamic Subscription & Lock State
+  // Dynamic Subscription & Lock State (Single Declaration)
   const [licenseInfo, setLicenseInfo] = useState({
     badgeText: 'LICENSED · 8D LEFT',
     badgeVariant: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
