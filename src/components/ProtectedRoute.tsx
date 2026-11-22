@@ -77,26 +77,14 @@ const ProtectedRoute = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  const rawRole = String(user.role || '').toLowerCase().trim();
+  const upperRole = rawRole.toUpperCase();
+
   // ── Jamlyan Analytics strict routing check ──
   const isJamlyanAnalyticsUser = rawRole === 'jamlyan_analytics' || rawRole === 'jamlyan' || rawRole === 'analytics';
   if (isJamlyanAnalyticsUser && location.pathname !== '/jamlyan-analytics') {
     return <Navigate to="/jamlyan-analytics" replace />;
   }
-
-  // ── Strict RBAC: STUDENT / non-staff users are blocked from Teacher Portal routes ──
-  const isStudentUser = isStudentRole(user);
-
-  // Student-safe routes: learners may take assessments / view set exams.
-  const isStudentSafePath = STUDENT_ALLOWED_PATHS.some(
-    (p) => location.pathname === p || location.pathname.startsWith(p + '/')
-  );
-
-  if (isStudentUser && !isStudentSafePath) {
-    return <UnauthorizedAccess />;
-  }
-
-  const rawRole = String(user.role || '').toLowerCase().trim();
-  const upperRole = rawRole.toUpperCase();
 
   // Strict check: subject teachers, class teachers, and teachers must never be treated as admin
   const isTeacherRole = rawRole.includes('teacher') || rawRole === 'staff' || rawRole === 'subject_teacher' || rawRole === 'class_teacher' || rawRole === 'senior_teacher';
