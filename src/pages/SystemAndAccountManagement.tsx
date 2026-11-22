@@ -260,9 +260,6 @@ const SystemAndAccountManagement = () => {
           <TabsTrigger value="logins" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
             <ShieldCheck size={16} /> Portal Logins
           </TabsTrigger>
-          <TabsTrigger value="network" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
-            <Wifi size={16} /> Network & Quotas
-          </TabsTrigger>
           <TabsTrigger value="lab" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
             <Monitor size={16} /> Lab Schedules
           </TabsTrigger>
@@ -272,120 +269,6 @@ const SystemAndAccountManagement = () => {
         </TabsList>
 
         {/* --- TAB 1: PORTAL LOGINS (Staff & Teacher Registry is now the unified auth source) --- */}
-        <TabsContent value="logins" className="space-y-8">
-          <div className="p-6 bg-indigo-50 rounded-2xl border border-indigo-100">
-            <div className="flex items-start gap-3">
-              <ShieldCheck size={20} className="text-indigo-600 shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-bold text-slate-900">Unified Authentication</h3>
-                <p className="text-sm text-slate-500 mt-1">
-                  All staff login credentials are now managed through the <strong>Staff & Teacher Registry</strong>.
-                  User accounts are no longer stored in a separate table.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200">
-            <p className="text-sm text-slate-500">
-              To manage staff login credentials, access codes, passwords, and account status, please visit the{' '}
-              <strong>Staff & Teacher Registry</strong> section.
-            </p>
-          </div>
-        </TabsContent>
-
-        {/* --- TAB 2: NETWORK USAGE --- */}
-        <TabsContent value="network" className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-none shadow-sm rounded-3xl bg-indigo-600 text-white p-8 relative overflow-hidden">
-              <div className="absolute right-[-10px] top-[-10px] opacity-10"><Wifi size={120} /></div>
-              <p className="text-xs font-black uppercase tracking-widest text-indigo-200">Daily Bandwidth Used</p>
-              <h3 className="text-4xl font-black mt-2">{networkStats.bandwidth}</h3>
-              <p className="text-xs font-medium text-indigo-200 mt-4 flex items-center gap-1"><HardDrive size={12} /> Safaricom Fiber Connection</p>
-            </Card>
-            <Card className="border-none shadow-sm rounded-3xl bg-white p-8">
-              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Active Devices</p>
-              <h3 className="text-4xl font-black text-slate-900 mt-2">{networkStats.active}</h3>
-              <p className="text-xs font-bold text-emerald-600 mt-4 flex items-center gap-1"><Activity size={12} /> Real-time Monitoring</p>
-            </Card>
-            <Card className="border-none shadow-sm rounded-3xl bg-white p-8">
-              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Avg. Daily Quota</p>
-              <h3 className="text-4xl font-black text-slate-900 mt-2">{networkStats.quotaAvg}</h3>
-              <p className="text-xs font-bold text-slate-400 mt-4 flex items-center gap-1"><ShieldCheck size={12} /> Security Policies Active</p>
-            </Card>
-          </div>
-
-          <div className="flex justify-between items-center bg-white p-5 rounded-[2rem] shadow-sm border-none">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-slate-50 text-indigo-600 rounded-2xl"><Globe size={24} /></div>
-              <div>
-                <h4 className="font-bold text-slate-900">Network Access Control</h4>
-                <p className="text-xs text-slate-400">Manage individual device quotas and connection status.</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" className="rounded-xl border-slate-200 font-bold gap-2 text-rose-600 hover:bg-rose-50"><Ban size={16} /> Revoke Guest Access</Button>
-              <Button variant="outline" className="rounded-xl border-slate-200 font-bold gap-2"><RefreshCw size={16} /> Reset All Quotas</Button>
-            </div>
-          </div>
-
-          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-sm text-left min-w-[900px]">
-                  <thead className="text-slate-500 border-b bg-slate-50/50">
-                    <tr>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">MAC / IP Address</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Owner & Role</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Data Usage (Current vs Quota)</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center whitespace-nowrap">Status</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right whitespace-nowrap">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {devices.map((dev) => {
-                      const usagePct = (dev.used / dev.quota) * 100;
-                      return (
-                        <tr key={dev.id} className="hover:bg-slate-50/50 transition-colors group">
-                                                  <td className="px-8 py-6 max-w-[180px]">
-                                                    <p className="font-mono font-bold text-slate-700 truncate">{dev.mac}</p>
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter truncate">IP: 192.168.1.{Math.floor(Math.random() * 254)}</p>
-                                                  </td>
-                                                  <td className="px-8 py-6 max-w-[180px]">
-                                                    <p className="font-bold text-slate-900 truncate">{dev.owner}</p>
-                                                    <p className="text-xs font-medium text-slate-400 truncate">{dev.role}</p>
-                                                  </td>
-                                                  <td className="px-8 py-6 max-w-[200px]">
-                                                    <div className="space-y-1.5">
-                                                      <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">
-                                                        <span>{dev.used.toFixed(1)} GB / {dev.quota.toFixed(1)} GB</span>
-                                                        <span className={cn(usagePct > 90 ? "text-rose-600" : "text-indigo-600")}>{Math.round(usagePct)}%</span>
-                                                      </div>
-                                                      <Progress value={usagePct} className={cn("h-1.5", usagePct > 90 && "[&>div]:bg-rose-500")} />
-                                                    </div>
-                                                  </td>
-                                                  <td className="px-8 py-6 text-center whitespace-nowrap">
-                                                    <Badge className={cn("rounded-full h-2.5 w-2.5 p-0 border-none", dev.status === 'Online' ? "bg-emerald-500 animate-pulse" : "bg-slate-300")} title={dev.status} />
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase ml-2">{dev.status}</span>
-                                                  </td>
-                                                  <td className="px-8 py-6 text-right whitespace-nowrap">
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      className="rounded-xl h-9 px-4 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
-                                                      onClick={() => handleAdjustQuota(dev.owner)}
-                                                    >
-                                                      Adjust Quota
-                                                    </Button>
-                                                  </td>
-                                                </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* --- TAB 3: LAB SCHEDULES --- */}
         <TabsContent value="lab" className="space-y-8">

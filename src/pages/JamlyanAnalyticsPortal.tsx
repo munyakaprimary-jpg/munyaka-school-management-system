@@ -26,7 +26,9 @@ import {
   Menu,
   X,
   Cpu,
-  HardDrive
+  HardDrive,
+  Wifi,
+  Globe
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,7 +43,13 @@ import { getStoredStaff } from '@/utils/storage';
 
 export default function JamlyanAnalyticsPortal() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions' | 'locks' | 'updates' | 'diagnostics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions' | 'locks' | 'updates' | 'diagnostics' | 'lan'>('overview');
+  const [lanServerUrl, setLanServerUrl] = useState(() => localStorage.getItem('munyaka_lan_server_url') || localStorage.getItem('lan_server_url') || 'http://192.168.1.100:3001');
+  const [autoDiscovery, setAutoDiscovery] = useState(() => localStorage.getItem('munyaka_lan_auto_discovery') === 'true');
+  const [syncInterval, setSyncInterval] = useState(() => localStorage.getItem('munyaka_lan_sync_interval') || '30');
+  const [syncMode, setSyncMode] = useState(() => localStorage.getItem('munyaka_lan_sync_mode') || 'hybrid');
+  const [isTestingLan, setIsTestingLan] = useState(false);
+  const [lanTestResult, setLanTestResult] = useState<{ success: boolean; message: string; timestamp?: string } | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState('Online (Firestore + LocalStorage)');
@@ -321,6 +329,18 @@ export default function JamlyanAnalyticsPortal() {
             <Activity size={18} />
             <span>System Diagnostics & Sync</span>
           </button>
+
+          <button
+            onClick={() => { setActiveTab('lan'); setMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
+              activeTab === 'lan'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <Wifi size={18} />
+            <span>LAN Configuration</span>
+          </button>
         </nav>
 
         {/* Sidebar Footer */}
@@ -364,6 +384,7 @@ export default function JamlyanAnalyticsPortal() {
                 {activeTab === 'locks' && 'Teacher App Access & Persistent Locks'}
                 {activeTab === 'updates' && 'System Releases & Maintenance Mode'}
                 {activeTab === 'diagnostics' && 'System Diagnostics & Firestore Sync'}
+                {activeTab === 'lan' && 'LAN Wi-Fi Server Configuration & Sync'}
               </h1>
               <p className="text-xs md:text-sm text-slate-300 max-w-2xl">
                 Authorized operator portal for Jamlyan Analytics. Monitor tenant seat utilization, subscription invoices, global teacher-app security locks, and system updates.
@@ -435,6 +456,172 @@ export default function JamlyanAnalyticsPortal() {
                     <p className="text-xs text-slate-400">Allow Jamlyan Analytics operator emergency override</p>
                   </div>
                   <Switch checked={ownerBypass} onCheckedChange={handleToggleBypass} />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : activeTab === 'lan' ? (
+          <div className="space-y-6">
+            <Card className="rounded-[2.5rem] bg-slate-900 border-slate-800 text-white shadow-2xl overflow-hidden">
+              <CardHeader className="p-8 border-b border-slate-800 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-black flex items-center gap-3">
+                    <Wifi size={24} className="text-amber-400" /> LAN Wi-Fi Server & Local Sync Configuration
+                  </CardTitle>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Manage local Node.js LAN server endpoints, synchronization frequency, and hybrid offline/online connection modes for school devices.
+                  </p>
+                </div>
+                <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-4 py-1.5 rounded-full font-bold text-xs">
+                  Jamlyan LAN Operator
+                </Badge>
+              </CardHeader>
+              <CardContent className="p-8 space-y-8">
+                {/* 1. Endpoint & Mode Settings */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                      <Globe size={16} className="text-amber-400" /> Local Node.js LAN Server URL & Port
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={lanServerUrl}
+                        onChange={(e) => setLanServerUrl(e.target.value)}
+                        placeholder="http://192.168.1.100:3001"
+                        className="bg-slate-950 border-slate-800 text-white font-mono h-12 rounded-2xl"
+                      />
+                      <Button
+                        onClick={() => {
+                          localStorage.setItem('munyaka_lan_server_url', lanServerUrl);
+                          localStorage.setItem('lan_server_url', lanServerUrl);
+                          showSuccess('LAN server URL successfully saved!');
+                        }}
+                        className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-2xl px-6 h-12"
+                      >
+                        Save
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Example: <code className="text-amber-300 font-mono">http://192.168.1.100:3001</code> or <code className="text-amber-300 font-mono">http://localhost:3001</code>
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                      <RefreshCw size={16} className="text-amber-400" /> Hybrid Sync Mode
+                    </Label>
+                    <select
+                      value={syncMode}
+                      onChange={(e) => {
+                        setSyncMode(e.target.value);
+                        localStorage.setItem('munyaka_lan_sync_mode', e.target.value);
+                        showSuccess(`Sync mode updated to ${e.target.value.toUpperCase()}`);
+                      }}
+                      className="w-full bg-slate-950 border border-slate-800 text-white font-bold h-12 px-4 rounded-2xl focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="hybrid">Hybrid (LAN + Firestore + LocalStorage)</option>
+                      <option value="lan_only">LAN Only (Offline School Wi-Fi Router)</option>
+                      <option value="standalone">Standalone Local + Cloud Fallback</option>
+                    </select>
+                    <p className="text-[11px] text-slate-400">
+                      Determines how client devices synchronize records across local Wi-Fi and cloud Firestore.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Auto-Discovery & Interval */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
+                  <div className="flex items-center justify-between p-5 rounded-2xl bg-slate-950 border border-slate-800">
+                    <div>
+                      <p className="font-bold text-sm text-white">LAN Server Auto-Discovery</p>
+                      <p className="text-xs text-slate-400 mt-0.5">Automatically broadcast and discover school server on local subnet</p>
+                    </div>
+                    <Switch
+                      checked={autoDiscovery}
+                      onCheckedChange={(checked) => {
+                        setAutoDiscovery(checked);
+                        localStorage.setItem('munyaka_lan_auto_discovery', String(checked));
+                        showSuccess(checked ? 'LAN Auto-Discovery Enabled' : 'LAN Auto-Discovery Disabled');
+                      }}
+                    />
+                  </div>
+
+                  <div className="space-y-3 p-5 rounded-2xl bg-slate-950 border border-slate-800">
+                    <div className="flex justify-between">
+                      <Label className="text-xs font-bold text-white uppercase tracking-wider">Background Sync Interval</Label>
+                      <span className="text-xs font-mono font-bold text-amber-400">{syncInterval} seconds</span>
+                    </div>
+                    <select
+                      value={syncInterval}
+                      onChange={(e) => {
+                        setSyncInterval(e.target.value);
+                        localStorage.setItem('munyaka_lan_sync_interval', e.target.value);
+                      }}
+                      className="w-full bg-slate-900 border border-slate-800 text-white font-bold h-10 px-3 rounded-xl"
+                    >
+                      <option value="10">Every 10 seconds</option>
+                      <option value="30">Every 30 seconds (Recommended)</option>
+                      <option value="60">Every 1 minute</option>
+                      <option value="300">Every 5 minutes</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 3. Live Heartbeat & Connection Tester */}
+                <div className="pt-6 border-t border-slate-800 space-y-6">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-950 border border-slate-800">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex h-3 w-3">
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${lanTestResult?.success ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+                          <span className={`relative inline-flex rounded-full h-3 w-3 ${lanTestResult?.success ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                        </span>
+                        <h4 className="font-bold text-white text-sm">
+                          {lanTestResult ? (lanTestResult.success ? 'LAN Server Connected & Operational' : 'LAN Server Unreachable (Standalone Mode)') : 'LAN Connection Status Ready'}
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        {lanTestResult ? lanTestResult.message : `Configured target endpoint: ${lanServerUrl}`}
+                      </p>
+                      {lanTestResult?.timestamp && (
+                        <p className="text-[10px] font-mono text-slate-500 mt-1">Last Tested: {lanTestResult.timestamp}</p>
+                      )}
+                    </div>
+
+                    <Button
+                      disabled={isTestingLan}
+                      onClick={async () => {
+                        setIsTestingLan(true);
+                        try {
+                          const res = await fetch(`${lanServerUrl}/api/health`, { method: 'GET', signal: AbortSignal.timeout(4000) });
+                          if (res.ok) {
+                            const data = await res.json().catch(() => ({}));
+                            setLanTestResult({
+                              success: true,
+                              message: `Successfully connected to LAN Server (${data.message || 'Online'})`,
+                              timestamp: new Date().toLocaleTimeString(),
+                            });
+                            showSuccess('LAN Server Connection Verified Successfully!');
+                          } else {
+                            throw new Error('Server responded with status ' + res.status);
+                          }
+                        } catch (err: any) {
+                          setLanTestResult({
+                            success: false,
+                            message: `Could not reach ${lanServerUrl} (${err.message || 'Network timeout'}). Running in Standalone / Firestore Fallback mode.`,
+                            timestamp: new Date().toLocaleTimeString(),
+                          });
+                          showError('LAN Connection Test Failed — Server unreachable on local network.');
+                        } finally {
+                          setIsTestingLan(false);
+                        }
+                      }}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl h-12 px-6 shrink-0 shadow-lg"
+                    >
+                      <RefreshCw size={16} className={`mr-2 ${isTestingLan ? 'animate-spin' : ''}`} />
+                      {isTestingLan ? 'Testing Connection...' : 'Test LAN Connection & Sync'}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
