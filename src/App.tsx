@@ -135,7 +135,6 @@ import SecurityPortalView from "./pages/SecurityPortalView";
 import AssessmentSettings from "./pages/AssessmentSettings";
 import QuestionCreator from "./pages/QuestionCreator";
 import LearnerAssessment from "./pages/LearnerAssessment";
-import StudentDashboard from "./pages/StudentDashboard";
 import GradingReview from "./pages/GradingReview";
 import AssessmentImport from "./pages/AssessmentImport";
 import LearnerAssessmentPage from "./pages/LearnerAssessmentPage";
