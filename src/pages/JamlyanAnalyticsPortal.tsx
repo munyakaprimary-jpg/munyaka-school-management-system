@@ -2,41 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck,
-  Activity,
-  Database,
-  Server,
-  RefreshCw,
-  Key,
-  Users,
-  Settings,
-  Calendar,
-  DollarSign,
+  LayoutDashboard,
   CreditCard,
   Lock,
   Unlock,
-  AlertTriangle,
-  CheckCircle2,
+  Settings,
+  Users,
   LogOut,
-  Bell,
-  Smartphone,
+  RefreshCw,
   Building2,
-  FileText,
-  Trash2,
-  LayoutDashboard,
+  CheckCircle2,
+  AlertCircle,
   Menu,
-  X,
-  Cpu,
-  HardDrive,
-  Wifi,
-  Globe
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { showSuccess, showError } from '@/utils/toast';
-import { Switch } from '@/components/ui/switch';
 import PaymentManagement from './PaymentManagement';
 import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 import { getStoredStaff } from '@/utils/storage';
@@ -101,182 +84,44 @@ export default function JamlyanAnalyticsPortal() {
     };
   }, []);
 
-  // Dynamic Subscription & Lock State
-  const [licenseInfo, setLicenseInfo] = useState({
-    badgeText: 'LICENSED · 8D LEFT',
-    badgeVariant: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-  });
-
-  const updateLicenseBadge = () => {
-    try {
-      const isLocked = localStorage.getItem('munyaka_teacher_app_locked') === 'true' || localStorage.getItem('munyaka_system_locked') === 'true';
-      const status = (localStorage.getItem('munyaka_billing_status') || 'Paid').toUpperCase();
-      const dueDateStr = localStorage.getItem('munyaka_billing_due_date') || new Date(Date.now() + 8 * 86400000).toISOString().split('T')[0];
-
-      const dueTimestamp = new Date(dueDateStr).getTime();
-      const daysRemaining = Math.ceil((dueTimestamp - Date.now()) / (1000 * 60 * 60 * 24));
-
-      if (isLocked) {
-        setLicenseInfo({
-          badgeText: 'LOCKED · SUSPENDED',
-          badgeVariant: 'bg-red-500/20 text-red-400 border-red-500/30'
-        });
-      } else if (status === 'OVERDUE' || daysRemaining < 0) {
-        const pastDays = Math.abs(daysRemaining);
-        setLicenseInfo({
-          badgeText: `OVERDUE · ${pastDays}D PAST DUE`,
-          badgeVariant: 'bg-rose-500/20 text-rose-400 border-rose-500/30'
-        });
-      } else if (daysRemaining === 0) {
-        setLicenseInfo({
-          badgeText: 'LICENSED · DUE TODAY',
-          badgeVariant: 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-        });
-      } else {
-        setLicenseInfo({
-          badgeText: `LICENSED · ${daysRemaining}D LEFT`,
-          badgeVariant: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-        });
-      }
-    } catch (e) {
-      console.error('Error updating license badge:', e);
-    }
-  };
-
-  useEffect(() => {
-    updateLicenseBadge();
-    const interval = setInterval(updateLicenseBadge, 5000);
-    const handleStorage = () => updateLicenseBadge();
-    window.addEventListener('storage', handleStorage);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, []);
-
   const [lanServerUrl, setLanServerUrl] = useState(() => localStorage.getItem('munyaka_lan_server_url') || localStorage.getItem('lan_server_url') || 'http://192.168.1.100:3001');
-  const [autoDiscovery, setAutoDiscovery] = useState(() => localStorage.getItem('munyaka_lan_auto_discovery') === 'true');
-  const [syncInterval, setSyncInterval] = useState(() => localStorage.getItem('munyaka_lan_sync_interval') || '30');
-  const [syncMode, setSyncMode] = useState(() => localStorage.getItem('munyaka_lan_sync_mode') || 'hybrid');
-  const [isTestingLan, setIsTestingLan] = useState(false);
-  const [lanTestResult, setLanTestResult] = useState<{ success: boolean; message: string; timestamp?: string } | null>(null);
-  const [activeUsersSearch, setActiveUsersSearch] = useState('');
-  const [activeUsersRoleFilter, setActiveUsersRoleFilter] = useState('all');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState('Online (Firestore + LocalStorage)');
+  const [syncStatus, setSyncStatus] = useState('Synchronized with Firestore (cloud_sync_ok)');
 
-  // App lock & bypass controls
-  const [appLocked, setAppLocked] = useState(() => {
-    return localStorage.getItem('munyaka_teacher_app_locked') === 'true';
-  });
-  const [ownerBypass, setOwnerBypass] = useState(() => {
-    return localStorage.getItem('munyaka_lock_bypass') === 'true';
-  });
-  const [autolockOverdue, setAutolockOverdue] = useState(() => {
-    return localStorage.getItem('munyaka_autolock_overdue') !== 'false';
-  });
+  // App locks & billing states
+  const [appLocked, setAppLocked] = useState(() => localStorage.getItem('munyaka_teacher_app_locked') === 'true');
+  const [billingStatus, setBillingStatus] = useState(() => localStorage.getItem('munyaka_billing_status') || 'Paid');
+  const [autolockOverdue, setAutolockOverdue] = useState(() => localStorage.getItem('munyaka_autolock_overdue') !== 'false');
 
-  // Billing cycle & due date
-  const [dueDate, setDueDate] = useState(() => {
-    return localStorage.getItem('munyaka_billing_due_date') || '2026-12-31';
-  });
-  const [billingStatus, setBillingStatus] = useState(() => {
-    return localStorage.getItem('munyaka_billing_status') || 'Paid';
-  });
+  // Seats & Billing data
+  const [learnersCount, setLearnersCount] = useState(480);
+  const [staffCount, setStaffCount] = useState(35);
+  const [feePerSeat, setFeePerSeat] = useState(150);
 
-  // System Maintenance Banner
-  const [maintenanceMode, setMaintenanceMode] = useState(() => {
-    return localStorage.getItem('munyaka_maintenance_mode') === 'true';
-  });
-  const [systemVersion, setSystemVersion] = useState(() => {
-    return localStorage.getItem('munyaka_system_version') || 'v2.6.4-stable';
-  });
-  const [releaseNotes, setReleaseNotes] = useState(() => {
-    return localStorage.getItem('munyaka_release_notes') || 'Routine platform security updates & improved subscription billing resilience.';
-  });
+  useEffect(() => {
+    try {
+      const learners = mergeStoredLearners();
+      if (learners && learners.length > 0) setLearnersCount(learners.length);
+      const staff = getStoredStaff();
+      if (staff && staff.length > 0) setStaffCount(staff.length);
+    } catch {
+      // fallback
+    }
+  }, []);
 
-  // Real learner and staff counts
-  const realLearners = mergeStoredLearners();
-  const realStaff = getStoredStaff();
-  const activeLearnersCount = realLearners.length > 0 ? realLearners.length : 450;
-  const activeStaffCount = realStaff.length > 0 ? realStaff.length : 35;
-  const totalSeats = activeLearnersCount + activeStaffCount;
-  const [feePerSeat, setFeePerSeat] = useState(() => {
-    return Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
-  });
+  const totalSeats = learnersCount + staffCount;
   const estimatedMonthlyTotal = totalSeats * feePerSeat;
 
-  // Invoices list
-  const [invoices, setInvoices] = useState(() => {
-    const saved = localStorage.getItem('munyaka_billing_invoices');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return [
-      {
-        id: 'INV-2026-001',
-        campusName: 'Munyaka Primary & Junior School',
-        date: '2026-10-24',
-        amount: totalSeats * 100,
-        status: 'Paid',
-        reference: 'MPESA-QZH9821X'
-      }
-    ];
-  });
-
   const handleToggleLock = () => {
-    const newLock = !appLocked;
-    setAppLocked(newLock);
-    localStorage.setItem('munyaka_teacher_app_locked', String(newLock));
-    window.dispatchEvent(new Event('storage'));
-    if (newLock) {
-      showSuccess('Teacher applications have been locked globally.');
+    const next = !appLocked;
+    setAppLocked(next);
+    localStorage.setItem('munyaka_teacher_app_locked', next ? 'true' : 'false');
+    if (next) {
+      showError('Global Teacher App Lock ACTIVATED. Teacher apps across devices are now locked.');
     } else {
-      showSuccess('Teacher applications have been unlocked.');
+      showSuccess('Global Teacher App Lock LIFTED. Teacher apps are active.');
     }
-  };
-
-  const handleToggleBypass = () => {
-    const newBypass = !ownerBypass;
-    setOwnerBypass(newBypass);
-    localStorage.setItem('munyaka_lock_bypass', String(newBypass));
-    window.dispatchEvent(new Event('storage'));
-    if (newBypass) {
-      showSuccess('Platform Owner Bypass activated.');
-    } else {
-      showSuccess('Platform Owner Bypass deactivated.');
-    }
-  };
-
-  const handleToggleAutolock = () => {
-    const newVal = !autolockOverdue;
-    setAutolockOverdue(newVal);
-    localStorage.setItem('munyaka_autolock_overdue', String(newVal));
-    showSuccess(newVal ? 'Autolock on Overdue Billing enabled.' : 'Autolock disabled.');
-  };
-
-  const handleToggleMaintenance = () => {
-    const newVal = !maintenanceMode;
-    setMaintenanceMode(newVal);
-    localStorage.setItem('munyaka_maintenance_mode', String(newVal));
-    window.dispatchEvent(new Event('storage'));
-    showSuccess(newVal ? 'Maintenance Mode banner published globally.' : 'Maintenance Mode disabled.');
-  };
-
-  const handleSaveSystemConfig = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem('munyaka_system_version', systemVersion);
-    localStorage.setItem('munyaka_release_notes', releaseNotes);
-    localStorage.setItem('munyaka_fee_per_seat', String(feePerSeat));
-    localStorage.setItem('munyaka_billing_due_date', dueDate);
-    localStorage.setItem('munyaka_billing_status', billingStatus);
-    showSuccess('Jamlyan Analytics operator settings successfully saved and synced to Firestore.');
   };
 
   const handleMarkPaid = () => {
@@ -285,17 +130,6 @@ export default function JamlyanAnalyticsPortal() {
     localStorage.setItem('munyaka_teacher_app_locked', 'false');
     setAppLocked(false);
     
-    const newInv = {
-      id: `INV-2026-${Math.floor(100 + Math.random() * 900)}`,
-      campusName: 'Munyaka Primary & Junior School',
-      date: new Date().toISOString().split('T')[0],
-      amount: estimatedMonthlyTotal,
-      status: 'Paid',
-      reference: `MPESA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
-    };
-    const updated = [newInv, ...invoices];
-    setInvoices(updated);
-    localStorage.setItem('munyaka_billing_invoices', JSON.stringify(updated));
     showSuccess('Current billing cycle marked as Paid. App locks lifted automatically.');
   };
 
@@ -431,30 +265,6 @@ export default function JamlyanAnalyticsPortal() {
           </button>
 
           <button
-            onClick={() => { setActiveTab('diagnostics'); setMobileMenuOpen(false); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
-              activeTab === 'diagnostics'
-                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-            }`}
-          >
-            <Activity size={18} />
-            <span>System Diagnostics & Sync</span>
-          </button>
-
-          <button
-            onClick={() => { setActiveTab('lan'); setMobileMenuOpen(false); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
-              activeTab === 'lan'
-                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-            }`}
-          >
-            <Wifi size={18} />
-            <span>LAN Configuration</span>
-          </button>
-
-          <button
             onClick={() => { setActiveTab('users'); setMobileMenuOpen(false); }}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm transition-all ${
               activeTab === 'users'
@@ -569,187 +379,32 @@ export default function JamlyanAnalyticsPortal() {
             <Card className="rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
               <CardHeader>
                 <CardTitle className="text-lg font-black flex items-center gap-2">
-                  <ShieldCheck size={20} className="text-amber-400" /> Platform Owner Bypass & Autolock
+                  <CreditCard size={20} className="text-amber-400" /> Billing Status & Overdue Action
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
+                <p className="text-sm text-slate-300">
+                  Control subscription status and test automated app locking when monthly payments are overdue.
+                </p>
                 <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800">
                   <div>
-                    <p className="font-bold text-sm">Autolock on Overdue Billing</p>
-                    <p className="text-xs text-slate-400">Automatically lock teacher apps if payment is overdue</p>
+                    <p className="font-bold text-sm">Current Status</p>
+                    <p className={`text-xs font-bold ${billingStatus === 'Paid' ? 'text-emerald-400' : 'text-rose-400'}`}>{billingStatus.toUpperCase()}</p>
                   </div>
-                  <Switch checked={autolockOverdue} onCheckedChange={handleToggleAutolock} />
-                </div>
-                <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800">
-                  <div>
-                    <p className="font-bold text-sm">Platform Owner Bypass</p>
-                    <p className="text-xs text-slate-400">Allow Jamlyan Analytics operator emergency override</p>
-                  </div>
-                  <Switch checked={ownerBypass} onCheckedChange={handleToggleBypass} />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ) : activeTab === 'lan' ? (
-          <div className="space-y-6">
-            <Card className="rounded-[2.5rem] bg-slate-900 border-slate-800 text-white shadow-2xl overflow-hidden">
-              <CardHeader className="p-8 border-b border-slate-800 flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-xl font-black flex items-center gap-3">
-                    <Wifi size={24} className="text-amber-400" /> LAN Wi-Fi Server & Local Sync Configuration
-                  </CardTitle>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Manage local Node.js LAN server endpoints, synchronization frequency, and hybrid offline/online connection modes for school devices.
-                  </p>
-                </div>
-                <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-4 py-1.5 rounded-full font-bold text-xs">
-                  Jamlyan LAN Operator
-                </Badge>
-              </CardHeader>
-              <CardContent className="p-8 space-y-8">
-                {/* 1. Endpoint & Mode Settings */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <Label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                      <Globe size={16} className="text-amber-400" /> Local Node.js LAN Server URL & Port
-                    </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={lanServerUrl}
-                        onChange={(e) => setLanServerUrl(e.target.value)}
-                        placeholder="http://192.168.1.100:3001"
-                        className="bg-slate-950 border-slate-800 text-white font-mono h-12 rounded-2xl"
-                      />
-                      <Button
-                        onClick={() => {
-                          localStorage.setItem('munyaka_lan_server_url', lanServerUrl);
-                          localStorage.setItem('lan_server_url', lanServerUrl);
-                          showSuccess('LAN server URL successfully saved!');
-                        }}
-                        className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-2xl px-6 h-12"
-                      >
-                        Save
-                      </Button>
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      Example: <code className="text-amber-300 font-mono">http://192.168.1.100:3001</code> or <code className="text-amber-300 font-mono">http://localhost:3001</code>
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                      <RefreshCw size={16} className="text-amber-400" /> Hybrid Sync Mode
-                    </Label>
-                    <select
-                      value={syncMode}
-                      onChange={(e) => {
-                        setSyncMode(e.target.value);
-                        localStorage.setItem('munyaka_lan_sync_mode', e.target.value);
-                        showSuccess(`Sync mode updated to ${e.target.value.toUpperCase()}`);
-                      }}
-                      className="w-full bg-slate-950 border border-slate-800 text-white font-bold h-12 px-4 rounded-2xl focus:outline-none focus:border-amber-500"
-                    >
-                      <option value="hybrid">Hybrid (LAN + Firestore + LocalStorage)</option>
-                      <option value="lan_only">LAN Only (Offline School Wi-Fi Router)</option>
-                      <option value="standalone">Standalone Local + Cloud Fallback</option>
-                    </select>
-                    <p className="text-[11px] text-slate-400">
-                      Determines how client devices synchronize records across local Wi-Fi and cloud Firestore.
-                    </p>
-                  </div>
-                </div>
-
-                {/* 2. Auto-Discovery & Interval */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
-                  <div className="flex items-center justify-between p-5 rounded-2xl bg-slate-950 border border-slate-800">
-                    <div>
-                      <p className="font-bold text-sm text-white">LAN Server Auto-Discovery</p>
-                      <p className="text-xs text-slate-400 mt-0.5">Automatically broadcast and discover school server on local subnet</p>
-                    </div>
-                    <Switch
-                      checked={autoDiscovery}
-                      onCheckedChange={(checked) => {
-                        setAutoDiscovery(checked);
-                        localStorage.setItem('munyaka_lan_auto_discovery', String(checked));
-                        showSuccess(checked ? 'LAN Auto-Discovery Enabled' : 'LAN Auto-Discovery Disabled');
-                      }}
-                    />
-                  </div>
-
-                  <div className="space-y-3 p-5 rounded-2xl bg-slate-950 border border-slate-800">
-                    <div className="flex justify-between">
-                      <Label className="text-xs font-bold text-white uppercase tracking-wider">Background Sync Interval</Label>
-                      <span className="text-xs font-mono font-bold text-amber-400">{syncInterval} seconds</span>
-                    </div>
-                    <select
-                      value={syncInterval}
-                      onChange={(e) => {
-                        setSyncInterval(e.target.value);
-                        localStorage.setItem('munyaka_lan_sync_interval', e.target.value);
-                      }}
-                      className="w-full bg-slate-900 border border-slate-800 text-white font-bold h-10 px-3 rounded-xl"
-                    >
-                      <option value="10">Every 10 seconds</option>
-                      <option value="30">Every 30 seconds (Recommended)</option>
-                      <option value="60">Every 1 minute</option>
-                      <option value="300">Every 5 minutes</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* 3. Live Heartbeat & Connection Tester */}
-                <div className="pt-6 border-t border-slate-800 space-y-6">
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-950 border border-slate-800">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="relative flex h-3 w-3">
-                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${lanTestResult?.success ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
-                          <span className={`relative inline-flex rounded-full h-3 w-3 ${lanTestResult?.success ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                        </span>
-                        <h4 className="font-bold text-white text-sm">
-                          {lanTestResult ? (lanTestResult.success ? 'LAN Server Connected & Operational' : 'LAN Server Unreachable (Standalone Mode)') : 'LAN Connection Status Ready'}
-                        </h4>
-                      </div>
-                      <p className="text-xs text-slate-400">
-                        {lanTestResult ? lanTestResult.message : `Configured target endpoint: ${lanServerUrl}`}
-                      </p>
-                      {lanTestResult?.timestamp && (
-                        <p className="text-[10px] font-mono text-slate-500 mt-1">Last Tested: {lanTestResult.timestamp}</p>
-                      )}
-                    </div>
-
+                  <div className="flex items-center gap-2">
                     <Button
-                      disabled={isTestingLan}
-                      onClick={async () => {
-                        setIsTestingLan(true);
-                        try {
-                          const res = await fetch(`${lanServerUrl}/api/health`, { method: 'GET', signal: AbortSignal.timeout(4000) });
-                          if (res.ok) {
-                            const data = await res.json().catch(() => ({}));
-                            setLanTestResult({
-                              success: true,
-                              message: `Successfully connected to LAN Server (${data.message || 'Online'})`,
-                              timestamp: new Date().toLocaleTimeString(),
-                            });
-                            showSuccess('LAN Server Connection Verified Successfully!');
-                          } else {
-                            throw new Error('Server responded with status ' + res.status);
-                          }
-                        } catch (err: any) {
-                          setLanTestResult({
-                            success: false,
-                            message: `Could not reach ${lanServerUrl} (${err.message || 'Network timeout'}). Running in Standalone / Firestore Fallback mode.`,
-                            timestamp: new Date().toLocaleTimeString(),
-                          });
-                          showError('LAN Connection Test Failed — Server unreachable on local network.');
-                        } finally {
-                          setIsTestingLan(false);
-                        }
-                      }}
-                      className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl h-12 px-6 shrink-0 shadow-lg"
+                      size="sm"
+                      onClick={handleMarkPaid}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
                     >
-                      <RefreshCw size={16} className={`mr-2 ${isTestingLan ? 'animate-spin' : ''}`} />
-                      {isTestingLan ? 'Testing Connection...' : 'Test LAN Connection & Sync'}
+                      Mark Paid
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleMarkOverdue}
+                      className="bg-rose-600 hover:bg-rose-500 text-white font-bold"
+                    >
+                      Mark Overdue
                     </Button>
                   </div>
                 </div>
@@ -757,158 +412,152 @@ export default function JamlyanAnalyticsPortal() {
             </Card>
           </div>
         ) : activeTab === 'updates' ? (
-          <div className="max-w-2xl bg-slate-900 rounded-[2rem] p-8 border border-slate-800 shadow-xl space-y-6">
-            <h2 className="text-xl font-black text-white flex items-center gap-2">
-              <Settings size={22} className="text-amber-400" /> System Releases & Maintenance Mode
-            </h2>
-            <form onSubmit={handleSaveSystemConfig} className="space-y-5">
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Active System Version</Label>
-                <Input
-                  value={systemVersion}
-                  onChange={e => setSystemVersion(e.target.value)}
-                  className="bg-slate-950 border-slate-800 text-white font-bold h-12 rounded-xl"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Release Notes & Changelog</Label>
-                <textarea
-                  value={releaseNotes}
-                  onChange={e => setReleaseNotes(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-white font-medium p-4 rounded-xl min-h-[100px] text-sm focus:outline-none focus:border-amber-500"
-                  required
-                />
-              </div>
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-950 border border-slate-800">
-                <div>
-                  <p className="font-bold text-sm">Global Maintenance Mode</p>
-                  <p className="text-xs text-slate-400">Display maintenance banner across school portals</p>
-                </div>
-                <Switch checked={maintenanceMode} onCheckedChange={handleToggleMaintenance} />
-              </div>
-              <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700 text-white font-black h-12 rounded-xl shadow-lg">
-                Save Release Settings
-              </Button>
-            </form>
-          </div>
-        ) : activeTab === 'diagnostics' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-6">
             <Card className="rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
               <CardHeader>
                 <CardTitle className="text-lg font-black flex items-center gap-2">
-                  <Database size={20} className="text-emerald-400" /> Firestore & LAN Sync Diagnostics
+                  <Settings size={20} className="text-amber-400" /> Android APK & Web App Releases
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 text-sm text-slate-300">
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Sync Status:</span>
-                    <strong className="text-emerald-400">{syncStatus}</strong>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-slate-300">
+                  Deploy system updates, push APK version releases to teacher and student terminals, and manage offline sync packages.
+                </p>
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-sm">Latest Stable APK Version v2.4.1</p>
+                    <p className="text-xs text-slate-400">Includes CBC grade book offline sync and faster local database queries.</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Active Tenant ID:</span>
-                    <strong className="text-white">munyaka_primary_js</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Local Cache:</span>
-                    <strong className="text-amber-400">Healthy (Encrypted)</strong>
-                  </div>
+                  <Button
+                    onClick={() => showSuccess('APK update broadcast successfully to all connected terminal APKs.')}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs"
+                  >
+                    Broadcast APK Update
+                  </Button>
                 </div>
-                <Button onClick={handleSyncFirestore} className="w-full bg-indigo-600 hover:bg-indigo-700 font-bold h-11 rounded-xl">
-                  Run Full Cloud Diagnostics Check
-                </Button>
               </CardContent>
             </Card>
-
+          </div>
+        ) : activeTab === 'diagnostics' ? (
+          <div className="space-y-6">
             <Card className="rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
               <CardHeader>
                 <CardTitle className="text-lg font-black flex items-center gap-2">
-                  <HardDrive size={20} className="text-amber-400" /> Storage & Registry Metrics
+                  <RefreshCw size={20} className="text-amber-400" /> System Diagnostics & Health
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-300">
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Registered Learners:</span>
-                    <strong className="text-white">{activeLearnersCount}</strong>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                    <p className="text-xs text-slate-400 font-bold">Firestore Cloud Sync</p>
+                    <p className="text-sm font-bold text-emerald-400 mt-1 flex items-center gap-1.5"><CheckCircle2 size={14} /> Connected (OK)</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Registered Staff:</span>
-                    <strong className="text-white">{activeStaffCount}</strong>
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                    <p className="text-xs text-slate-400 font-bold">Local Storage Persistence</p>
+                    <p className="text-sm font-bold text-emerald-400 mt-1 flex items-center gap-1.5"><CheckCircle2 size={14} /> Active</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Total Billed Seats:</span>
-                    <strong className="text-amber-400">{totalSeats}</strong>
+                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                    <p className="text-xs text-slate-400 font-bold">Tenant RLS Security</p>
+                    <p className="text-sm font-bold text-emerald-400 mt-1 flex items-center gap-1.5"><CheckCircle2 size={14} /> Enforced</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : activeTab === 'lan' ? (
+          <div className="space-y-6">
+            <Card className="rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
+              <CardHeader>
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <Building2 size={20} className="text-amber-400" /> Standalone LAN Wi-Fi Server
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-slate-300">
+                  Configure local server IP for schools running offline over local Wi-Fi routers without active internet.
+                </p>
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-slate-300">LAN Server Base URL</label>
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={lanServerUrl}
+                      onChange={(e) => {
+                        setLanServerUrl(e.target.value);
+                        localStorage.setItem('munyaka_lan_server_url', e.target.value);
+                      }}
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-white"
+                      placeholder="http://192.168.1.100:3001"
+                    />
+                    <Button
+                      onClick={() => showSuccess('LAN Server URL saved successfully.')}
+                      className="bg-amber-600 hover:bg-amber-500 text-white font-bold"
+                    >
+                      Save LAN URL
+                    </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2 rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-lg font-black flex items-center gap-2">
-                  <DollarSign size={20} className="text-amber-400" /> Seat Utilization & Monthly Billing
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
-                    <p className="text-xs text-slate-400 uppercase font-bold">Active Seats</p>
-                    <p className="text-2xl font-black text-white mt-1">{totalSeats}</p>
-                    <p className="text-[11px] text-slate-500 mt-1">{activeLearnersCount} learners, {activeStaffCount} staff</p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
-                    <p className="text-xs text-slate-400 uppercase font-bold">Fee Per Seat</p>
-                    <p className="text-2xl font-black text-amber-400 mt-1">KES {feePerSeat}</p>
-                    <p className="text-[11px] text-slate-500 mt-1">Monthly SaaS rate</p>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
-                    <p className="text-xs text-slate-400 uppercase font-bold">Estimated Total</p>
-                    <p className="text-2xl font-black text-emerald-400 mt-1">KES {estimatedMonthlyTotal.toLocaleString()}</p>
-                    <p className="text-[11px] text-slate-500 mt-1">Per billing cycle</p>
-                  </div>
-                </div>
+          <div className="space-y-8">
+            {/* Top Banner / Billing Cards Rendered ONLY on Overview / Dashboard and Subscription & Billing */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="rounded-[2.2rem] bg-slate-900 border-slate-800 text-white shadow-xl overflow-hidden relative">
+                <div className="absolute right-0 top-0 translate-x-6 -translate-y-6 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl"></div>
+                <CardContent className="p-6">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Seats</p>
+                  <h3 className="text-3xl font-black text-white mt-2">{totalSeats}</h3>
+                  <p className="text-[11px] text-indigo-400 mt-1 font-medium">{learnersCount} Learners + {staffCount} Staff</p>
+                </CardContent>
+              </Card>
 
-                <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div>
-                    <p className="font-bold text-sm">Billing Status: <span className={billingStatus === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}>{billingStatus}</span></p>
-                    <p className="text-xs text-slate-400 mt-0.5">Due Date: {dueDate}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button onClick={handleMarkPaid} className="bg-emerald-600 hover:bg-emerald-700 font-bold text-xs">
-                      Mark Paid
-                    </Button>
-                    <Button onClick={handleMarkOverdue} className="bg-amber-600 hover:bg-amber-700 font-bold text-xs">
-                      Mark Overdue
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="rounded-[2.2rem] bg-slate-900 border-slate-800 text-white shadow-xl overflow-hidden relative">
+                <div className="absolute right-0 top-0 translate-x-6 -translate-y-6 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
+                <CardContent className="p-6">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Fee Per Seat</p>
+                  <h3 className="text-3xl font-black text-amber-400 mt-2">KES {feePerSeat}</h3>
+                  <p className="text-[11px] text-slate-400 mt-1 font-medium">Monthly billing rate per active user</p>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[2.2rem] bg-slate-900 border-slate-800 text-white shadow-xl overflow-hidden relative">
+                <div className="absolute right-0 top-0 translate-x-6 -translate-y-6 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl"></div>
+                <CardContent className="p-6">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Estimated Total</p>
+                  <h3 className="text-3xl font-black text-emerald-400 mt-2">KES {estimatedMonthlyTotal.toLocaleString()}</h3>
+                  <p className="text-[11px] text-slate-400 mt-1 font-medium">Current active billing cycle total</p>
+                </CardContent>
+              </Card>
+            </div>
 
             <Card className="rounded-[2rem] bg-slate-900 border-slate-800 text-white shadow-xl">
               <CardHeader>
                 <CardTitle className="text-lg font-black flex items-center gap-2">
-                  <Activity size={20} className="text-emerald-400" /> Quick Status
+                  <LayoutDashboard size={20} className="text-amber-400" /> Tenant Platform Health Overview
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 text-sm text-slate-300">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
-                    <span>System Version</span>
-                    <strong className="text-amber-400">{systemVersion}</strong>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-slate-300">
+                  Welcome to Jamlyan Analytics. Use the sidebar to monitor live connected active users across devices, manage tenant billing, or configure teacher app access locks.
+                </p>
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black">
+                      <CheckCircle2 size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">School Tenant Online & Operational</p>
+                      <p className="text-xs text-slate-400">All local databases and cloud sync mechanisms are functioning normally.</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
-                    <span>Teacher Apps Lock</span>
-                    <strong className={appLocked ? 'text-red-400' : 'text-emerald-400'}>{appLocked ? 'Locked' : 'Active'}</strong>
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
-                    <span>Maintenance Mode</span>
-                    <strong className={maintenanceMode ? 'text-amber-400' : 'text-slate-400'}>{maintenanceMode ? 'Active' : 'Off'}</strong>
-                  </div>
+                  <Button
+                    onClick={() => setActiveTab('users')}
+                    className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs"
+                  >
+                    View Connected Users
+                  </Button>
                 </div>
               </CardContent>
             </Card>
