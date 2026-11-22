@@ -781,6 +781,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = () => {
+      // Clear cached admin/system sub-route tab states
+      localStorage.removeItem('munyaka_admin_tab');
+      localStorage.removeItem('munyaka_system_tab');
+      localStorage.removeItem('lastAdminTab');
+      localStorage.removeItem('lastSystemTab');
+
       // Clear all cached session state before saving new auth state,
       // BUT preserve persistent teacher apps lock state ('munyaka_teacher_apps_lock_persistent' and 'munyaka_global_app_lock')
       const preservedLock = localStorage.getItem('munyaka_teacher_apps_lock_persistent');

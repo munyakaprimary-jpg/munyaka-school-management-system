@@ -139,7 +139,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Study Corner', href: '/study-corner', icon: BookOpen, allowedRoles: ['all'] },
   ] : [
     { name: 'Home / Dashboard', href: '/', icon: LayoutDashboard, allowedRoles: ['all'] },
-    { name: 'Admin Dashboard', href: '/system-management', icon: ShieldCheck, allowedRoles: ['all'] },
+    { name: 'Admin Dashboard', href: '/dashboard', icon: ShieldCheck, allowedRoles: ['all'] },
     { name: 'Library Workstation', href: '/library', icon: Library, allowedRoles: ['all'] },
     { name: 'Academic CBC Portal', href: '/academics', icon: BookOpen, allowedRoles: ['all'] },
     { name: 'Staff Directory', href: '/staff-registry', icon: UserCheck, allowedRoles: ['all'] },

@@ -155,7 +155,7 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     email: 'sysadmin@munyaka.sc.ke',
     userName: 'School Administrator',
     userRole: 'admin',
-    redirectPath: '/system-management',
+    redirectPath: '/dashboard',
     icon: Settings2,
     primaryColor: 'indigo',
     defaultPassword: DEFAULT_ADMIN_PASSWORD,
