@@ -272,6 +272,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated, user, setUser, logout } = useAuth();
+  const [showCover, setShowCover] = useState(false);
 
   useEffect(() => {
     const hash = window.location.hash;
