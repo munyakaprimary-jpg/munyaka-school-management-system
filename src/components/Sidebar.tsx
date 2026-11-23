@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { mapRoleLabelToRbacKey, getExactStaffRoleTitle } from '@/constants/roles';
+import { getExactStaffRoleTitle } from '@/constants/roles';
 import { isStudentRole } from '@/utils/roleGuard';
 import {
   LayoutDashboard,
@@ -9,7 +9,6 @@ import {
   Layers,
   BookOpen,
   BookOpenCheck,
-  Award,
   Clock,
   CheckSquare,
   ClipboardCheck,
@@ -101,7 +100,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  // Dynamically fetch active registered user profile from unified staff table
   const getActiveUserRole = () => {
     if (!user) return 'Guest';
     const rawRole = user.role || user.title || 'Staff';
@@ -109,7 +107,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   };
 
   const activeRole = getActiveUserRole();
-  const isAdminOrOwner = true; // Admin/staff should have access to all menus as requested
   const isStaffOnly = true;
   const isStudentUser = isStudentRole(activeRole);
 
@@ -121,10 +118,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Communication', href: '/communication', icon: MessageSquare, allowedRoles: ['all'] },
     { name: 'Study Corner', href: '/study-corner', icon: BookOpen, allowedRoles: ['all'] },
   ];
-
-  const handleNavClick = () => {
-    localStorage.removeItem("munyaka_selected_target_exam");
-  };
 
   const handleNavClick = () => {
     localStorage.removeItem("munyaka_selected_target_exam");
@@ -176,10 +169,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const activePath = location.pathname;
-
-  const handleNavClick = () => {
-    localStorage.removeItem("munyaka_selected_target_exam");
-  };
 
   return (
     <div className="flex h-screen bg-slate-950 overflow-hidden font-sans">
