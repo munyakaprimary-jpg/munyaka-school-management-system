@@ -529,24 +529,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         assessmentId: assessment.id,
         title: assessment.title,
         score: submission.score,
-        total: submission.total,
-        percentage: submission.percentage,
-        answers: submission.answers,
-        submittedAt: submission.submittedAt || new Date().toISOString(),
-      });
-    } catch (e) {}
-
-    // Also sync to Firestore
-    try {
-      saveAssessmentSubmission({
-        id: submission.id || `${lockedStudentId}_${assessment.id}_${Date.now()}`,
-        learnerId: lockedStudentId,
-        studentId: lockedStudentId,
-        learnerName: lockedStudentName,
-        assessmentId: assessment.id,
-        title: assessment.title,
-        score: submission.score,
-        total: submission.total,
+        total: (submission as any).total || gradingResult.totalPossible || 0,
         percentage: submission.percentage,
         answers: submission.answers,
         submittedAt: submission.submittedAt || new Date().toISOString(),
