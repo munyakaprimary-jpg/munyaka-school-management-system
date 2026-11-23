@@ -529,7 +529,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         assessmentId: assessment.id,
         title: assessment.title,
         score: submission.score,
-        total: (submission as any).total || gradingResult.totalPossible || 0,
+        total: (submission as any).total || gradingResult.totalScore || 0,
         percentage: submission.percentage,
         answers: submission.answers,
         submittedAt: submission.submittedAt || new Date().toISOString(),
