@@ -68,6 +68,12 @@ export default function Attendance() {
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
 
+  // Per-session submission / lock states per grade/stream/date
+  const [morningSubmitted, setMorningSubmitted] = useState<boolean>(false);
+  const [morningSubmittedAt, setMorningSubmittedAt] = useState<string | null>(null);
+  const [afternoonSubmitted, setAfternoonSubmitted] = useState<boolean>(false);
+  const [afternoonSubmittedAt, setAfternoonSubmittedAt] = useState<string | null>(null);
+
   // Time Lock & Role check helper
   const { user } = useAuth();
   const roleStr = String((user as any)?.role || '');
@@ -297,6 +303,19 @@ export default function Attendance() {
 
       const activeKey = `${selectedDate}_${selectedGrade}_${selectedStream}`;
       const existingRecord = parsedRollCalls[activeKey] || parsedRollCalls[`${selectedGrade}_${selectedStream}_${selectedDate}`];
+
+      // Load submission flags
+      if (existingRecord) {
+        setMorningSubmitted(!!existingRecord.morningSubmitted);
+        setMorningSubmittedAt(existingRecord.morningSubmittedAt || null);
+        setAfternoonSubmitted(!!existingRecord.afternoonSubmitted);
+        setAfternoonSubmittedAt(existingRecord.afternoonSubmittedAt || null);
+      } else {
+        setMorningSubmitted(false);
+        setMorningSubmittedAt(null);
+        setAfternoonSubmitted(false);
+        setAfternoonSubmittedAt(null);
+      }
 
       const initialMap: Record<string, { morning: string | null; afternoon: string | null; remarks: string }> = {};
       const targetLearners = getFilteredLearners();
