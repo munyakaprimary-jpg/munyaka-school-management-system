@@ -788,9 +788,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.removeItem('lastSystemTab');
 
       // Clear all cached session state before saving new auth state,
-      // BUT preserve persistent teacher apps lock state ('munyaka_teacher_apps_lock_persistent' and 'munyaka_global_app_lock')
+      // BUT preserve persistent teacher apps lock state ('munyaka_teacher_apps_lock_persistent', 'munyaka_global_app_lock', and 'munyaka_teacher_app_locked')
       const preservedLock = localStorage.getItem('munyaka_teacher_apps_lock_persistent');
       const preservedGlobalLock = localStorage.getItem('munyaka_global_app_lock');
+      const preservedTeacherAppLock = localStorage.getItem('munyaka_teacher_app_locked');
       const preservedBypass = localStorage.getItem('munyaka_lock_bypass');
   
       localStorage.removeItem('munyaka_session');
@@ -808,6 +809,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Restore preserved lock state across logout
       if (preservedLock !== null) localStorage.setItem('munyaka_teacher_apps_lock_persistent', preservedLock);
       if (preservedGlobalLock !== null) localStorage.setItem('munyaka_global_app_lock', preservedGlobalLock);
+      if (preservedTeacherAppLock !== null) localStorage.setItem('munyaka_teacher_app_locked', preservedTeacherAppLock);
       if (preservedBypass !== null) localStorage.setItem('munyaka_lock_bypass', preservedBypass);
   
       try {

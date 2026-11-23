@@ -762,20 +762,23 @@ export default function PaymentManagement() {
                     <button
                       type="button"
                       onClick={() => {
-                        const nextState = !isGloballyLocked;
-                        setIsGloballyLocked(nextState);
-                        try {
-                          localStorage.setItem(GLOBAL_LOCK_KEY, nextState ? 'true' : 'false');
-                          window.dispatchEvent(new Event('storage'));
-                          if (nextState) {
-                            showSuccess('Global App Lock activated! Teacher apps will now be restricted.');
-                          } else {
-                            showSuccess('Global App Lock deactivated! Teacher apps are now unlocked.');
-                          }
-                        } catch (err) {
-                          console.error('Failed to update global lock state:', err);
-                        }
-                      }}
+                                              const nextState = !isGloballyLocked;
+                                              setIsGloballyLocked(nextState);
+                                              try {
+                                                // Sync all lock keys used by the Teacher Portal guard
+                                                localStorage.setItem(GLOBAL_LOCK_KEY, nextState ? 'true' : 'false');
+                                                localStorage.setItem('munyaka_teacher_app_locked', nextState ? 'true' : 'false');
+                                                localStorage.setItem('munyaka_teacher_apps_lock_persistent', nextState ? 'true' : 'false');
+                                                window.dispatchEvent(new Event('storage'));
+                                                if (nextState) {
+                                                  showSuccess('Global App Lock activated! Teacher apps will now be restricted.');
+                                                } else {
+                                                  showSuccess('Global App Lock deactivated! Teacher apps are now unlocked.');
+                                                }
+                                              } catch (err) {
+                                                console.error('Failed to update global lock state:', err);
+                                              }
+                                            }}
                       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isGloballyLocked ? 'bg-red-600' : 'bg-emerald-600'}`}
                       role="switch"
                       aria-checked={isGloballyLocked}

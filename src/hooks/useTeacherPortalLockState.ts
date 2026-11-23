@@ -6,15 +6,12 @@ export function useTeacherPortalLockState() {
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     try {
       const manualLock = localStorage.getItem('munyaka_teacher_app_locked') === 'true' ||
-                         localStorage.getItem('munyaka_teacher_apps_lock_persistent') === 'true';
-      const autolockOverdue = localStorage.getItem('munyaka_autolock_overdue') !== 'false';
-      const isOverdue = localStorage.getItem('munyaka_billing_overdue') === 'true' ||
-                        localStorage.getItem('munyaka_subscription_status') === 'OVERDUE';
+                         localStorage.getItem('munyaka_teacher_apps_lock_persistent') === 'true' ||
+                         localStorage.getItem('munyaka_global_app_lock') === 'true';
       const bypass = localStorage.getItem('munyaka_lock_bypass') === 'true';
 
       if (bypass) return false;
       if (manualLock) return true;
-      if (autolockOverdue && isOverdue) return true;
       return false;
     } catch {
       return false;
@@ -25,10 +22,8 @@ export function useTeacherPortalLockState() {
     const checkState = () => {
       try {
         const manualLock = localStorage.getItem('munyaka_teacher_app_locked') === 'true' ||
-                           localStorage.getItem('munyaka_teacher_apps_lock_persistent') === 'true';
-        const autolockOverdue = localStorage.getItem('munyaka_autolock_overdue') !== 'false';
-        const isOverdue = localStorage.getItem('munyaka_billing_overdue') === 'true' ||
-                          localStorage.getItem('munyaka_subscription_status') === 'OVERDUE';
+                           localStorage.getItem('munyaka_teacher_apps_lock_persistent') === 'true' ||
+                           localStorage.getItem('munyaka_global_app_lock') === 'true';
         const bypass = localStorage.getItem('munyaka_lock_bypass') === 'true';
 
         if (bypass) {
@@ -36,10 +31,6 @@ export function useTeacherPortalLockState() {
           return;
         }
         if (manualLock) {
-          setIsLocked(true);
-          return;
-        }
-        if (autolockOverdue && isOverdue) {
           setIsLocked(true);
           return;
         }
@@ -65,16 +56,23 @@ export function useTeacherPortalLockState() {
             const data = docSnap.data();
             const firestoreLocked = data.teacherAppLocked || data.locked || false;
             const firestoreBypass = data.platformBypass || data.lockBypass || false;
-            const firestoreAutolock = data.autolockOverdue ?? true;
-            const isOverdue = data.billingStatus === 'OVERDUE' || localStorage.getItem('munyaka_billing_overdue') === 'true';
 
             if (firestoreBypass) {
               setIsLocked(false);
-            } else if (firestoreLocked || (firestoreAutolock && isOverdue)) {
+              // Also clear local manual lock if bypass is active
+              localStorage.setItem('munyaka_teacher_app_locked', 'false');
+              localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'false');
+              localStorage.setItem('munyaka_global_app_lock', 'false');
+            } else if (firestoreLocked) {
               setIsLocked(true);
               localStorage.setItem('munyaka_teacher_app_locked', 'true');
+              localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'true');
+              localStorage.setItem('munyaka_global_app_lock', 'true');
             } else {
               setIsLocked(false);
+              localStorage.setItem('munyaka_teacher_app_locked', 'false');
+              localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'false');
+              localStorage.setItem('munyaka_global_app_lock', 'false');
             }
           }
         }, () => {});

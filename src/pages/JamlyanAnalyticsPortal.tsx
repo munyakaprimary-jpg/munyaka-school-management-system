@@ -97,36 +97,50 @@ export default function JamlyanAnalyticsPortal() {
   const estimatedMonthlyTotal = totalSeats * feePerSeat;
 
   const handleToggleLock = () => {
-    const next = !appLocked;
-    setAppLocked(next);
-    localStorage.setItem('munyaka_teacher_app_locked', next ? 'true' : 'false');
-    if (next) {
-      showError('Global Teacher App Lock ACTIVATED. Teacher apps across devices are now locked.');
-    } else {
-      showSuccess('Global Teacher App Lock LIFTED. Teacher apps are active.');
-    }
-  };
+      const next = !appLocked;
+      setAppLocked(next);
+      // Sync all lock keys used by the Teacher Portal guard
+      localStorage.setItem('munyaka_teacher_app_locked', next ? 'true' : 'false');
+      localStorage.setItem('munyaka_teacher_apps_lock_persistent', next ? 'true' : 'false');
+      localStorage.setItem('munyaka_global_app_lock', next ? 'true' : 'false');
+      // Dispatch storage event so any open Teacher Portal tab or route immediately unlocks
+      window.dispatchEvent(new Event('storage'));
+      if (next) {
+        showError('Global Teacher App Lock ACTIVATED. Teacher apps across devices are now locked.');
+      } else {
+        showSuccess('Global Teacher App Lock LIFTED. Teacher apps are active.');
+      }
+    };
 
   const handleMarkPaid = () => {
-    setBillingStatus('Paid');
-    localStorage.setItem('munyaka_billing_status', 'Paid');
-    localStorage.setItem('munyaka_teacher_app_locked', 'false');
-    setAppLocked(false);
-    
-    showSuccess('Current billing cycle marked as Paid. App locks lifted automatically.');
-  };
-
-  const handleMarkOverdue = () => {
-    setBillingStatus('Overdue');
-    localStorage.setItem('munyaka_billing_status', 'Overdue');
-    if (autolockOverdue) {
-      setAppLocked(true);
-      localStorage.setItem('munyaka_teacher_app_locked', 'true');
-      showError('Billing marked Overdue. App autolock triggered!');
-    } else {
-      showSuccess('Billing marked Overdue.');
-    }
-  };
+      setBillingStatus('Paid');
+      localStorage.setItem('munyaka_billing_status', 'Paid');
+      // Lift the lock explicitly when marked as Paid
+      localStorage.setItem('munyaka_teacher_app_locked', 'false');
+      localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'false');
+      localStorage.setItem('munyaka_global_app_lock', 'false');
+      setAppLocked(false);
+      // Notify other tabs
+      window.dispatchEvent(new Event('storage'));
+      showSuccess('Current billing cycle marked as Paid. App locks lifted automatically.');
+    };
+  
+    const handleMarkOverdue = () => {
+      setBillingStatus('Overdue');
+      localStorage.setItem('munyaka_billing_status', 'Overdue');
+      if (autolockOverdue) {
+        setAppLocked(true);
+        // Lock all sync keys
+        localStorage.setItem('munyaka_teacher_app_locked', 'true');
+        localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'true');
+        localStorage.setItem('munyaka_global_app_lock', 'true');
+        // Notify other tabs
+        window.dispatchEvent(new Event('storage'));
+        showError('Billing marked Overdue. App autolock triggered!');
+      } else {
+        showSuccess('Billing marked Overdue.');
+      }
+    };
 
   const handleSyncFirestore = () => {
     setIsSyncing(true);

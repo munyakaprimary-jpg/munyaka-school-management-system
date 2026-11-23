@@ -934,7 +934,10 @@ const OwnerDashboard: React.FC = () => {
   const handleToggleGlobalLock = (checked: boolean) => {
     setIsGloballyLocked(checked);
     try {
+      // Sync all lock keys used by the Teacher Portal guard
       localStorage.setItem(GLOBAL_LOCK_KEY, checked ? 'true' : 'false');
+      localStorage.setItem('munyaka_teacher_app_locked', checked ? 'true' : 'false');
+      localStorage.setItem('munyaka_teacher_apps_lock_persistent', checked ? 'true' : 'false');
       // Dispatch storage event / custom event so other connected tabs/windows or teacher apps sync immediately
       window.dispatchEvent(new Event('storage'));
       if (checked) {

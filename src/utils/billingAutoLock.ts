@@ -243,6 +243,7 @@ export function applyAutoLock(): boolean {
         localStorage.setItem(GLOBAL_LOCK_KEY, 'true');
         try {
           localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'true');
+          localStorage.setItem('munyaka_teacher_app_locked', 'true');
         } catch {}
         window.dispatchEvent(new Event('storage'));
         console.info('[Billing Auto-Lock] Teacher apps auto-locked due to overdue payment (Authoritative Time Verified)');
@@ -318,6 +319,7 @@ export function recordPaymentAndUnlock(paymentData: {
 
     localStorage.setItem(GLOBAL_LOCK_KEY, 'false');
     localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'false');
+    localStorage.setItem('munyaka_teacher_app_locked', 'false');
     window.dispatchEvent(new Event('storage'));
     console.info('[Billing Auto-Lock] Payment recorded as PAID and teacher apps unlocked.');
   } catch (err) {
