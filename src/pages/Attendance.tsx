@@ -68,11 +68,44 @@ export default function Attendance() {
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
 
-  // Per-session submission / lock states per grade/stream/date
-  const [morningSubmitted, setMorningSubmitted] = useState<boolean>(false);
-  const [morningSubmittedAt, setMorningSubmittedAt] = useState<string | null>(null);
-  const [afternoonSubmitted, setAfternoonSubmitted] = useState<boolean>(false);
-  const [afternoonSubmittedAt, setAfternoonSubmittedAt] = useState<string | null>(null);
+  // Per-session submission / lock states per date & session
+  const [sessionSubmittedData, setSessionSubmittedData] = useState<Record<string, { morning: boolean; afternoon: boolean }>>(() => {
+    try {
+      const saved = localStorage.getItem('session_submitted_data');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('session_submitted_data', JSON.stringify(sessionSubmittedData));
+    } catch (e) {}
+  }, [sessionSubmittedData]);
+
+  const currentSubmission = sessionSubmittedData[selectedDate] || { morning: false, afternoon: false };
+  const isMorningSubmitted = !!currentSubmission.morning;
+  const isAfternoonSubmitted = !!currentSubmission.afternoon;
+
+  const handleUnlockSubmittedSession = (session: 'morning' | 'afternoon') => {
+    if (!isAdmin && roleStr !== 'jamlyan_analytics' && !user?.email?.includes('admin')) {
+      toast.error('Only administrators can unlock submitted sessions.');
+      return;
+    }
+    setSessionSubmittedData(prev => {
+      const current = prev[selectedDate] || { morning: false, afternoon: false };
+      const updated = {
+        ...prev,
+        [selectedDate]: {
+          ...current,
+          [session]: false
+        }
+      };
+      return updated;
+    });
+    toast.success(`${session === 'morning' ? 'Morning' : 'Afternoon'} session submission unlocked.`);
+  };
 
   // Time Lock & Role check helper
   const { user } = useAuth();
@@ -130,8 +163,11 @@ export default function Attendance() {
     manualAfternoonLock ? 'Locked' : undefined
   );
 
-  const morningLocked = !isMorningOpen;
-  const afternoonLocked = !isAfternoonOpen;
+  const morningLocked = !isMorningOpen || manualMorningLock;
+  const afternoonLocked = !isAfternoonOpen || manualAfternoonLock;
+
+  const isMorningLocked = morningLocked || isMorningSubmitted;
+  const isAfternoonLocked = afternoonLocked || isAfternoonSubmitted;
 
   const handleMorningFromChange = (newVal: string) => {
     setMorningFromTime(newVal);
@@ -304,19 +340,6 @@ export default function Attendance() {
       const activeKey = `${selectedDate}_${selectedGrade}_${selectedStream}`;
       const existingRecord = parsedRollCalls[activeKey] || parsedRollCalls[`${selectedGrade}_${selectedStream}_${selectedDate}`];
 
-      // Load submission flags
-      if (existingRecord) {
-        setMorningSubmitted(!!existingRecord.morningSubmitted);
-        setMorningSubmittedAt(existingRecord.morningSubmittedAt || null);
-        setAfternoonSubmitted(!!existingRecord.afternoonSubmitted);
-        setAfternoonSubmittedAt(existingRecord.afternoonSubmittedAt || null);
-      } else {
-        setMorningSubmitted(false);
-        setMorningSubmittedAt(null);
-        setAfternoonSubmitted(false);
-        setAfternoonSubmittedAt(null);
-      }
-
       const initialMap: Record<string, { morning: string | null; afternoon: string | null; remarks: string }> = {};
       const targetLearners = getFilteredLearners();
 
@@ -363,12 +386,20 @@ export default function Attendance() {
   };
 
   const handleStatusChange = (id: string, session: 'morning' | 'afternoon', status: string | null) => {
-    if (session === 'morning' && morningLocked && (!isAdmin || !bypassCutoff)) {
-      toast.error('Morning attendance is locked after 9:40 AM.');
+    if (session === 'morning' && isMorningLocked && (!isAdmin || !bypassCutoff)) {
+      if (isMorningSubmitted) {
+        toast.error('Morning session is submitted and locked. Only admin can unlock.');
+      } else {
+        toast.error('Morning attendance is locked.');
+      }
       return;
     }
-    if (session === 'afternoon' && afternoonLocked && (!isAdmin || !bypassCutoff)) {
-      toast.error('Afternoon attendance is locked after 15:00.');
+    if (session === 'afternoon' && isAfternoonLocked && (!isAdmin || !bypassCutoff)) {
+      if (isAfternoonSubmitted) {
+        toast.error('Afternoon session is submitted and locked. Only admin can unlock.');
+      } else {
+        toast.error('Afternoon attendance is locked.');
+      }
       return;
     }
     setAttendanceMap(prev => ({
@@ -381,6 +412,14 @@ export default function Attendance() {
   };
 
   const handleRemarksChange = (id: string, remarks: string) => {
+    if (activeSession === 'morning' && isMorningLocked && !isAdmin) {
+      toast.error('Morning session is locked.');
+      return;
+    }
+    if (activeSession === 'afternoon' && isAfternoonLocked && !isAdmin) {
+      toast.error('Afternoon session is locked.');
+      return;
+    }
     setAttendanceMap(prev => ({
       ...prev,
       [id]: {
@@ -391,12 +430,12 @@ export default function Attendance() {
   };
 
   const markAll = (session: 'morning' | 'afternoon', status: string) => {
-    if (session === 'morning' && morningLocked && (!isAdmin || !bypassCutoff)) {
-      toast.error('Morning attendance is locked after 9:40 AM.');
+    if (session === 'morning' && isMorningLocked && (!isAdmin || !bypassCutoff)) {
+      toast.error('Morning session is locked.');
       return;
     }
-    if (session === 'afternoon' && afternoonLocked && (!isAdmin || !bypassCutoff)) {
-      toast.error('Afternoon attendance is locked after 15:00.');
+    if (session === 'afternoon' && isAfternoonLocked && (!isAdmin || !bypassCutoff)) {
+      toast.error('Afternoon session is locked.');
       return;
     }
     const targetLearners = getFilteredLearners();
@@ -421,6 +460,22 @@ export default function Attendance() {
     try {
       const targetLearners = getFilteredLearners();
       const activeKey = `${selectedDate}_${selectedGrade}_${selectedStream}`;
+
+      // Immediately mark current session as submitted in state and localStorage
+      setSessionSubmittedData(prev => {
+        const current = prev[selectedDate] || { morning: false, afternoon: false };
+        const updated = {
+          ...prev,
+          [selectedDate]: {
+            ...current,
+            [activeSession]: true
+          }
+        };
+        try {
+          localStorage.setItem('session_submitted_data', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
 
       const rawMaster = localStorage.getItem('roll_call_records') || '{}';
       let masterParsed: any = {};
@@ -1102,14 +1157,52 @@ export default function Attendance() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                onClick={handleSaveAttendance}
-                disabled={isSaving || totalLearnersCount === 0}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md gap-2"
-              >
-                <Save className="w-4 h-4" />
-                {savedSuccess ? 'Saved Successfully!' : 'Save Roll Call'}
-              </Button>
+              {activeSession === 'morning' && isMorningSubmitted ? (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 px-3 py-1.5 text-xs font-semibold gap-1.5 shadow-sm">
+                    <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                    Session Submitted (Locked)
+                  </Badge>
+                  {(isAdmin || roleStr === 'jamlyan_analytics' || user?.email?.includes('admin')) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUnlockSubmittedSession('morning')}
+                      className="border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs h-8 gap-1"
+                    >
+                      <Unlock className="w-3.5 h-3.5" />
+                      Unlock Submitted Session
+                    </Button>
+                  )}
+                </div>
+              ) : activeSession === 'afternoon' && isAfternoonSubmitted ? (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 px-3 py-1.5 text-xs font-semibold gap-1.5 shadow-sm">
+                    <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                    Session Submitted (Locked)
+                  </Badge>
+                  {(isAdmin || roleStr === 'jamlyan_analytics' || user?.email?.includes('admin')) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUnlockSubmittedSession('afternoon')}
+                      className="border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs h-8 gap-1"
+                    >
+                      <Unlock className="w-3.5 h-3.5" />
+                      Unlock Submitted Session
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <Button
+                  onClick={handleSaveAttendance}
+                  disabled={isSaving || totalLearnersCount === 0 || (activeSession === 'morning' ? isMorningLocked : isAfternoonLocked)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {savedSuccess ? 'Saved Successfully!' : 'Save Roll Call'}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -1351,14 +1444,52 @@ export default function Attendance() {
             <p className="text-xs text-slate-500">
               Legend: <strong>P</strong> = Present, <strong>A</strong> = Absent, <strong>L</strong> = Late, <strong>E</strong> = Excused
             </p>
-            <Button
-              onClick={handleSaveAttendance}
-              disabled={isSaving || totalLearnersCount === 0}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md gap-2"
-            >
-              <Save className="w-4 h-4" />
-              {savedSuccess ? 'Saved Successfully!' : 'Save Roll Call'}
-            </Button>
+            {activeSession === 'morning' && isMorningSubmitted ? (
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 px-3 py-1.5 text-xs font-semibold gap-1.5 shadow-sm">
+                  <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                  Session Submitted (Locked)
+                </Badge>
+                {(isAdmin || roleStr === 'jamlyan_analytics' || user?.email?.includes('admin')) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleUnlockSubmittedSession('morning')}
+                    className="border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs h-8 gap-1"
+                  >
+                    <Unlock className="w-3.5 h-3.5" />
+                    Unlock Submitted Session
+                  </Button>
+                )}
+              </div>
+            ) : activeSession === 'afternoon' && isAfternoonSubmitted ? (
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 px-3 py-1.5 text-xs font-semibold gap-1.5 shadow-sm">
+                  <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                  Session Submitted (Locked)
+                </Badge>
+                {(isAdmin || roleStr === 'jamlyan_analytics' || user?.email?.includes('admin')) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleUnlockSubmittedSession('afternoon')}
+                    className="border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs h-8 gap-1"
+                  >
+                    <Unlock className="w-3.5 h-3.5" />
+                    Unlock Submitted Session
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Button
+                onClick={handleSaveAttendance}
+                disabled={isSaving || totalLearnersCount === 0 || (activeSession === 'morning' ? isMorningLocked : isAfternoonLocked)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md gap-2"
+              >
+                <Save className="w-4 h-4" />
+                {savedSuccess ? 'Saved Successfully!' : 'Save Roll Call'}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
