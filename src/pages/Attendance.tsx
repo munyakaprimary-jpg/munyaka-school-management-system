@@ -298,7 +298,7 @@ export default function Attendance() {
       const activeKey = `${selectedDate}_${selectedGrade}_${selectedStream}`;
       const existingRecord = parsedRollCalls[activeKey] || parsedRollCalls[`${selectedGrade}_${selectedStream}_${selectedDate}`];
 
-      const initialMap: Record<string, { morning: string; afternoon: string; remarks: string }> = {};
+      const initialMap: Record<string, { morning: string | null; afternoon: string | null; remarks: string }> = {};
       const targetLearners = getFilteredLearners();
 
       targetLearners.forEach((learner) => {
@@ -306,8 +306,8 @@ export default function Attendance() {
         const studentRecord = existingRecord?.students?.[id] || existingRecord?.learners?.[id];
         
         initialMap[id] = {
-          morning: studentRecord?.morning || studentRecord?.status || '',
-          afternoon: studentRecord?.afternoon || studentRecord?.status || '',
+          morning: studentRecord?.morning !== undefined ? studentRecord.morning : (studentRecord?.status !== undefined ? studentRecord.status : null),
+          afternoon: studentRecord?.afternoon !== undefined ? studentRecord.afternoon : null,
           remarks: studentRecord?.remarks || ''
         };
       });
@@ -343,7 +343,7 @@ export default function Attendance() {
     return adm.replace(/-G\d+-/gi, '-').replace(/\s+/g, '');
   };
 
-  const handleStatusChange = (id: string, session: 'morning' | 'afternoon', status: string) => {
+  const handleStatusChange = (id: string, session: 'morning' | 'afternoon', status: string | null) => {
     if (session === 'morning' && morningLocked && (!isAdmin || !bypassCutoff)) {
       toast.error('Morning attendance is locked after 9:40 AM.');
       return;
@@ -355,8 +355,8 @@ export default function Attendance() {
     setAttendanceMap(prev => ({
       ...prev,
       [id]: {
-        ...(prev[id] || { morning: 'Present', afternoon: 'Present', remarks: '' }),
-        [session]: status
+        ...(prev[id] || { morning: null, afternoon: null, remarks: '' }),
+        [session]: prev[id]?.[session] === status ? null : status // toggle off if clicked again
       }
     }));
   };
@@ -365,7 +365,7 @@ export default function Attendance() {
     setAttendanceMap(prev => ({
       ...prev,
       [id]: {
-        ...(prev[id] || { morning: 'Present', afternoon: 'Present', remarks: '' }),
+        ...(prev[id] || { morning: null, afternoon: null, remarks: '' }),
         remarks
       }
     }));
@@ -387,14 +387,14 @@ export default function Attendance() {
         const id = l.id || l.admissionNo || l.admissionNumber || '';
         if (id) {
           next[id] = {
-            ...(next[id] || { morning: 'Present', afternoon: 'Present', remarks: '' }),
+            ...(next[id] || { morning: null, afternoon: null, remarks: '' }),
             [session]: status
           };
         }
       });
       return next;
     });
-    toast.success(`Marked all filtered learners as ${status} for ${session}`);
+    toast.success(`Marked all filtered learners as ${status} for ${activeSession === 'morning' ? 'Morning Roll Call' : 'Afternoon Roll Call'}`);
   };
 
   const handleSaveAttendance = () => {
@@ -982,7 +982,7 @@ export default function Attendance() {
                     const grade = learner.grade || learner.classLevel || '-';
                     const stream = learner.stream || '-';
                     
-                    const currentData = attendanceMap[id] || { morning: 'Present', afternoon: 'Present', remarks: '' };
+                    const currentData = attendanceMap[id] || { morning: null, afternoon: null, remarks: '' };
 
                     return (
                       <tr key={id} className="hover:bg-slate-50/80 transition-colors whitespace-nowrap">
