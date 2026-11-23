@@ -1,90 +1,112 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { db } from '@/config/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+
+/**
+ * Unified Teacher Portal Lock State Hook
+ *
+ * Single source of truth: `isTeacherAppLocked` from localStorage.
+ * The Teacher Portal Locked screen ONLY triggers when this flag is explicitly true.
+ *
+ * Debug: console.debug `[LockGuard] isTeacherAppLocked:` and its source
+ *   (`localStorage` vs `Firestore`) when evaluating the Teacher Portal route.
+ */
 
 export function useTeacherPortalLockState() {
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     try {
-      const manualLock = localStorage.getItem('munyaka_teacher_app_locked') === 'true' ||
-                         localStorage.getItem('munyaka_teacher_apps_lock_persistent') === 'true' ||
-                         localStorage.getItem('munyaka_global_app_lock') === 'true';
-      const bypass = localStorage.getItem('munyaka_lock_bypass') === 'true';
-
-      if (bypass) return false;
-      if (manualLock) return true;
-      return false;
+      const locked = localStorage.getItem('isTeacherAppLocked') === 'true';
+      console.debug(
+        `[LockGuard] isTeacherAppLocked: ${locked} (source: localStorage)`
+      );
+      return locked;
     } catch {
       return false;
     }
   });
 
-  useEffect(() => {
-    const checkState = () => {
-      try {
-        const manualLock = localStorage.getItem('munyaka_teacher_app_locked') === 'true' ||
-                           localStorage.getItem('munyaka_teacher_apps_lock_persistent') === 'true' ||
-                           localStorage.getItem('munyaka_global_app_lock') === 'true';
-        const bypass = localStorage.getItem('munyaka_lock_bypass') === 'true';
+  const isLockedRef = useRef(isLocked);
+  isLockedRef.current = isLocked;
 
-        if (bypass) {
-          setIsLocked(false);
-          return;
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+
+    try {
+      if (db) {
+        const docRef = doc(db, 'system_settings', 'global_lock');
+        unsubscribe = onSnapshot(
+          docRef,
+          (docSnap) => {
+            try {
+              const storedLocal = localStorage.getItem('isTeacherAppLocked');
+
+              // If localStorage explicitly says unlocked, keep it unlocked.
+              // This is the exact disconnect fix: Firestore must not re-lock
+              // after the operator has manually unlocked via Jamlyan Analytics.
+              if (storedLocal === 'false') {
+                if (isLockedRef.current !== false) {
+                  setIsLocked(false);
+                }
+                console.debug(
+                  `[LockGuard] isTeacherAppLocked: false (source: localStorage — Firestore ignored)`
+                );
+                return;
+              }
+
+              if (docSnap.exists()) {
+                const data = docSnap.data();
+                const firestoreLocked = Boolean(
+                  data?.isTeacherAppLocked ??
+                  data?.teacherAppLocked ??
+                  data?.locked
+                );
+
+                if (firestoreLocked) {
+                  setIsLocked(true);
+                  localStorage.setItem('isTeacherAppLocked', 'true');
+                  console.debug(
+                    `[LockGuard] isTeacherAppLocked: true (source: Firestore)`
+                  );
+                } else {
+                  setIsLocked(false);
+                  localStorage.setItem('isTeacherAppLocked', 'false');
+                  console.debug(
+                    `[LockGuard] isTeacherAppLocked: false (source: Firestore)`
+                  );
+                }
+              }
+            } catch (err) {
+              console.warn('[LockGuard] Firestore snapshot handler error:', err);
+            }
+          },
+          () => {
+            // Silent error handler — Firestore may be unavailable
+          }
+        );
+      }
+    } catch (err) {
+      console.warn('[LockGuard] Firestore subscription failed:', err);
+    }
+
+    // Sync localStorage changes (storage event fires in OTHER tabs)
+    const handleStorage = () => {
+      try {
+        const locked = localStorage.getItem('isTeacherAppLocked') === 'true';
+        if (isLockedRef.current !== locked) {
+          setIsLocked(locked);
+          console.debug(
+            `[LockGuard] isTeacherAppLocked: ${locked} (source: localStorage storage event)`
+          );
         }
-        if (manualLock) {
-          setIsLocked(true);
-          return;
-        }
-        setIsLocked(false);
       } catch {
         // ignore
       }
     };
 
-    window.addEventListener('storage', checkState);
-    const interval = setInterval(checkState, 1000);
-
-    let unsubscribe: (() => void) | undefined;
-    const timeout = setTimeout(() => {
-      // guarantee no hanging
-    }, 2500);
-
-    try {
-      if (db) {
-        const docRef = doc(db, 'system_settings', 'global_lock');
-        unsubscribe = onSnapshot(docRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            const firestoreLocked = data.teacherAppLocked || data.locked || false;
-            const firestoreBypass = data.platformBypass || data.lockBypass || false;
-
-            if (firestoreBypass) {
-              setIsLocked(false);
-              // Also clear local manual lock if bypass is active
-              localStorage.setItem('munyaka_teacher_app_locked', 'false');
-              localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'false');
-              localStorage.setItem('munyaka_global_app_lock', 'false');
-            } else if (firestoreLocked) {
-              setIsLocked(true);
-              localStorage.setItem('munyaka_teacher_app_locked', 'true');
-              localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'true');
-              localStorage.setItem('munyaka_global_app_lock', 'true');
-            } else {
-              setIsLocked(false);
-              localStorage.setItem('munyaka_teacher_app_locked', 'false');
-              localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'false');
-              localStorage.setItem('munyaka_global_app_lock', 'false');
-            }
-          }
-        }, () => {});
-      }
-    } catch {
-      // ignore
-    }
+    window.addEventListener('storage', handleStorage);
 
     return () => {
-      window.removeEventListener('storage', checkState);
-      clearInterval(interval);
-      clearTimeout(timeout);
+      window.removeEventListener('storage', handleStorage);
       if (unsubscribe) unsubscribe();
     };
   }, []);

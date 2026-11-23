@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { showSuccess, showError } from '@/utils/toast';
+import { setTeacherAppLock, getTeacherAppLock } from '@/utils/teacherAppLock';
 import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';

@@ -27,6 +27,7 @@ import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
 import { getStoredStaff } from '@/utils/storage';
 import { useSessionHeartbeat } from '@/utils/sessionHeartbeat';
 import { ConnectedActiveUsersMonitor } from '@/components/ConnectedActiveUsersMonitor';
+import { setTeacherAppLock, getTeacherAppLock } from '@/utils/teacherAppLock';
 
 export default function JamlyanAnalyticsPortal() {
   useSessionHeartbeat();
@@ -73,7 +74,7 @@ export default function JamlyanAnalyticsPortal() {
   const [syncStatus, setSyncStatus] = useState('Synchronized with Firestore (cloud_sync_ok)');
 
   // App locks & billing states
-  const [appLocked, setAppLocked] = useState(() => localStorage.getItem('munyaka_teacher_app_locked') === 'true');
+  const [appLocked, setAppLocked] = useState(() => getTeacherAppLock());
   const [billingStatus, setBillingStatus] = useState(() => localStorage.getItem('munyaka_billing_status') || 'Paid');
   const [autolockOverdue, setAutolockOverdue] = useState(() => localStorage.getItem('munyaka_autolock_overdue') !== 'false');
 
@@ -99,12 +100,8 @@ export default function JamlyanAnalyticsPortal() {
   const handleToggleLock = () => {
       const next = !appLocked;
       setAppLocked(next);
-      // Sync all lock keys used by the Teacher Portal guard
-      localStorage.setItem('munyaka_teacher_app_locked', next ? 'true' : 'false');
-      localStorage.setItem('munyaka_teacher_apps_lock_persistent', next ? 'true' : 'false');
-      localStorage.setItem('munyaka_global_app_lock', next ? 'true' : 'false');
-      // Dispatch storage event so any open Teacher Portal tab or route immediately unlocks
-      window.dispatchEvent(new Event('storage'));
+      // Write unified lock flag to localStorage + Firestore, clear legacy keys
+      setTeacherAppLock(next);
       if (next) {
         showError('Global Teacher App Lock ACTIVATED. Teacher apps across devices are now locked.');
       } else {
@@ -116,30 +113,18 @@ export default function JamlyanAnalyticsPortal() {
       setBillingStatus('Paid');
       localStorage.setItem('munyaka_billing_status', 'Paid');
       // Lift the lock explicitly when marked as Paid
-      localStorage.setItem('munyaka_teacher_app_locked', 'false');
-      localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'false');
-      localStorage.setItem('munyaka_global_app_lock', 'false');
+      setTeacherAppLock(false);
       setAppLocked(false);
-      // Notify other tabs
-      window.dispatchEvent(new Event('storage'));
       showSuccess('Current billing cycle marked as Paid. App locks lifted automatically.');
     };
   
     const handleMarkOverdue = () => {
       setBillingStatus('Overdue');
       localStorage.setItem('munyaka_billing_status', 'Overdue');
-      if (autolockOverdue) {
-        setAppLocked(true);
-        // Lock all sync keys
-        localStorage.setItem('munyaka_teacher_app_locked', 'true');
-        localStorage.setItem('munyaka_teacher_apps_lock_persistent', 'true');
-        localStorage.setItem('munyaka_global_app_lock', 'true');
-        // Notify other tabs
-        window.dispatchEvent(new Event('storage'));
-        showError('Billing marked Overdue. App autolock triggered!');
-      } else {
-        showSuccess('Billing marked Overdue.');
-      }
+      // NOTE: Marking billing as Overdue does NOT automatically lock teacher apps.
+      // The lock is ONLY controlled by the Global Teacher App Lock toggle above.
+      // This prevents secondary/overdue lock triggers from causing the disconnect.
+      showSuccess('Billing marked Overdue. Use the Global Teacher App Lock toggle to restrict access if needed.');
     };
 
   const handleSyncFirestore = () => {

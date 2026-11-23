@@ -60,6 +60,7 @@ import {
 } from '@/services/licenseService';
 import { downloadCSV } from '@/utils/downloadHelper';
 import { showSuccess, showError } from '@/utils/toast';
+import { setTeacherAppLock, getTeacherAppLock } from '@/utils/teacherAppLock';
 import { DeviceMonitoringDashboard } from '@/components/device-monitoring/DeviceMonitoringDashboard';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -913,31 +914,13 @@ const OwnerDashboard: React.FC = () => {
     : 'from-blue-600 via-cyan-600 to-teal-500';
 
   // Global Lock state management
-  const GLOBAL_LOCK_KEY = 'munyaka_global_app_lock';
-  const [isGloballyLocked, setIsGloballyLocked] = useState<boolean>(() => {
-    try {
-      // Check if billing is overdue before defaulting to locked
-      const dueDateStr = localStorage.getItem('munyaka_next_billing_date') || localStorage.getItem('munyaka_payment_due_date') || '2026-10-30';
-      const isOverdue = new Date().getTime() > new Date(dueDateStr).getTime();
-      const saved = localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
-      // If not overdue, force unlocked unless explicitly required
-      if (!isOverdue && saved) {
-        localStorage.setItem(GLOBAL_LOCK_KEY, 'false');
-        return false;
-      }
-      return saved;
-    } catch {
-      return false;
-    }
-  });
+  const [isGloballyLocked, setIsGloballyLocked] = useState<boolean>(() => getTeacherAppLock());
 
   const handleToggleGlobalLock = (checked: boolean) => {
     setIsGloballyLocked(checked);
     try {
-      // Sync all lock keys used by the Teacher Portal guard
-      localStorage.setItem(GLOBAL_LOCK_KEY, checked ? 'true' : 'false');
-      localStorage.setItem('munyaka_teacher_app_locked', checked ? 'true' : 'false');
-      localStorage.setItem('munyaka_teacher_apps_lock_persistent', checked ? 'true' : 'false');
+      // Write unified lock flag to localStorage + Firestore, clear legacy keys
+      setTeacherAppLock(checked);
       // Dispatch storage event / custom event so other connected tabs/windows or teacher apps sync immediately
       window.dispatchEvent(new Event('storage'));
       if (checked) {
