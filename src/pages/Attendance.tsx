@@ -515,13 +515,157 @@ export default function Attendance() {
     }
   };
 
-  const filteredLearners = getFilteredLearners().filter(l => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    const name = (l.name || l.fullName || l.learnerName || '').toLowerCase();
-    const adm = cleanAdmissionNo(l.admissionNo || l.admissionNumber || '').toLowerCase();
-    return name.includes(q) || adm.includes(q);
-  });
+  const visibleLearners = filteredLearners;
+  const [reportPeriod, setReportPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+
+  const handleDownloadAttendanceReport = () => {
+    const baseDate = selectedDate ? new Date(`${selectedDate}T00:00:00`) : new Date();
+    const toIso = (d: Date) => d.toISOString().slice(0, 10);
+
+    let startDateStr = toIso(baseDate);
+    let endDateStr = toIso(baseDate);
+
+    if (reportPeriod === 'weekly') {
+      const day = baseDate.getDay(); // 0 = Sun, 1 = Mon...
+      const diffToMon = day === 0 ? -6 : 1 - day;
+      const mon = new Date(baseDate);
+      mon.setDate(baseDate.getDate() + diffToMon);
+      const fri = new Date(mon);
+      fri.setDate(mon.getDate() + 4);
+      startDateStr = toIso(mon);
+      endDateStr = toIso(fri);
+    } else if (reportPeriod === 'monthly') {
+      const first = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+      const last = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
+      startDateStr = toIso(first);
+      endDateStr = toIso(last);
+    }
+
+    // Pull saved roll_call records from localStorage (adjust key if stored under another key)
+    const rawRollCall = JSON.parse(localStorage.getItem('roll_call') || '[]');
+    const records = Array.isArray(rawRollCall) ? rawRollCall : [];
+
+    const selectedGradeStream = selectedGrade !== 'all' && selectedStream !== 'all'
+      ? `${selectedGrade} ${selectedStream}`
+      : selectedGrade !== 'all' ? selectedGrade : 'ALL';
+
+    const filteredRecords = records.filter((rec: any) => {
+      const recDate = String(rec.date || '').slice(0, 10);
+      const inRange = recDate >= startDateStr && recDate <= endDateStr;
+      const matchesScope =
+        !selectedGradeStream ||
+        selectedGradeStream === 'ALL' ||
+        rec.gradeStream === selectedGradeStream ||
+        `${rec.grade || ''} ${rec.stream || ''}`.trim() === selectedGradeStream;
+      return inRange && matchesScope;
+    });
+
+    const learnerMap = new Map<string, {
+      admissionNo: string;
+      name: string;
+      gradeStream: string;
+      morningPresent: number;
+      afternoonPresent: number;
+      absent: number;
+      late: number;
+      excused: number;
+      totalMarks: number;
+    }>();
+
+    for (const l of visibleLearners || []) {
+      const key = String(l.id || l.admissionNo || l.name);
+      learnerMap.set(key, {
+        admissionNo: l.admissionNo || l.admissionNumber || '',
+        name: l.name || l.fullName || l.learnerName || '',
+        gradeStream: l.grade || l.stream ? `${l.grade || ''} ${l.stream || ''}`.trim() : '',
+        morningPresent: 0,
+        afternoonPresent: 0,
+        absent: 0,
+        late: 0,
+        excused: 0,
+        totalMarks: 0,
+      });
+    }
+
+    for (const rec of filteredRecords) {
+      const key = String(rec.learnerId || rec.admissionNo || rec.name || rec.studentName);
+      const entry = learnerMap.get(key) || {
+        admissionNo: rec.admissionNo || '',
+        name: rec.name || rec.studentName || key,
+        gradeStream: rec.gradeStream || '',
+        morningPresent: 0,
+        afternoonPresent: 0,
+        absent: 0,
+        late: 0,
+        excused: 0,
+        totalMarks: 0,
+      };
+
+      const mStatus = String(rec.morningStatus || rec.morning || '').toUpperCase();
+      const aStatus = String(rec.afternoonStatus || rec.afternoon || '').toUpperCase();
+
+      if (mStatus === 'P') { entry.morningPresent += 1; entry.totalMarks += 1; }
+      else if (mStatus === 'A') { entry.absent += 1; entry.totalMarks += 1; }
+      else if (mStatus === 'L') { entry.late += 1; entry.totalMarks += 1; }
+      else if (mStatus === 'E') { entry.excused += 1; entry.totalMarks += 1; }
+
+      if (aStatus === 'P') { entry.afternoonPresent += 1; entry.totalMarks += 1; }
+      else if (aStatus === 'A') { entry.absent += 1; entry.totalMarks += 1; }
+      else if (aStatus === 'L') { entry.late += 1; entry.totalMarks += 1; }
+      else if (aStatus === 'E') { entry.excused += 1; entry.totalMarks += 1; }
+
+      learnerMap.set(key, entry);
+    }
+
+    const rows = Array.from(learnerMap.values());
+    const totalLearners = rows.length;
+    const totalMorningPresent = rows.reduce((s, r) => s + r.morningPresent, 0);
+    const totalAfternoonPresent = rows.reduce((s, r) => s + r.afternoonPresent, 0);
+    const totalAbsent = rows.reduce((s, r) => s + r.absent, 0);
+    const totalLate = rows.reduce((s, r) => s + r.late, 0);
+    const totalExcused = rows.reduce((s, r) => s + r.excused, 0);
+    const totalPresentCombined = totalMorningPresent + totalAfternoonPresent;
+    const totalSessionsMarked = totalPresentCombined + totalAbsent + totalLate + totalExcused;
+    const attendancePct = totalSessionsMarked > 0
+      ? ((totalPresentCombined / totalSessionsMarked) * 100).toFixed(1)
+      : '0.0';
+
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+    const lines: string[] = [
+      ['ATTENDANCE SUMMARY', reportPeriod.toUpperCase(), `${startDateStr} to ${endDateStr}`].map(esc).join(','),
+      ['Total Learners', totalLearners, 'Morning Present', totalMorningPresent, 'Afternoon Present', totalAfternoonPresent].map(esc).join(','),
+      ['Total Absent', totalAbsent, 'Total Late', totalLate, 'Total Excused', totalExcused, 'Attendance Rate %', `${attendancePct}%`].map(esc).join(','),
+      '',
+      ['Admission No', 'Learner Name', 'Grade / Stream', 'Morning Present', 'Afternoon Present', 'Absent', 'Late', 'Excused', 'Attendance %'].map(esc).join(','),
+      ...rows.map((r) => {
+        const presentSum = r.morningPresent + r.afternoonPresent;
+        const pct = r.totalMarks > 0 ? ((presentSum / r.totalMarks) * 100).toFixed(1) : '0.0';
+        return [
+          r.admissionNo,
+          r.name,
+          r.gradeStream,
+          r.morningPresent,
+          r.afternoonPresent,
+          r.absent,
+          r.late,
+          r.excused,
+          `${pct}%`,
+        ].map(esc).join(',');
+      }),
+    ];
+
+    const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const scopeSlug = (selectedGradeStream || 'All').replace(/[^a-zA-Z0-9_-]+/g, '_');
+    a.href = url;
+    a.download = `Attendance_${reportPeriod}_${scopeSlug}_${startDateStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const totalLearnersCount = filteredLearners.length;
   const masterTotalCount = learners.length;
@@ -621,6 +765,25 @@ export default function Attendance() {
               </div>
             </>
           )}
+
+          <div className="flex items-center gap-2">
+            <select
+              value={reportPeriod}
+              onChange={(e) => setReportPeriod(e.target.value as 'daily' | 'weekly' | 'monthly')}
+              className="bg-white/10 text-white border border-white/20 rounded-xl px-2.5 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-white/40 [&>option]:bg-slate-900 [&>option]:text-white"
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+            <Button
+              onClick={handleDownloadAttendanceReport}
+              variant="outline"
+              className="bg-white/20 text-white border-white/30 hover:bg-white/30 gap-1.5 text-xs font-semibold"
+            >
+              <Download className="w-3.5 h-3.5" /> Download Sheet
+            </Button>
+          </div>
 
           <Button
             onClick={() => {
