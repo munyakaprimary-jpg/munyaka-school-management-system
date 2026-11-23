@@ -11,7 +11,7 @@ export interface LicenseBadgeInfo {
 
 export function getUnifiedLicenseInfo(): LicenseBadgeInfo {
   try {
-    const isLocked = localStorage.getItem('munyaka_teacher_app_locked') === 'true' || localStorage.getItem('munyaka_system_locked') === 'true';
+    const isLocked = localStorage.getItem('isTeacherAppLocked') === 'true';
     let status = (localStorage.getItem('munyaka_billing_status') || localStorage.getItem('munyaka_payment_status') || 'ACTIVE').toUpperCase();
     
     // Unify storage keys: check munyaka_billing_due_date, munyaka_payment_due_date, munyaka_next_billing_date, school_license_expiry

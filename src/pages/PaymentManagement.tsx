@@ -308,23 +308,7 @@ export default function PaymentManagement() {
   }, [paymentPeriod, hasCustomNotes]);
 
   // Global App Lock Toggle State
-  const GLOBAL_LOCK_KEY = 'munyaka_global_app_lock';
-  const [isGloballyLocked, setIsGloballyLocked] = useState<boolean>(() => {
-    try {
-      // Check if billing is overdue before defaulting to locked
-      const dueDateStr = localStorage.getItem('munyaka_next_billing_date') || localStorage.getItem('munyaka_payment_due_date') || '2026-10-30';
-      const isOverdue = new Date().getTime() > new Date(dueDateStr).getTime();
-      const saved = localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
-      // If not overdue, force unlocked unless explicitly required
-      if (!isOverdue && saved) {
-        localStorage.setItem(GLOBAL_LOCK_KEY, 'false');
-        return false;
-      }
-      return saved;
-    } catch {
-      return false;
-    }
-  });
+  const [isGloballyLocked, setIsGloballyLocked] = useState<boolean>(() => getTeacherAppLock());
 
   // Real Data from learner and staff storages
       const realActiveLearners = activeLearnersCount;
@@ -766,10 +750,8 @@ export default function PaymentManagement() {
                                               const nextState = !isGloballyLocked;
                                               setIsGloballyLocked(nextState);
                                               try {
-                                                // Sync all lock keys used by the Teacher Portal guard
-                                                localStorage.setItem(GLOBAL_LOCK_KEY, nextState ? 'true' : 'false');
-                                                localStorage.setItem('munyaka_teacher_app_locked', nextState ? 'true' : 'false');
-                                                localStorage.setItem('munyaka_teacher_apps_lock_persistent', nextState ? 'true' : 'false');
+                                                // Write unified lock flag to localStorage + Firestore, clear legacy keys
+                                                setTeacherAppLock(nextState);
                                                 window.dispatchEvent(new Event('storage'));
                                                 if (nextState) {
                                                   showSuccess('Global App Lock activated! Teacher apps will now be restricted.');

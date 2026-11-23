@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Lock, LogOut, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 
 export default function TeacherPortalLockedScreen() {
   const { logout } = useAuth();
+
+  useEffect(() => {
+    console.debug('[LockGuard] TeacherPortalLockedScreen rendered — isTeacherAppLocked is true');
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-6">

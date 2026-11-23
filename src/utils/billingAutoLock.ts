@@ -202,25 +202,9 @@ function getCurrentMonthDeadline(): Date {
  * Check if auto-lock should be triggered using authoritative time
  */
 export function shouldAutoLock(): boolean {
-  // If Admin Bypass is active, never trigger auto-lock
-  try {
-    if (localStorage.getItem('munyaka_lock_bypass') === 'true') {
-      return false;
-    }
-  } catch {}
-
-  const deadline = getCurrentMonthDeadline();
-  const now = getAuthoritativeTimeSync();
-  
-  if (now <= deadline) {
-    return false;
-  }
-  
-  if (isCurrentCyclePaid()) {
-    return false;
-  }
-  
-  return true;
+  // Auto-lock based on overdue billing is disabled per system requirements.
+  // Teacher portal lock is exclusively controlled by Global Teacher App Lock toggle.
+  return false;
 }
 
 /**
