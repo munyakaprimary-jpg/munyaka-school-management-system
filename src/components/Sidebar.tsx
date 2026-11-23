@@ -32,9 +32,7 @@ import {
   LogOut,
   Wifi,
   Lock,
-  FlaskConical,
-  GraduationCap,
-  MessageSquare
+  FlaskConical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -112,7 +110,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const isAdminOrOwner = true; // Admin/staff should have access to all menus as requested
   const isStaffOnly = true;
 
-  const isStudentUser = false;
   const studentMenuItems: NavItem[] = [
     { name: 'Student Dashboard', href: '/student-dashboard', icon: GraduationCap, allowedRoles: ['all'] },
     { name: 'My Assessment', href: '/student-assessment', icon: BookOpen, allowedRoles: ['all'] },
