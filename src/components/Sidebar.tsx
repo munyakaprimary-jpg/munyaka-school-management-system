@@ -117,6 +117,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Student Dashboard', href: '/student-dashboard', icon: GraduationCap, allowedRoles: ['all'] },
     { name: 'My Assessment', href: '/student-assessment', icon: BookOpen, allowedRoles: ['all'] },
     { name: 'All Set Exams', href: '/assessments/list', icon: BookOpenCheck, allowedRoles: ['all'] },
+    { name: 'Games Hub', href: '/games', icon: Gamepad2, allowedRoles: ['all'] },
     { name: 'Communication', href: '/communication', icon: MessageSquare, allowedRoles: ['all'] },
     { name: 'Study Corner', href: '/study-corner', icon: BookOpen, allowedRoles: ['all'] },
   ];

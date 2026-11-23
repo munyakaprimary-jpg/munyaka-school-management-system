@@ -498,6 +498,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: GraduationCap, label: 'Student Dashboard', path: '/student-dashboard' },
     { icon: BookOpen, label: 'My Assessment', path: '/student-assessment' },
     { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list' },
+    { icon: Gamepad2, label: 'Games Hub', path: '/games' },
     { icon: MessageSquare, label: 'Communication', path: '/communication' },
     { icon: BookOpen, label: 'Study Corner', path: '/study-corner' },
   ];
