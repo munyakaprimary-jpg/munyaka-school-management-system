@@ -616,26 +616,49 @@ export default function Attendance() {
       cursor.setDate(cursor.getDate() + 1);
     }
 
-    const rawRollCall = JSON.parse(localStorage.getItem('roll_call') || '[]');
-    const records = Array.isArray(rawRollCall) ? rawRollCall : [];
+    // 1. Gather all possible attendance and roll call records from localStorage keys matching /attendance|roll_?call|marks/i
+    const allRecords: any[] = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const keyName = localStorage.key(i) || '';
+        if (/attendance|roll_?call|marks/i.test(keyName)) {
+          const rawVal = localStorage.getItem(keyName);
+          if (rawVal) {
+            try {
+              const parsed = JSON.parse(rawVal);
+              if (Array.isArray(parsed)) {
+                allRecords.push(...parsed);
+              } else if (typeof parsed === 'object' && parsed !== null) {
+                // Could be date-keyed or composite-key object
+                Object.entries(parsed).forEach(([k, v]: [string, any]) => {
+                  if (v && typeof v === 'object') {
+                    if (v.date || v.students || v.learners) {
+                      allRecords.push(v);
+                    } else {
+                      // Maybe date-keyed { [date]: { [learnerId]: { morning, afternoon, remarks } } }
+                      allRecords.push({ key: k, ...v });
+                    }
+                  }
+                });
+              }
+            } catch (e) {}
+          }
+        }
+      }
+    } catch (err) {}
+
+    // Also include active historicalRecords state
+    if (Array.isArray(historicalRecords)) {
+      allRecords.push(...historicalRecords);
+    }
 
     const selectedGradeStream = selectedGrade !== 'all' && selectedStream !== 'all'
       ? `${selectedGrade} ${selectedStream}`
       : selectedGrade !== 'all' ? selectedGrade : 'ALL';
 
-    const filteredRecords = records.filter((rec: any) => {
-      const recDate = String(rec.date || '').slice(0, 10);
-      const inRange = recDate >= startDateStr && recDate <= endDateStr;
-      const matchesScope =
-        !selectedGradeStream ||
-        selectedGradeStream === 'ALL' ||
-        rec.gradeStream === selectedGradeStream ||
-        `${rec.grade || ''} ${rec.stream || ''}`.trim() === selectedGradeStream;
-      return inRange && matchesScope;
-    });
-
     type DayMark = { morning: string; afternoon: string; remarks: string };
     type LearnerSummary = {
+      id: string;
       admissionNo: string;
       name: string;
       gradeStream: string;
@@ -650,12 +673,30 @@ export default function Attendance() {
 
     const learnerMap = new Map<string, LearnerSummary>();
 
-    for (const l of visibleLearners || []) {
-      const key = String(l.id || l.admissionNo || l.name);
-      learnerMap.set(key, {
-        admissionNo: l.admissionNo || l.admissionNumber || '',
-        name: l.name || l.fullName || l.learnerName || '',
-        gradeStream: `${l.grade || ''} ${l.stream || ''}`.trim(),
+    // Helper to normalize status ('P' | 'A' | 'L' | 'E' or full status words)
+    const normalizeStatus = (val: any): string => {
+      if (!val) return '-';
+      const s = String(val).trim().toUpperCase();
+      if (s.startsWith('P') || s === 'PRESENT') return 'P';
+      if (s.startsWith('A') || s === 'ABSENT') return 'A';
+      if (s.startsWith('L') || s === 'LATE') return 'L';
+      if (s.startsWith('E') || s === 'EXCUSED') return 'E';
+      return s.slice(0, 1) || '-';
+    };
+
+    const targetVisibleLearners = visibleLearners && visibleLearners.length > 0 ? visibleLearners : learners;
+
+    for (const l of targetVisibleLearners || []) {
+      const id = String(l.id || l.admissionNo || l.admissionNumber || l.name || '');
+      const adm = l.admissionNo || l.admissionNumber || id;
+      const name = l.name || l.fullName || l.learnerName || '';
+      const gradeStream = `${l.grade || l.classLevel || ''} ${l.stream || ''}`.trim();
+
+      learnerMap.set(id, {
+        id,
+        admissionNo: cleanAdmissionNo(adm),
+        name,
+        gradeStream,
         byDate: {},
         morningPresent: 0,
         afternoonPresent: 0,
@@ -666,46 +707,170 @@ export default function Attendance() {
       });
     }
 
-    for (const rec of filteredRecords) {
-      const key = String(rec.learnerId || rec.admissionNo || rec.name || rec.studentName);
-      const entry = learnerMap.get(key) || {
-        admissionNo: rec.admissionNo || '',
-        name: rec.name || rec.studentName || key,
-        gradeStream: rec.gradeStream || `${rec.grade || ''} ${rec.stream || ''}`.trim(),
-        byDate: {},
-        morningPresent: 0,
-        afternoonPresent: 0,
-        absent: 0,
-        late: 0,
-        excused: 0,
-        totalMarks: 0,
-      };
+    // Populate from active component attendanceMap for selectedDate if present
+    if (selectedDate && attendanceMap && Object.keys(attendanceMap).length > 0) {
+      for (const [id, markObj] of Object.entries(attendanceMap)) {
+        let entry = learnerMap.get(id);
+        if (!entry) {
+          // Find in learners list by id or admissionNo
+          const found = targetVisibleLearners.find(l => String(l.id || l.admissionNo || l.admissionNumber) === id);
+          if (found) {
+            const foundId = String(found.id || found.admissionNo || found.admissionNumber || id);
+            entry = {
+              id: foundId,
+              admissionNo: cleanAdmissionNo(found.admissionNo || found.admissionNumber || foundId),
+              name: found.name || found.fullName || found.learnerName || '',
+              gradeStream: `${found.grade || found.classLevel || ''} ${found.stream || ''}`.trim(),
+              byDate: {},
+              morningPresent: 0,
+              afternoonPresent: 0,
+              absent: 0,
+              late: 0,
+              excused: 0,
+              totalMarks: 0,
+            };
+            learnerMap.set(foundId, entry);
+          }
+        }
+        if (entry) {
+          const m = normalizeStatus(markObj.morning);
+          const a = normalizeStatus(markObj.afternoon);
+          const rem = markObj.remarks || '';
 
-      const recDate = String(rec.date || '').slice(0, 10);
-      const mStatus = String(rec.morningStatus || rec.morning || '').toUpperCase();
-      const aStatus = String(rec.afternoonStatus || rec.afternoon || '').toUpperCase();
-      const remarks = String(rec.remarks || rec.note || '');
+          entry.byDate[selectedDate] = {
+            morning: m,
+            afternoon: a,
+            remarks: rem,
+          };
 
-      entry.byDate[recDate] = {
-        morning: mStatus || '-',
-        afternoon: aStatus || '-',
-        remarks: remarks || entry.byDate[recDate]?.remarks || '',
-      };
+          if (m === 'P') { entry.morningPresent += 1; entry.totalMarks += 1; }
+          else if (m === 'A') { entry.absent += 1; entry.totalMarks += 1; }
+          else if (m === 'L') { entry.late += 1; entry.totalMarks += 1; }
+          else if (m === 'E') { entry.excused += 1; entry.totalMarks += 1; }
 
-      if (mStatus === 'P') { entry.morningPresent += 1; entry.totalMarks += 1; }
-      else if (mStatus === 'A') { entry.absent += 1; entry.totalMarks += 1; }
-      else if (mStatus === 'L') { entry.late += 1; entry.totalMarks += 1; }
-      else if (mStatus === 'E') { entry.excused += 1; entry.totalMarks += 1; }
-
-      if (aStatus === 'P') { entry.afternoonPresent += 1; entry.totalMarks += 1; }
-      else if (aStatus === 'A') { entry.absent += 1; entry.totalMarks += 1; }
-      else if (aStatus === 'L') { entry.late += 1; entry.totalMarks += 1; }
-      else if (aStatus === 'E') { entry.excused += 1; entry.totalMarks += 1; }
-
-      learnerMap.set(key, entry);
+          if (a === 'P') { entry.afternoonPresent += 1; entry.totalMarks += 1; }
+          else if (a === 'A') { entry.absent += 1; entry.totalMarks += 1; }
+          else if (a === 'L') { entry.late += 1; entry.totalMarks += 1; }
+          else if (a === 'E') { entry.excused += 1; entry.totalMarks += 1; }
+        }
+      }
     }
 
-    const rows = Array.from(learnerMap.values());
+    // Process all gathered records from storage and history
+    for (const rec of allRecords) {
+      const recDate = String(rec.date || rec.key || '').slice(0, 10);
+      const isDateInRange = !recDate || (recDate >= startDateStr && recDate <= endDateStr);
+
+      const studentsContainer = rec.students || rec.learners || rec.records || rec.marks || (typeof rec === 'object' && !rec.date ? rec : null);
+
+      if (studentsContainer && typeof studentsContainer === 'object') {
+        const entries = Array.isArray(studentsContainer) ? studentsContainer : Object.entries(studentsContainer);
+        for (const item of entries) {
+          const [sKey, sVal] = Array.isArray(item) ? item : [item.id || item.admissionNo || item.name, item];
+          if (!sVal || typeof sVal !== 'object') continue;
+
+          const learnerId = String(sVal.id || sVal.learnerId || sVal.admissionNo || sVal.studentId || sKey || '');
+          const mStatus = normalizeStatus(
+            sVal.morningStatus ?? sVal.morning ?? sVal.am ?? sVal.morning_status ?? sVal.status
+          );
+          const aStatus = normalizeStatus(
+            sVal.afternoonStatus ?? sVal.afternoon ?? sVal.pm ?? sVal.afternoon_status
+          );
+          const remarks = String(sVal.remarks || sVal.note || sVal.comment || '');
+          const targetDate = recDate || selectedDate;
+
+          let entry = learnerMap.get(learnerId);
+          if (!entry) {
+            // Match by name or admissionNo
+            const matchName = String(sVal.name || sVal.studentName || '').trim().toLowerCase();
+            const matchAdm = String(sVal.admissionNo || sVal.admissionNumber || '').trim();
+            for (const [eKey, eVal] of learnerMap.entries()) {
+              if (
+                (matchAdm && eVal.admissionNo === matchAdm) ||
+                (matchName && eVal.name.toLowerCase() === matchName)
+              ) {
+                entry = eVal;
+                break;
+              }
+            }
+          }
+
+          if (!entry) {
+            // Create new entry dynamically if learner wasn't in filtered list
+            entry = {
+              id: learnerId,
+              admissionNo: cleanAdmissionNo(sVal.admissionNo || sVal.admissionNumber || learnerId),
+              name: sVal.name || sVal.studentName || learnerId,
+              gradeStream: sVal.gradeStream || `${sVal.grade || ''} ${sVal.stream || ''}`.trim(),
+              byDate: {},
+              morningPresent: 0,
+              afternoonPresent: 0,
+              absent: 0,
+              late: 0,
+              excused: 0,
+              totalMarks: 0,
+            };
+            learnerMap.set(learnerId, entry);
+          }
+
+          if (targetDate && (targetDate >= startDateStr && targetDate <= endDateStr)) {
+            // Only overwrite if not already set or if new status is present/valid
+            const existingDay = entry.byDate[targetDate];
+            const hasExisting = existingDay && existingDay.morning !== '-' && existingDay.afternoon !== '-';
+            
+            if (!hasExisting || mStatus !== '-' || aStatus !== '-') {
+              entry.byDate[targetDate] = {
+                morning: mStatus !== '-' ? mStatus : (existingDay?.morning || '-'),
+                afternoon: aStatus !== '-' ? aStatus : (existingDay?.afternoon || '-'),
+                remarks: remarks || existingDay?.remarks || '',
+              };
+            }
+          }
+        }
+      }
+    }
+
+    // Recalculate tallies for all learners across dateColumns in range
+    for (const [id, entry] of learnerMap.entries()) {
+      let mp = 0;
+      let ap = 0;
+      let ab = 0;
+      let lt = 0;
+      let ex = 0;
+      let tm = 0;
+
+      for (const dCol of dateColumns) {
+        const dm = entry.byDate[dCol.iso];
+        if (dm) {
+          if (dm.morning === 'P') { mp += 1; tm += 1; }
+          else if (dm.morning === 'A') { ab += 1; tm += 1; }
+          else if (dm.morning === 'L') { lt += 1; tm += 1; }
+          else if (dm.morning === 'E') { ex += 1; tm += 1; }
+
+          if (dm.afternoon === 'P') { ap += 1; tm += 1; }
+          else if (dm.afternoon === 'A') { ab += 1; tm += 1; }
+          else if (dm.afternoon === 'L') { lt += 1; tm += 1; }
+          else if (dm.afternoon === 'E') { ex += 1; tm += 1; }
+        }
+      }
+
+      entry.morningPresent = mp;
+      entry.afternoonPresent = ap;
+      entry.absent = ab;
+      entry.late = lt;
+      entry.excused = ex;
+      entry.totalMarks = tm;
+    }
+
+    const rows = Array.from(learnerMap.values()).filter(r => {
+      const matchesScope =
+        !selectedGradeStream ||
+        selectedGradeStream === 'ALL' ||
+        r.gradeStream === selectedGradeStream ||
+        r.gradeStream.toUpperCase().includes(selectedGrade.toUpperCase());
+      return matchesScope || targetVisibleLearners.length === 0;
+    });
+
     const totalLearners = rows.length;
     const totalMorningPresent = rows.reduce((s, r) => s + r.morningPresent, 0);
     const totalAfternoonPresent = rows.reduce((s, r) => s + r.afternoonPresent, 0);
@@ -720,7 +885,7 @@ export default function Attendance() {
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 
     const formatDayCell = (dayMark?: DayMark) => {
-      if (!dayMark) return '-';
+      if (!dayMark || (dayMark.morning === '-' && dayMark.afternoon === '-')) return '-';
       return `AM:${dayMark.morning} | PM:${dayMark.afternoon}`;
     };
 
@@ -749,14 +914,14 @@ export default function Attendance() {
 
     const learnerLines = rows.map((r) => {
       if (reportPeriod === 'daily') {
-        const dm = r.byDate[startDateStr];
+        const dm = r.byDate[startDateStr] || { morning: '-', afternoon: '-', remarks: '' };
         return [
           r.admissionNo,
           r.name,
           r.gradeStream,
-          dm?.morning || '-',
-          dm?.afternoon || '-',
-          dm?.remarks || '',
+          dm.morning,
+          dm.afternoon,
+          dm.remarks || '',
         ]
           .map(esc)
           .join(',');
