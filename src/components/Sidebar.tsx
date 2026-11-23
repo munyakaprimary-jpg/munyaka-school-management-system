@@ -122,6 +122,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Study Corner', href: '/study-corner', icon: BookOpen, allowedRoles: ['all'] },
   ];
 
+  const handleNavClick = () => {
+    localStorage.removeItem("munyaka_selected_target_exam");
+  };
+
+  const handleNavClick = () => {
+    localStorage.removeItem("munyaka_selected_target_exam");
+  };
+
   const displayName = currentStaff.name || currentStaff.fullName || user?.name || (user as any)?.username || 'Staff Member';
   const profileName = displayName;
   const profileRole = activeRole;
@@ -169,6 +177,10 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   const activePath = location.pathname;
 
+  const handleNavClick = () => {
+    localStorage.removeItem("munyaka_selected_target_exam");
+  };
+
   return (
     <div className="flex h-screen bg-slate-950 overflow-hidden font-sans">
       <aside className={cn(
@@ -209,6 +221,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 <NavLink
                   key={idx}
                   to={item.href}
+                  onClick={handleNavClick}
                   className={cn(
                     "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
                     isActive
