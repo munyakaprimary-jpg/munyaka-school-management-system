@@ -297,47 +297,49 @@ export default function StudentAssessment() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
-              <ShieldCheck className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-800">{assessment.title}</h1>
-              <p className="text-sm text-slate-500">
-                {assessment.subject} • Class {assessment.classLevel}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Timer */}
-            <div
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${
-                timeLeft < 300
-                  ? "bg-red-50 border-red-200 text-red-700 animate-pulse"
-                  : "bg-slate-50 border-slate-200 text-slate-700"
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              <span className="font-mono font-bold text-base">{formatTime(timeLeft)}</span>
+      {/* Header - Only render when assessment is active and NOT submitted */}
+      {assessment && !isSubmitted && (
+        <header className="bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50">
+          <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+                <ShieldCheck className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-800">{assessment.title}</h1>
+                <p className="text-sm text-slate-500">
+                  {assessment.subject} • Class {assessment.classLevel}
+                </p>
+              </div>
             </div>
 
-            {/* Connection Status */}
-            <Badge
-              variant={isOnline ? "default" : "secondary"}
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 ${
-                isOnline ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-              }`}
-            >
-              {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
-              <span>{isOnline ? "Online" : "Offline Storage"}</span>
-            </Badge>
+            <div className="flex items-center gap-4">
+              {/* Timer */}
+              <div
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${
+                  timeLeft < 300
+                    ? "bg-red-50 border-red-200 text-red-700 animate-pulse"
+                    : "bg-slate-50 border-slate-200 text-slate-700"
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                <span className="font-mono font-bold text-base">{formatTime(timeLeft)}</span>
+              </div>
+
+              {/* Connection Status */}
+              <Badge
+                variant={isOnline ? "default" : "secondary"}
+                className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 ${
+                  isOnline ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                }`}
+              >
+                {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+                <span>{isOnline ? "Online" : "Offline Storage"}</span>
+              </Badge>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         {isSubmitted ? (

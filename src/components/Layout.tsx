@@ -517,14 +517,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     <div className={cn("flex min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
       {isOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+          className="fixed inset-0 z-[9998] bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar Drawer */}
       <aside className={cn(
-        "fixed left-0 top-0 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 transform transition-all duration-300 ease-in-out flex flex-col pt-safe pb-safe shadow-2xl lg:shadow-none",
+        "fixed top-0 left-0 bottom-0 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-[9999] transform transition-all duration-300 ease-in-out flex flex-col pt-safe pb-safe shadow-2xl lg:shadow-none",
         isCollapsed ? "w-20" : "w-72 md:w-64",
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
