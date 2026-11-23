@@ -334,7 +334,105 @@ export async function pullOnceAttendanceAndSubmissions(date?: string): Promise<v
     if (subs.length > 0) {
       localStorage.setItem(ASSESSMENT_SUBMISSIONS_KEY, JSON.stringify(subs));
     }
+
+    // Pull quote / styling settings
+    const quoteRef = doc(db, "schools", schoolId, "settings", "login_quote");
+    const quoteSnap = await getDoc(quoteRef);
+    if (quoteSnap.exists()) {
+      const qData = quoteSnap.data();
+      if (qData) {
+        if (qData.quote) localStorage.setItem("munyaka_login_quote", qData.quote);
+        if (qData.author) localStorage.setItem("munyaka_login_author", qData.author);
+        if (qData.textTransform) localStorage.setItem("munyaka_login_quote_transform", qData.textTransform);
+        if (qData.accentColor) localStorage.setItem("munyaka_login_quote_color", qData.accentColor);
+        if (qData.theme) localStorage.setItem("munyaka_login_quote_theme", qData.theme);
+      }
+    }
   } catch (e) {
-    console.error("Error pulling attendance & submissions from Firestore:", e);
+    console.error("Error pulling attendance, submissions & quote from Firestore:", e);
+  }
+}
+
+// Quote & Styling sync
+export interface QuoteSettingsPayload {
+  quote?: string;
+  author?: string;
+  textTransform?: string;
+  accentColor?: string;
+  theme?: string;
+  [key: string]: any;
+}
+
+export async function saveQuoteSettings(payload: QuoteSettingsPayload): Promise<void> {
+  const schoolId = getActiveSchoolId();
+  
+  // Save to localStorage cache
+  try {
+    if (payload.quote !== undefined) localStorage.setItem("munyaka_login_quote", payload.quote);
+    if (payload.author !== undefined) localStorage.setItem("munyaka_login_author", payload.author);
+    if (payload.textTransform !== undefined) localStorage.setItem("munyaka_login_quote_transform", payload.textTransform);
+    if (payload.accentColor !== undefined) localStorage.setItem("munyaka_login_quote_color", payload.accentColor);
+    if (payload.theme !== undefined) localStorage.setItem("munyaka_login_quote_theme", payload.theme);
+    localStorage.setItem("munyaka_login_quote_settings", JSON.stringify(payload));
+  } catch (e) {}
+
+  // Save to Firestore or queue
+  try {
+    if (!navigator.onLine) {
+      throw new Error("Offline");
+    }
+    const ref = doc(db, "schools", schoolId, "settings", "login_quote");
+    await setDoc(ref, { ...payload, updatedAt: new Date().toISOString() }, { merge: true });
+  } catch (e) {
+    const queue = getOfflineQueue();
+    queue.push({ type: "quote_settings", data: payload, timestamp: Date.now() });
+    saveOfflineQueue(queue);
+  }
+}
+
+export function subscribeQuoteSettings(onUpdate: (payload: QuoteSettingsPayload) => void): () => void {
+  const schoolId = getActiveSchoolId();
+
+  // Load from localStorage first
+  try {
+    const cached = {
+      quote: localStorage.getItem("munyaka_login_quote"),
+      author: localStorage.getItem("munyaka_login_author"),
+      textTransform: localStorage.getItem("munyaka_login_quote_transform"),
+      accentColor: localStorage.getItem("munyaka_login_quote_color"),
+      theme: localStorage.getItem("munyaka_login_quote_theme"),
+    };
+    if (cached.quote || cached.author) {
+      onUpdate(cached);
+    }
+  } catch (e) {}
+
+  try {
+    const ref = doc(db, "schools", schoolId, "settings", "login_quote");
+    const unsubscribe = onSnapshot(
+      ref,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data) {
+            try {
+              if (data.quote) localStorage.setItem("munyaka_login_quote", data.quote);
+              if (data.author) localStorage.setItem("munyaka_login_author", data.author);
+              if (data.textTransform) localStorage.setItem("munyaka_login_quote_transform", data.textTransform);
+              if (data.accentColor) localStorage.setItem("munyaka_login_quote_color", data.accentColor);
+              if (data.theme) localStorage.setItem("munyaka_login_quote_theme", data.theme);
+              localStorage.setItem("munyaka_login_quote_settings", JSON.stringify(data));
+            } catch (e) {}
+            onUpdate(data);
+          }
+        }
+      },
+      (err) => {
+        console.error("Firestore quote settings snapshot error:", err);
+      }
+    );
+    return () => unsubscribe();
+  } catch (e) {
+    return () => {};
   }
 }

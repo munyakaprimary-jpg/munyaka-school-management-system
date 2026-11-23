@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { saveQuoteSettings } from '@/services/firestoreSync';
 
 const COLOR_PRESETS = [
   { id: 'indigo', name: 'Indigo', textClass: 'text-indigo-600 dark:text-indigo-400', bgClass: 'from-indigo-50 to-slate-50 dark:from-slate-800 dark:to-slate-800' },
@@ -48,22 +49,36 @@ export const AdminQuoteSettings = () => {
     const [isFlashing, setIsFlashing] = useState(initial.isFlashing ?? false);
     const [savedNotice, setSavedNotice] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
       e.preventDefault();
       const config = {
         text: quoteText,
+        quote: quoteText,
         colorId: selectedColor,
+        accentColor: selectedColor,
         textStyle,
+        textTransform: textStyle,
         isFlashing,
       };
       localStorage.setItem('munyaka_login_quote_config', JSON.stringify(config));
-    localStorage.setItem('munyaka_login_quote', quoteText); // Fallback string
+      localStorage.setItem('munyaka_login_quote', quoteText); // Fallback string
 
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('munyaka_storage_update'));
+      try {
+        await saveQuoteSettings({
+          quote: quoteText,
+          text: quoteText,
+          accentColor: selectedColor,
+          colorId: selectedColor,
+          textTransform: textStyle,
+          theme: selectedColor,
+        });
+      } catch (e) {}
 
-    setSavedNotice(true);
-    setTimeout(() => setSavedNotice(false), 3000);
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('munyaka_storage_update'));
+
+      setSavedNotice(true);
+      setTimeout(() => setSavedNotice(false), 3000);
   };
 
   return (

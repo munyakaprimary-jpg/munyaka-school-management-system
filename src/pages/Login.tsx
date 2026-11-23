@@ -35,6 +35,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
+import { subscribeQuoteSettings } from '@/services/firestoreSync';
 
 // Helper function to safely read quote configuration from localStorage
 const getStoredQuoteConfig = () => {
@@ -43,11 +44,11 @@ const getStoredQuoteConfig = () => {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && typeof parsed === 'object') {
-        const textValue = String(parsed.text || localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.');
+        const textValue = String(parsed.text || parsed.quote || localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.');
         return {
           text: textValue,
-          colorId: String(parsed.colorId || 'indigo'),
-          isUppercase: Boolean(parsed.isUppercase),
+          colorId: String(parsed.colorId || parsed.accentColor || 'indigo'),
+          isUppercase: Boolean(parsed.isUppercase || parsed.textTransform === 'uppercase'),
           isFlashing: Boolean(parsed.isFlashing)
         };
       }
@@ -55,8 +56,8 @@ const getStoredQuoteConfig = () => {
   } catch (e) {}
   return {
     text: localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
-    colorId: 'indigo',
-    isUppercase: false,
+    colorId: localStorage.getItem('munyaka_login_quote_color') || 'indigo',
+    isUppercase: localStorage.getItem('munyaka_login_quote_transform') === 'uppercase',
     isFlashing: false
   };
 };
@@ -304,6 +305,23 @@ const Login: React.FC = () => {
 
   // ── Quote config state ──────────────────────────────────────────────────
   const [quoteConfig, setQuoteConfig] = useState(getStoredQuoteConfig());
+
+  // Subscribe to live quote settings from Firestore
+  useEffect(() => {
+    const unsubscribe = subscribeQuoteSettings((settings) => {
+      if (settings && (settings.quote || settings.text || settings.accentColor)) {
+        setQuoteConfig({
+          text: String(settings.quote || settings.text || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.'),
+          colorId: String(settings.accentColor || settings.colorId || 'indigo'),
+          isUppercase: Boolean(settings.textTransform === 'uppercase' || settings.isUppercase),
+          isFlashing: Boolean(settings.isFlashing),
+        });
+      }
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
 
   // Listen for localStorage changes (e.g. from another tab) to refresh the quote config
   useEffect(() => {
