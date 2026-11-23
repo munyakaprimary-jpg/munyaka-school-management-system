@@ -10,8 +10,10 @@ export default function StudentDashboard() {
   const [studentInfo, setStudentInfo] = useState<any>(null);
   const [activeAssessments, setActiveAssessments] = useState<any[]>([]);
   const [completedAssessments, setCompletedAssessments] = useState<any[]>([]);
+  const [activeExamsCount, setActiveExamsCount] = useState<number>(0);
+  const [completedExamsCount, setCompletedExamsCount] = useState<number>(0);
 
-  useEffect(() => {
+  const computeStudentData = () => {
     try {
       const currentUser = JSON.parse(localStorage.getItem('munyaka_current_user') || localStorage.getItem('munyaka_session') || '{}');
       
@@ -52,15 +54,146 @@ export default function StudentDashboard() {
 
       setStudentInfo(combinedInfo);
 
-      // Load assessments or question bank
-      const questionBank = JSON.parse(localStorage.getItem('munyaka_question_bank') || '[]');
-      setActiveAssessments(questionBank);
+      // Load all available exams/assessments from all_set_exams, assessments, munyaka_question_bank, question_bank
+      let allExams: any[] = [];
+      for (const k of ['all_set_exams', 'assessments', 'munyaka_question_bank', 'question_bank', 'munyaka_exams', 'exams']) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              allExams = [...allExams, ...parsed];
+            } else if (parsed && typeof parsed === 'object') {
+              // could be object map or wrapper
+              const values = Object.values(parsed);
+              if (values.length > 0) {
+                allExams = [...allExams, ...values];
+              }
+            }
+          } catch {}
+        }
+      }
 
-      const submissions = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
-      setCompletedAssessments(submissions);
+      // Deduplicate exams by id or title
+      const uniqueExamsMap = new Map();
+      allExams.forEach(ex => {
+        if (ex && typeof ex === 'object') {
+          const id = ex.id || ex.examId || ex.title || JSON.stringify(ex);
+          if (!uniqueExamsMap.has(id)) {
+            uniqueExamsMap.set(id, ex);
+          }
+        }
+      });
+      const uniqueExams = Array.from(uniqueExamsMap.values());
+
+      // Load all student submissions across possible storage keys
+      let allSubmissions: any[] = [];
+      for (const k of ['marked_student_submissions', 'munyaka_exam_submissions', 'student_submissions', 'munyaka_marks_records']) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              allSubmissions = [...allSubmissions, ...parsed];
+            } else if (parsed && typeof parsed === 'object') {
+              const values = Object.values(parsed);
+              if (values.length > 0) {
+                allSubmissions = [...allSubmissions, ...values];
+              }
+            }
+          } catch {}
+        }
+      }
+
+      // Identify student identifiers
+      const studentId = String(combinedInfo.id || combinedInfo.uid || '').trim().toLowerCase();
+      const studentAdm = String(combinedInfo.admissionNo || combinedInfo.admNo || combinedInfo.admissionNumber || combinedInfo.upi || '').trim().toLowerCase();
+      const studentNameVal = String(combinedInfo.name || combinedInfo.fullName || '').trim().toLowerCase();
+      const studentGradeVal = String(combinedInfo.grade || combinedInfo.stream || combinedInfo.classLevel || '').trim().toLowerCase();
+
+      // Filter submissions belonging to current student
+      const studentSubmissions = allSubmissions.filter((sub: any) => {
+        if (!sub) return false;
+        const subLearnerId = String(sub.learnerId || sub.studentId || sub.id || '').trim().toLowerCase();
+        const subAdm = String(sub.admissionNo || sub.admNo || sub.admissionNumber || sub.upi || '').trim().toLowerCase();
+        const subName = String(sub.learnerName || sub.studentName || sub.name || '').trim().toLowerCase();
+
+        return (
+          (studentId && subLearnerId === studentId) ||
+          (studentAdm && subAdm === studentAdm) ||
+          (studentNameVal && subName === studentNameVal)
+        );
+      });
+
+      // Get set of completed assessment IDs or titles
+      const completedIds = new Set();
+      studentSubmissions.forEach((sub: any) => {
+        if (sub.examId) completedIds.add(String(sub.examId));
+        if (sub.id) completedIds.add(String(sub.id));
+        if (sub.title) completedIds.add(String(sub.title).trim().toLowerCase());
+        if (sub.assessmentTitle) completedIds.add(String(sub.assessmentTitle).trim().toLowerCase());
+      });
+
+      setCompletedAssessments(studentSubmissions);
+      setCompletedExamsCount(completedIds.size || studentSubmissions.length);
+
+      // Filter available exams: match grade/stream or general/all, active/published, not yet completed by this learner
+      const filteredActiveExams = uniqueExams.filter((exam: any) => {
+        if (!exam) return false;
+        
+        // Check if already completed
+        const examId = String(exam.id || exam.examId || '').trim();
+        const examTitle = String(exam.title || exam.examTitle || '').trim().toLowerCase();
+        if ((examId && completedIds.has(examId)) || (examTitle && completedIds.has(examTitle))) {
+          return false;
+        }
+
+        // Grade/Stream matching
+        const examGrade = String(exam.grade || exam.classLevel || exam.targetGrade || exam.stream || 'all').trim().toLowerCase();
+        const isGeneral = !examGrade || examGrade === 'all' || examGrade === 'general' || examGrade === 'all grades';
+        const matchesGrade = isGeneral || (studentGradeVal && (examGrade.includes(studentGradeVal) || studentGradeVal.includes(examGrade)));
+
+        return matchesGrade;
+      });
+
+      // If no strict grade match filters anything or if uniqueExams was empty, fallback or show all uncompleted unique exams
+      const finalActiveExams = filteredActiveExams.length > 0 ? filteredActiveExams : uniqueExams.filter((exam: any) => {
+        const examId = String(exam.id || exam.examId || '').trim();
+        const examTitle = String(exam.title || exam.examTitle || '').trim().toLowerCase();
+        return !((examId && completedIds.has(examId)) || (examTitle && completedIds.has(examTitle)));
+      });
+
+      setActiveAssessments(finalActiveExams);
+      setActiveExamsCount(finalActiveExams.length);
+
     } catch (e) {
-      console.error('Error loading student dashboard data:', e);
+      console.error('Error computing student data:', e);
     }
+  };
+
+  useEffect(() => {
+    computeStudentData();
+
+    // Listen to storage events and custom sync events for real-time live updates
+    const handleStorageChange = (e: StorageEvent) => {
+      if (!e.key || [
+        'munyaka_current_user', 'munyaka_session', 'marked_student_submissions',
+        'all_set_exams', 'assessments', 'munyaka_question_bank', 'munyaka_learners',
+        'munyaka_exam_submissions', 'student_submissions', 'munyaka_marks_records'
+      ].includes(e.key)) {
+        computeStudentData();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    const interval = setInterval(() => {
+      computeStudentData();
+    }, 2000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
   }, []);
 
   const studentName = studentInfo?.name || studentInfo?.fullName || 'Student Learner';
@@ -122,7 +255,7 @@ export default function StudentDashboard() {
           </div>
           <div>
             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Exams</p>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{activeAssessments.length} Available</h3>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{activeExamsCount} Available</h3>
           </div>
         </Card>
 
@@ -132,7 +265,7 @@ export default function StudentDashboard() {
           </div>
           <div>
             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Completed</p>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{completedAssessments.length} Submitted</h3>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-1">{completedExamsCount} Submitted</h3>
           </div>
         </Card>
 
