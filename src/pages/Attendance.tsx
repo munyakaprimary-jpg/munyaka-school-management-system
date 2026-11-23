@@ -667,6 +667,8 @@ export default function Attendance() {
     URL.revokeObjectURL(url);
   };
 
+  const filteredLearners = getFilteredLearners();
+
   const totalLearnersCount = filteredLearners.length;
   const masterTotalCount = learners.length;
   const presentMorningCount = filteredLearners.filter(l => {
