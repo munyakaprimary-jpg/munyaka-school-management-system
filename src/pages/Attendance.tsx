@@ -520,28 +520,47 @@ export default function Attendance() {
 
   const handleDownloadAttendanceReport = () => {
     const baseDate = selectedDate ? new Date(`${selectedDate}T00:00:00`) : new Date();
-    const toIso = (d: Date) => d.toISOString().slice(0, 10);
+    const toIso = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
 
-    let startDateStr = toIso(baseDate);
-    let endDateStr = toIso(baseDate);
+    let startDateObj = new Date(baseDate);
+    let endDateObj = new Date(baseDate);
 
     if (reportPeriod === 'weekly') {
-      const day = baseDate.getDay(); // 0 = Sun, 1 = Mon...
-      const diffToMon = day === 0 ? -6 : 1 - day;
-      const mon = new Date(baseDate);
-      mon.setDate(baseDate.getDate() + diffToMon);
-      const fri = new Date(mon);
-      fri.setDate(mon.getDate() + 4);
-      startDateStr = toIso(mon);
-      endDateStr = toIso(fri);
+      const dayOfWeek = baseDate.getDay(); // 0 = Sun, 1 = Mon...
+      const diffToMon = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      startDateObj = new Date(baseDate);
+      startDateObj.setDate(baseDate.getDate() + diffToMon);
+      endDateObj = new Date(startDateObj);
+      endDateObj.setDate(startDateObj.getDate() + 4); // Monday – Friday
     } else if (reportPeriod === 'monthly') {
-      const first = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
-      const last = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
-      startDateStr = toIso(first);
-      endDateStr = toIso(last);
+      startDateObj = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+      endDateObj = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
     }
 
-    // Pull saved roll_call records from localStorage (adjust key if stored under another key)
+    const startDateStr = toIso(startDateObj);
+    const endDateStr = toIso(endDateObj);
+
+    // Build ordered list of dates in the selected period
+    const dateColumns: { iso: string; label: string }[] = [];
+    const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const cursor = new Date(startDateObj);
+    while (cursor <= endDateObj) {
+      const iso = toIso(cursor);
+      const label =
+        reportPeriod === 'weekly'
+          ? `${weekdayNames[cursor.getDay()]} (${iso.slice(5)})`
+          : reportPeriod === 'monthly'
+          ? `${weekdayNames[cursor.getDay()].slice(0, 3)} ${cursor.getDate()}`
+          : iso;
+      dateColumns.push({ iso, label });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
     const rawRollCall = JSON.parse(localStorage.getItem('roll_call') || '[]');
     const records = Array.isArray(rawRollCall) ? rawRollCall : [];
 
@@ -560,24 +579,29 @@ export default function Attendance() {
       return inRange && matchesScope;
     });
 
-    const learnerMap = new Map<string, {
+    type DayMark = { morning: string; afternoon: string; remarks: string };
+    type LearnerSummary = {
       admissionNo: string;
       name: string;
       gradeStream: string;
+      byDate: Record<string, DayMark>;
       morningPresent: number;
       afternoonPresent: number;
       absent: number;
       late: number;
       excused: number;
       totalMarks: number;
-    }>();
+    };
+
+    const learnerMap = new Map<string, LearnerSummary>();
 
     for (const l of visibleLearners || []) {
       const key = String(l.id || l.admissionNo || l.name);
       learnerMap.set(key, {
         admissionNo: l.admissionNo || l.admissionNumber || '',
         name: l.name || l.fullName || l.learnerName || '',
-        gradeStream: l.grade || l.stream ? `${l.grade || ''} ${l.stream || ''}`.trim() : '',
+        gradeStream: `${l.grade || ''} ${l.stream || ''}`.trim(),
+        byDate: {},
         morningPresent: 0,
         afternoonPresent: 0,
         absent: 0,
@@ -592,7 +616,8 @@ export default function Attendance() {
       const entry = learnerMap.get(key) || {
         admissionNo: rec.admissionNo || '',
         name: rec.name || rec.studentName || key,
-        gradeStream: rec.gradeStream || '',
+        gradeStream: rec.gradeStream || `${rec.grade || ''} ${rec.stream || ''}`.trim(),
+        byDate: {},
         morningPresent: 0,
         afternoonPresent: 0,
         absent: 0,
@@ -601,8 +626,16 @@ export default function Attendance() {
         totalMarks: 0,
       };
 
+      const recDate = String(rec.date || '').slice(0, 10);
       const mStatus = String(rec.morningStatus || rec.morning || '').toUpperCase();
       const aStatus = String(rec.afternoonStatus || rec.afternoon || '').toUpperCase();
+      const remarks = String(rec.remarks || rec.note || '');
+
+      entry.byDate[recDate] = {
+        morning: mStatus || '-',
+        afternoon: aStatus || '-',
+        remarks: remarks || entry.byDate[recDate]?.remarks || '',
+      };
 
       if (mStatus === 'P') { entry.morningPresent += 1; entry.totalMarks += 1; }
       else if (mStatus === 'A') { entry.absent += 1; entry.totalMarks += 1; }
@@ -626,33 +659,97 @@ export default function Attendance() {
     const totalExcused = rows.reduce((s, r) => s + r.excused, 0);
     const totalPresentCombined = totalMorningPresent + totalAfternoonPresent;
     const totalSessionsMarked = totalPresentCombined + totalAbsent + totalLate + totalExcused;
-    const attendancePct = totalSessionsMarked > 0
-      ? ((totalPresentCombined / totalSessionsMarked) * 100).toFixed(1)
-      : '0.0';
+    const attendancePct =
+      totalSessionsMarked > 0 ? ((totalPresentCombined / totalSessionsMarked) * 100).toFixed(1) : '0.0';
 
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 
-    const lines: string[] = [
-      ['ATTENDANCE SUMMARY', reportPeriod.toUpperCase(), `${startDateStr} to ${endDateStr}`].map(esc).join(','),
-      ['Total Learners', totalLearners, 'Morning Present', totalMorningPresent, 'Afternoon Present', totalAfternoonPresent].map(esc).join(','),
-      ['Total Absent', totalAbsent, 'Total Late', totalLate, 'Total Excused', totalExcused, 'Attendance Rate %', `${attendancePct}%`].map(esc).join(','),
-      '',
-      ['Admission No', 'Learner Name', 'Grade / Stream', 'Morning Present', 'Afternoon Present', 'Absent', 'Late', 'Excused', 'Attendance %'].map(esc).join(','),
-      ...rows.map((r) => {
-        const presentSum = r.morningPresent + r.afternoonPresent;
-        const pct = r.totalMarks > 0 ? ((presentSum / r.totalMarks) * 100).toFixed(1) : '0.0';
+    const formatDayCell = (dayMark?: DayMark) => {
+      if (!dayMark) return '-';
+      return `AM:${dayMark.morning} | PM:${dayMark.afternoon}`;
+    };
+
+    const headers =
+      reportPeriod === 'daily'
+        ? [
+            'Admission No',
+            'Learner Name',
+            'Grade / Stream',
+            'Morning',
+            'Afternoon',
+            'Remarks',
+          ]
+        : [
+            'Admission No',
+            'Learner Name',
+            'Grade / Stream',
+            ...dateColumns.map((d) => d.label),
+            'Morning Present',
+            'Afternoon Present',
+            'Absent',
+            'Late',
+            'Excused',
+            'Attendance %',
+          ];
+
+    const learnerLines = rows.map((r) => {
+      if (reportPeriod === 'daily') {
+        const dm = r.byDate[startDateStr];
         return [
           r.admissionNo,
           r.name,
           r.gradeStream,
-          r.morningPresent,
-          r.afternoonPresent,
-          r.absent,
-          r.late,
-          r.excused,
-          `${pct}%`,
-        ].map(esc).join(',');
-      }),
+          dm?.morning || '-',
+          dm?.afternoon || '-',
+          dm?.remarks || '',
+        ]
+          .map(esc)
+          .join(',');
+      }
+
+      const dayCells = dateColumns.map((d) => formatDayCell(r.byDate[d.iso]));
+      const presentSum = r.morningPresent + r.afternoonPresent;
+      const pct = r.totalMarks > 0 ? ((presentSum / r.totalMarks) * 100).toFixed(1) : '0.0';
+
+      return [
+        r.admissionNo,
+        r.name,
+        r.gradeStream,
+        ...dayCells,
+        r.morningPresent,
+        r.afternoonPresent,
+        r.absent,
+        r.late,
+        r.excused,
+        `${pct}%`,
+      ]
+        .map(esc)
+        .join(',');
+    });
+
+    const lines: string[] = [
+      ['ATTENDANCE SUMMARY', reportPeriod.toUpperCase(), `${startDateStr} to ${endDateStr}`].map(esc).join(','),
+      [
+        'Total Learners',
+        totalLearners,
+        'Morning Present',
+        totalMorningPresent,
+        'Afternoon Present',
+        totalAfternoonPresent,
+        'Total Absent',
+        totalAbsent,
+        'Total Late',
+        totalLate,
+        'Total Excused',
+        totalExcused,
+        'Attendance Rate %',
+        `${attendancePct}%`,
+      ]
+        .map(esc)
+        .join(','),
+      '',
+      headers.map(esc).join(','),
+      ...learnerLines,
     ];
 
     const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
