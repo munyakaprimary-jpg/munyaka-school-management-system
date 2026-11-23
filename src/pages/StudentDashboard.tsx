@@ -13,8 +13,44 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     try {
-      const userObj = JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
-      setStudentInfo(userObj);
+      const currentUser = JSON.parse(localStorage.getItem('munyaka_current_user') || localStorage.getItem('munyaka_session') || '{}');
+      
+      // Load master learners list across potential keys
+      let allLearners: any[] = [];
+      for (const key of ['munyaka_learners', 'munyaka_learners_directory', 'munyaka_learners_v2', 'munyaka_students', 'students', 'learners', 'school_students', 'munyaka_learners_db']) {
+        const val = localStorage.getItem(key);
+        if (val) {
+          try {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              allLearners = parsed;
+              break;
+            } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.learners)) {
+              allLearners = parsed.learners;
+              break;
+            }
+          } catch {}
+        }
+      }
+
+      // Match current user against master learners list
+      let matchedLearner: any = null;
+      if (allLearners.length > 0 && currentUser) {
+        matchedLearner = allLearners.find((l: any) =>
+          (currentUser.id && String(l.id) === String(currentUser.id)) ||
+          (currentUser.uid && String(l.uid || l.id) === String(currentUser.uid)) ||
+          (currentUser.email && l.email && String(l.email).toLowerCase() === String(currentUser.email).toLowerCase()) ||
+          (currentUser.admissionNo && String(l.admissionNo || l.admNo || l.admissionNumber) === String(currentUser.admissionNo)) ||
+          (currentUser.name && l.name && String(l.name).toLowerCase() === String(currentUser.name).toLowerCase())
+        );
+      }
+
+      const combinedInfo = {
+        ...(matchedLearner || {}),
+        ...currentUser
+      };
+
+      setStudentInfo(combinedInfo);
 
       // Load assessments or question bank
       const questionBank = JSON.parse(localStorage.getItem('munyaka_question_bank') || '[]');
@@ -28,8 +64,15 @@ export default function StudentDashboard() {
   }, []);
 
   const studentName = studentInfo?.name || studentInfo?.fullName || 'Student Learner';
-  const studentGrade = studentInfo?.grade || studentInfo?.stream || 'Grade 5';
-  const admissionNumber = studentInfo?.admissionNumber || studentInfo?.upi || 'MUN/2026/001';
+  const studentGrade = studentInfo?.grade || studentInfo?.stream || studentInfo?.classLevel || 'Grade 5';
+  
+  const admissionNumber =
+    studentInfo?.admissionNo ??
+    studentInfo?.admNo ??
+    studentInfo?.admissionNumber ??
+    studentInfo?.upi ??
+    studentInfo?.assessmentNo ??
+    'Not Assigned';
 
   return (
     <div className="space-y-8 pb-12">
