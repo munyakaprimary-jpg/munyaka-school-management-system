@@ -515,7 +515,7 @@ export default function Attendance() {
     }
   };
 
-  const visibleLearners = filteredLearners;
+  const visibleLearners = getFilteredLearners ? getFilteredLearners() : learners;
   const [reportPeriod, setReportPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
   const handleDownloadAttendanceReport = () => {
