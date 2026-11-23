@@ -13,6 +13,12 @@ import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { getStoredLearners } from '@/utils/learnersStore';
 import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
+import {
+  saveAttendanceRecordsAndLocks,
+  subscribeSchoolAttendance,
+  pullOnceAttendanceAndSubmissions,
+  flushOfflineQueue
+} from '@/services/firestoreSync';
 
 interface Learner {
   id?: string;
@@ -83,6 +89,38 @@ export default function Attendance() {
       localStorage.setItem('session_submitted_data', JSON.stringify(sessionSubmittedData));
     } catch (e) {}
   }, [sessionSubmittedData]);
+
+  // Firestore live subscription & queue flushing on mount
+  useEffect(() => {
+    flushOfflineQueue();
+
+    const unsubscribe = subscribeSchoolAttendance(selectedDate, ({ records, locks }) => {
+      if (locks) {
+        setSessionSubmittedData(prev => ({
+          ...prev,
+          [selectedDate]: locks
+        }));
+      }
+      if (records && records.length > 0) {
+        const initialMap: Record<string, { morning: string | null; afternoon: string | null; remarks: string }> = {};
+        records.forEach((r: any) => {
+          const id = r.learnerId || r.studentId || r.admissionNo || r.id;
+          if (id) {
+            initialMap[id] = {
+              morning: r.morningStatus || r.morning || null,
+              afternoon: r.afternoonStatus || r.afternoon || null,
+              remarks: r.remarks || '',
+            };
+          }
+        });
+        setAttendanceMap(prev => ({ ...initialMap, ...prev }));
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [selectedDate]);
 
   const currentSubmission = sessionSubmittedData[selectedDate] || { morning: false, afternoon: false };
   const isMorningSubmitted = !!currentSubmission.morning;
@@ -455,11 +493,16 @@ export default function Attendance() {
     toast.success(`Marked all filtered learners as ${status} for ${activeSession === 'morning' ? 'Morning Roll Call' : 'Afternoon Roll Call'}`);
   };
 
-  const handleSaveAttendance = () => {
+  const handleSaveAttendance = async () => {
     setIsSaving(true);
     try {
       const targetLearners = getFilteredLearners();
       const activeKey = `${selectedDate}_${selectedGrade}_${selectedStream}`;
+
+      const newLocks = {
+        ...currentSubmission,
+        [activeSession]: true
+      };
 
       // Immediately mark current session as submitted in state and localStorage
       setSessionSubmittedData(prev => {
@@ -551,6 +594,22 @@ export default function Attendance() {
       
       munyakaList.push(recordPayload);
       localStorage.setItem('munyaka_attendance_records', JSON.stringify(munyakaList));
+
+      // Save via firestoreSync helper
+      const flatRecordsToSave = Object.entries(updatedStudents).map(([id, sData]: [string, any]) => ({
+        learnerId: id,
+        learnerName: sData.name,
+        morningStatus: sData.morning || 'Present',
+        afternoonStatus: sData.afternoon || 'Present',
+        remarks: sData.remarks || '',
+        date: selectedDate,
+      }));
+
+      await saveAttendanceRecordsAndLocks({
+        date: selectedDate,
+        records: flatRecordsToSave,
+        locks: newLocks,
+      });
 
       // Broadcast update events so Admin Dashboard and stream attendance table instantly re-aggregate live
       window.dispatchEvent(new Event('storage'));

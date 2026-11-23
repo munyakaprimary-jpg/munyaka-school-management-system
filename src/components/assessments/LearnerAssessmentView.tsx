@@ -36,6 +36,7 @@ import {
   type GradingStudent,
 } from "@/lib/gradingUtils";
 import { LearnerIdentificationModal } from "./LearnerIdentificationModal";
+import { saveAssessmentSubmission, subscribeAssessmentSubmissions, flushOfflineQueue } from "@/services/firestoreSync";
 
 const SUBMISSION_STORAGE_KEY_PREFIX = "submission";
 const TIMER_TICK_MS = 1000;
@@ -183,6 +184,20 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   );
   const [saveBadge, setSaveBadge] = useState<"idle" | "saved">("idle");
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [submissionsCount, setSubmissionsCount] = useState<number>(0);
+
+  // Subscribe to assessment submissions live via Firestore & flush offline queue on mount
+  useEffect(() => {
+    flushOfflineQueue();
+    const unsubscribe = subscribeAssessmentSubmissions((subs) => {
+      if (Array.isArray(subs)) {
+        setSubmissionsCount(subs.length);
+      }
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
   const startedAtRef = useRef<string>(new Date().toISOString());
   const saveBadgeTimeoutRef = useRef<number | null>(null);
 
@@ -503,6 +518,40 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
 
     // Save to the frozen ledger — dispatches `submissions_updated` + `storage`
     saveMarkedSubmission(submission);
+
+    // Also sync to Firestore
+    try {
+      saveAssessmentSubmission({
+        id: submission.id || `${lockedStudentId}_${assessment.id}_${Date.now()}`,
+        learnerId: lockedStudentId,
+        studentId: lockedStudentId,
+        learnerName: lockedStudentName,
+        assessmentId: assessment.id,
+        title: assessment.title,
+        score: submission.score,
+        total: submission.total,
+        percentage: submission.percentage,
+        answers: submission.answers,
+        submittedAt: submission.submittedAt || new Date().toISOString(),
+      });
+    } catch (e) {}
+
+    // Also sync to Firestore
+    try {
+      saveAssessmentSubmission({
+        id: submission.id || `${lockedStudentId}_${assessment.id}_${Date.now()}`,
+        learnerId: lockedStudentId,
+        studentId: lockedStudentId,
+        learnerName: lockedStudentName,
+        assessmentId: assessment.id,
+        title: assessment.title,
+        score: submission.score,
+        total: submission.total,
+        percentage: submission.percentage,
+        answers: submission.answers,
+        submittedAt: submission.submittedAt || new Date().toISOString(),
+      });
+    } catch (e) {}
 
     showSuccess("Assessment submitted and graded! All answers have been evaluated.");
     if (onSubmit) onSubmit(submission as unknown as LiveStudentSubmission);
