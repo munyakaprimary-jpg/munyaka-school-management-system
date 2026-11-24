@@ -749,7 +749,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
           <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap justify-end ml-auto">
             <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-black tracking-wide shrink-0 whitespace-nowrap shadow-sm ${licenseInfo.badgeVariant}`}>
-              <ShieldCheck size={14} className="shrink-0" />
+              <ShieldCheck size={14} className={licenseInfo.daysRemaining <= 7 ? "text-amber-700 dark:text-amber-400 shrink-0" : "text-emerald-700 dark:text-emerald-400 shrink-0"} />
               <span>{licenseInfo.badgeText}</span>
             </div>
             <div className="shrink-0">
