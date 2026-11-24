@@ -128,12 +128,20 @@ function saveOfflineQueue(queue: any[]) {
 }
 
 export async function flushOfflineQueue(): Promise<void> {
-  if (!navigator.onLine) return;
+  if (!navigator.onLine) {
+    setSyncState({ state: 'offline', errorMessage: null });
+    return;
+  }
   const queue = getOfflineQueue();
-  if (queue.length === 0) return;
+  if (queue.length === 0) {
+    setSyncState({ state: 'synced', errorMessage: null, lastSync: new Date().toISOString() });
+    return;
+  }
 
+  setSyncState({ state: 'syncing', errorMessage: null });
   const remaining: any[] = [];
   const schoolId = getActiveSchoolId();
+  let lastError: string | null = null;
 
   for (const item of queue) {
     try {
@@ -156,13 +164,20 @@ export async function flushOfflineQueue(): Promise<void> {
         const ref = doc(db, "schools", schoolId, "settings", "login_quote");
         await setDoc(ref, item.data, { merge: true });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to flush queue item:", e);
+      lastError = e?.code || e?.message || "Sync failed";
       remaining.push(item);
     }
   }
 
   saveOfflineQueue(remaining);
+
+  if (remaining.length === 0) {
+    setSyncState({ state: 'synced', errorMessage: null, lastSync: new Date().toISOString() });
+  } else {
+    setSyncState({ state: 'error', errorMessage: lastError || "Some items failed to sync" });
+  }
 }
 
 // Attendance sync
@@ -201,12 +216,18 @@ export async function saveAttendanceRecordsAndLocks({ date, records, locks }: At
     if (!navigator.onLine) {
       throw new Error("Offline");
     }
+    setSyncState({ state: 'syncing', errorMessage: null });
     const ref = doc(db, "schools", schoolId, "attendance", date);
     await setDoc(ref, payload, { merge: true });
-  } catch (e) {
+    setSyncState({ state: 'synced', errorMessage: null, lastSync: new Date().toISOString() });
+  } catch (e: any) {
     const queue = getOfflineQueue();
     queue.push({ type: "attendance", date, data: payload, timestamp: Date.now() });
     saveOfflineQueue(queue);
+    setSyncState({
+      state: !navigator.onLine ? 'offline' : 'error',
+      errorMessage: !navigator.onLine ? null : (e?.code || e?.message || "Sync failed"),
+    });
   }
 }
 
@@ -253,8 +274,12 @@ export function subscribeSchoolAttendance(
           }
         }
       },
-      (err) => {
+      (err: any) => {
         console.error("Firestore attendance snapshot error:", err);
+        setSyncState({
+          state: !navigator.onLine ? 'offline' : 'error',
+          errorMessage: !navigator.onLine ? null : (err?.code || err?.message || "Snapshot error"),
+        });
       }
     );
     return () => unsubscribe();
@@ -298,12 +323,18 @@ export async function saveAssessmentSubmission(sub: AssessmentSubmissionPayload)
     if (!navigator.onLine) {
       throw new Error("Offline");
     }
+    setSyncState({ state: 'syncing', errorMessage: null });
     const ref = doc(db, "schools", schoolId, "submissions", subId);
     await setDoc(ref, enhancedSub, { merge: true });
-  } catch (e) {
+    setSyncState({ state: 'synced', errorMessage: null, lastSync: new Date().toISOString() });
+  } catch (e: any) {
     const queue = getOfflineQueue();
     queue.push({ type: "assessment_submission", data: enhancedSub, timestamp: Date.now() });
     saveOfflineQueue(queue);
+    setSyncState({
+      state: !navigator.onLine ? 'offline' : 'error',
+      errorMessage: !navigator.onLine ? null : (e?.code || e?.message || "Sync failed"),
+    });
   }
 }
 
@@ -355,8 +386,12 @@ export function subscribeAssessmentSubmissions(onUpdate: (subs: any[]) => void):
           onUpdate(subs);
         }
       },
-      (err) => {
+      (err: any) => {
         console.error("Firestore submissions snapshot error:", err);
+        setSyncState({
+          state: !navigator.onLine ? 'offline' : 'error',
+          errorMessage: !navigator.onLine ? null : (err?.code || err?.message || "Snapshot error"),
+        });
       }
     );
     return () => unsubscribe();
@@ -400,12 +435,18 @@ export async function saveLearnerProfile(learner: LearnerProfilePayload): Promis
     if (!navigator.onLine) {
       throw new Error("Offline");
     }
+    setSyncState({ state: 'syncing', errorMessage: null });
     const ref = doc(db, "schools", schoolId, "learners", learnerId);
     await setDoc(ref, enhancedLearner, { merge: true });
-  } catch (e) {
+    setSyncState({ state: 'synced', errorMessage: null, lastSync: new Date().toISOString() });
+  } catch (e: any) {
     const queue = getOfflineQueue();
     queue.push({ type: "learner_profile", data: enhancedLearner, timestamp: Date.now() });
     saveOfflineQueue(queue);
+    setSyncState({
+      state: !navigator.onLine ? 'offline' : 'error',
+      errorMessage: !navigator.onLine ? null : (e?.code || e?.message || "Sync failed"),
+    });
   }
 }
 
@@ -457,8 +498,12 @@ export function subscribeLearnerProfiles(onUpdate: (learners: any[]) => void): (
           onUpdate(learners);
         }
       },
-      (err) => {
+      (err: any) => {
         console.error("Firestore learners snapshot error:", err);
+        setSyncState({
+          state: !navigator.onLine ? 'offline' : 'error',
+          errorMessage: !navigator.onLine ? null : (err?.code || err?.message || "Snapshot error"),
+        });
       }
     );
     return () => unsubscribe();
@@ -502,12 +547,18 @@ export async function saveMarks(marks: MarksPayload): Promise<void> {
     if (!navigator.onLine) {
       throw new Error("Offline");
     }
+    setSyncState({ state: 'syncing', errorMessage: null });
     const ref = doc(db, "schools", schoolId, "marks", marksId);
     await setDoc(ref, enhancedMarks, { merge: true });
-  } catch (e) {
+    setSyncState({ state: 'synced', errorMessage: null, lastSync: new Date().toISOString() });
+  } catch (e: any) {
     const queue = getOfflineQueue();
     queue.push({ type: "marks", data: enhancedMarks, timestamp: Date.now() });
     saveOfflineQueue(queue);
+    setSyncState({
+      state: !navigator.onLine ? 'offline' : 'error',
+      errorMessage: !navigator.onLine ? null : (e?.code || e?.message || "Sync failed"),
+    });
   }
 }
 
@@ -559,8 +610,12 @@ export function subscribeMarks(onUpdate: (marks: any[]) => void): () => void {
           onUpdate(marks);
         }
       },
-      (err) => {
+      (err: any) => {
         console.error("Firestore marks snapshot error:", err);
+        setSyncState({
+          state: !navigator.onLine ? 'offline' : 'error',
+          errorMessage: !navigator.onLine ? null : (err?.code || err?.message || "Snapshot error"),
+        });
       }
     );
     return () => unsubscribe();
@@ -660,18 +715,24 @@ export async function saveQuoteSettings(payload: QuoteSettingsPayload): Promise<
   } catch (e) {}
 
   // Save to Firestore or queue
-  try {
-    if (!navigator.onLine) {
-      throw new Error("Offline");
+    try {
+      if (!navigator.onLine) {
+        throw new Error("Offline");
+      }
+      setSyncState({ state: 'syncing', errorMessage: null });
+      const ref = doc(db, "schools", schoolId, "settings", "login_quote");
+      await setDoc(ref, { ...payload, updatedAt: new Date().toISOString() }, { merge: true });
+      setSyncState({ state: 'synced', errorMessage: null, lastSync: new Date().toISOString() });
+    } catch (e: any) {
+      const queue = getOfflineQueue();
+      queue.push({ type: "quote_settings", data: payload, timestamp: Date.now() });
+      saveOfflineQueue(queue);
+      setSyncState({
+        state: !navigator.onLine ? 'offline' : 'error',
+        errorMessage: !navigator.onLine ? null : (e?.code || e?.message || "Sync failed"),
+      });
     }
-    const ref = doc(db, "schools", schoolId, "settings", "login_quote");
-    await setDoc(ref, { ...payload, updatedAt: new Date().toISOString() }, { merge: true });
-  } catch (e) {
-    const queue = getOfflineQueue();
-    queue.push({ type: "quote_settings", data: payload, timestamp: Date.now() });
-    saveOfflineQueue(queue);
   }
-}
 
 export function subscribeQuoteSettings(onUpdate: (payload: QuoteSettingsPayload) => void): () => void {
   const schoolId = getActiveSchoolId();
@@ -710,8 +771,12 @@ export function subscribeQuoteSettings(onUpdate: (payload: QuoteSettingsPayload)
           }
         }
       },
-      (err) => {
+      (err: any) => {
         console.error("Firestore quote settings snapshot error:", err);
+        setSyncState({
+          state: !navigator.onLine ? 'offline' : 'error',
+          errorMessage: !navigator.onLine ? null : (err?.code || err?.message || "Snapshot error"),
+        });
       }
     );
     return () => unsubscribe();
@@ -727,4 +792,105 @@ export function getSyncQueueLength(): number {
 
 export function isOnline(): boolean {
   return navigator.onLine;
+}
+
+// ── Sync State Manager ────────────────────────────────────────────────────────
+// Exposes a reactive sync state (synced | syncing | offline | error) with
+// error message and queued item count so any UI can surface sync status.
+
+export type SyncState = 'synced' | 'syncing' | 'offline' | 'error';
+
+export interface SyncStatus {
+  state: SyncState;
+  queuedCount: number;
+  errorMessage: string | null;
+  lastSync: string | null;
+}
+
+const SYNC_STATE_KEY = 'munyaka_sync_state_v1';
+
+let currentSyncState: SyncStatus = {
+  state: 'synced',
+  queuedCount: 0,
+  errorMessage: null,
+  lastSync: null,
+};
+
+const listeners: Array<(status: SyncStatus) => void> = [];
+
+function persistState(status: SyncStatus) {
+  try {
+    localStorage.setItem(SYNC_STATE_KEY, JSON.stringify(status));
+  } catch (e) {
+    // ignore
+  }
+}
+
+function notifyListeners() {
+  const snapshot = { ...currentSyncState };
+  for (const listener of listeners) {
+    try {
+      listener(snapshot);
+    } catch (e) {
+      // ignore listener errors
+    }
+  }
+}
+
+export function setSyncState(partial: Partial<SyncStatus>) {
+  currentSyncState = { ...currentSyncState, ...partial };
+  currentSyncState.queuedCount = getOfflineQueue().length;
+  persistState(currentSyncState);
+  notifyListeners();
+}
+
+export function getSyncState(): SyncStatus {
+  return { ...currentSyncState };
+}
+
+export function subscribeSyncState(listener: (status: SyncStatus) => void): () => void {
+  listeners.push(listener);
+  // Emit current state immediately
+  try {
+    listener({ ...currentSyncState });
+  } catch (e) {
+    // ignore
+  }
+  return () => {
+    const idx = listeners.indexOf(listener);
+    if (idx >= 0) listeners.splice(idx, 1);
+  };
+}
+
+export function initializeSyncState() {
+  try {
+    const stored = localStorage.getItem(SYNC_STATE_KEY);
+    if (stored) {
+      currentSyncState = JSON.parse(stored);
+    }
+  } catch (e) {
+    // ignore
+  }
+  currentSyncState.queuedCount = getOfflineQueue().length;
+  notifyListeners();
+
+  // Listen for online/offline changes
+  const handleOnline = () => {
+    setSyncState({ state: 'synced', errorMessage: null });
+  };
+  const handleOffline = () => {
+    setSyncState({ state: 'offline', errorMessage: null });
+  };
+  const handleQueueUpdated = () => {
+    setSyncState({ queuedCount: getOfflineQueue().length });
+  };
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
+  window.addEventListener('sync-queue-updated', handleQueueUpdated);
+
+  return () => {
+    window.removeEventListener('online', handleOnline);
+    window.removeEventListener('offline', handleOffline);
+    window.removeEventListener('sync-queue-updated', handleQueueUpdated);
+  };
 }

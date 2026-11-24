@@ -58,47 +58,17 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
 import { isStudentRole } from '@/utils/roleGuard';
-import { flushOfflineQueue, getSyncQueueLength, isOnline } from '@/services/firestoreSync';
+import { flushOfflineQueue, getSyncState, subscribeSyncState, initializeSyncState, type SyncStatus } from '@/services/firestoreSync';
 
 // ── Sync Status Badge Component ───────────────────────────────────────────────
 export const SyncStatusBadge: React.FC = () => {
-  const [queueLength, setQueueLength] = useState(0);
-  const [online, setOnline] = useState(true);
+  const [status, setStatus] = useState<SyncStatus>(getSyncState());
   const [isFlushing, setIsFlushing] = useState(false);
-  const [lastSync, setLastSync] = useState<Date | null>(null);
 
   useEffect(() => {
-    const updateStatus = () => {
-      setQueueLength(getSyncQueueLength());
-      setOnline(isOnline());
-    };
-    
-    updateStatus();
-    
-    const handleOnline = () => {
-      setOnline(true);
-      updateStatus();
-    };
-    
-    const handleOffline = () => {
-      setOnline(false);
-      updateStatus();
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    window.addEventListener('sync-queue-updated', updateStatus);
-    window.addEventListener('storage', updateStatus);
-    
-    const interval = setInterval(updateStatus, 5000);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('sync-queue-updated', updateStatus);
-      window.removeEventListener('storage', updateStatus);
-      clearInterval(interval);
-    };
+    initializeSyncState();
+    const unsubscribe = subscribeSyncState(setStatus);
+    return () => unsubscribe();
   }, []);
 
   const handleFlush = async () => {
@@ -106,8 +76,6 @@ export const SyncStatusBadge: React.FC = () => {
     setIsFlushing(true);
     try {
       await flushOfflineQueue();
-      setLastSync(new Date());
-      setQueueLength(getSyncQueueLength());
     } catch (e) {
       console.error('Flush failed:', e);
     } finally {
@@ -115,58 +83,68 @@ export const SyncStatusBadge: React.FC = () => {
     }
   };
 
-  if (online && queueLength === 0) {
-    return (
-      <button
-        onClick={handleFlush}
-        disabled={isFlushing}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-all text-xs font-bold min-h-[36px] min-w-[36px] justify-center"
-        title={lastSync ? `Last synced: ${lastSync.toLocaleTimeString()}. Click to refresh.` : 'All synced. Click to refresh.'}
-        aria-label="Sync status: All synced"
-      >
-        <Wifi className="w-3.5 h-3.5" />
-        <span className="hidden sm:inline">Synced</span>
-      </button>
-    );
-  }
+  const badgeTitle = () => {
+    switch (status.state) {
+      case 'synced':
+        return status.lastSync ? `Cloud Synced — last synced ${new Date(status.lastSync).toLocaleTimeString()}. Click to refresh.` : 'Cloud Synced. Click to refresh.';
+      case 'syncing':
+        return `Syncing ${status.queuedCount} item(s)...`;
+      case 'offline':
+        return `Offline — ${status.queuedCount} item(s) queued. Will sync when back online.`;
+      case 'error':
+        return `Sync Error — ${status.errorMessage || 'Unknown error'} (${status.queuedCount} queued). Click to retry.`;
+      default:
+        return 'Sync status unknown.';
+    }
+  };
 
-  if (!online) {
-    return (
-      <button
-        onClick={handleFlush}
-        disabled={isFlushing}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-all text-xs font-bold min-h-[36px] min-w-[36px] justify-center"
-        title={`Offline - ${queueLength} queued. Will sync when online.`}
-        aria-label={`Sync status: Offline, ${queueLength} items queued`}
-      >
-        <Wifi className="w-3.5 h-3.5" />
-        <span className="hidden sm:inline">Offline</span>
-        {queueLength > 0 && (
-          <span className="w-5 h-5 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center">
-            {queueLength > 99 ? '99+' : queueLength}
-          </span>
-        )}
-      </button>
-    );
-  }
+  const badgeLabel = () => {
+    switch (status.state) {
+      case 'synced':
+        return 'Cloud Synced';
+      case 'syncing':
+        return 'Syncing';
+      case 'offline':
+        return 'Offline';
+      case 'error':
+        return 'Sync Error';
+      default:
+        return 'Sync';
+    }
+  };
+
+  const badgeVariant = () => {
+    switch (status.state) {
+      case 'synced':
+        return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50';
+      case 'syncing':
+        return 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50';
+      case 'offline':
+        return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50';
+      case 'error':
+        return 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-900/50';
+      default:
+        return 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
+    }
+  };
+
+  const icon = status.state === 'syncing' && isFlushing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wifi className="w-3.5 h-3.5" />;
 
   return (
     <button
       onClick={handleFlush}
       disabled={isFlushing}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-all text-xs font-bold min-h-[36px] min-w-[36px] justify-center"
-      title={`${queueLength} pending. Click to sync now.`}
-      aria-label={`Sync status: ${queueLength} items pending`}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${badgeVariant()} transition-all text-xs font-bold min-h-[36px] min-w-[36px] justify-center`}
+      title={badgeTitle()}
+      aria-label={`Sync status: ${badgeLabel()}, ${status.queuedCount} queued`}
     >
-      {isFlushing ? (
-        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-      ) : (
-        <Wifi className="w-3.5 h-3.5" />
+      {icon}
+      <span className="hidden sm:inline">{badgeLabel()}</span>
+      {status.queuedCount > 0 && (
+        <span className="w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center">
+          {status.queuedCount > 99 ? '99+' : status.queuedCount}
+        </span>
       )}
-      <span className="hidden sm:inline">Syncing</span>
-      <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">
-        {queueLength > 99 ? '99+' : queueLength}
-      </span>
     </button>
   );
 };
