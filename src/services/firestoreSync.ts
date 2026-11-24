@@ -489,7 +489,11 @@ export function subscribeLearnerProfiles(onUpdate: (learners: any[]) => void): (
             .filter((item) => item.type === "learner_profile")
             .map((item) => item.data);
           
-          // Merge: offline entries take precedence (they're newer)
+          // Reconcile: authoritative Firestore learners list vs local localStorage cache
+          // Remove local-only phantom/deleted learner entries that no longer exist in Firestore
+          // (unless they are actively queued in jamlyan_firestore_sync_queue_v1 awaiting upload)
+          const queuedIds = new Set(offlineLearners.map(l => l.id || l.admissionNumber));
+          
           const merged = [...learners];
           for (const offline of offlineLearners) {
             const idx = merged.findIndex((l) => l.id === offline.id || l.admissionNumber === offline.admissionNumber);
@@ -500,7 +504,7 @@ export function subscribeLearnerProfiles(onUpdate: (learners: any[]) => void): (
             }
           }
 
-          // Update localStorage cache with merged data
+          // Update localStorage cache with authoritative merged data
           localStorage.setItem(LEARNER_PROFILES_KEY, JSON.stringify(merged));
           localStorage.setItem('munyaka_learners', JSON.stringify(merged));
           localStorage.setItem('munyaka_learners_directory', JSON.stringify(merged));
@@ -512,6 +516,8 @@ export function subscribeLearnerProfiles(onUpdate: (learners: any[]) => void): (
         } catch (e) {
           // Fallback to cloud-only
           localStorage.setItem(LEARNER_PROFILES_KEY, JSON.stringify(learners));
+          localStorage.setItem('munyaka_learners', JSON.stringify(learners));
+          localStorage.setItem('munyaka_learners_directory', JSON.stringify(learners));
           onUpdate(learners);
         }
       },

@@ -90,10 +90,26 @@ export const AdminDashboardComponent: React.FC = () => {
     return true;
   });
 
-  const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
-  const junior = learners.length - primary.length;
+  const primary = learners.filter((l: any) => {
+    const status = String(l.status || l.enrollmentStatus || 'active').toLowerCase();
+    if (status === 'transferred' || status === 'archived' || status === 'deleted' || status === 'left') return false;
+    const grade = String(l.grade || l.class || '').toLowerCase();
+    return !grade.includes('junior') && !grade.includes('grade 7') && !grade.includes('grade 8') && !grade.includes('grade 9');
+  });
 
-  const totalStudents = learners.length;
+  const junior = learners.filter((l: any) => {
+    const status = String(l.status || l.enrollmentStatus || 'active').toLowerCase();
+    if (status === 'transferred' || status === 'archived' || status === 'deleted' || status === 'left') return false;
+    const grade = String(l.grade || l.class || '').toLowerCase();
+    return grade.includes('junior') || grade.includes('grade 7') || grade.includes('grade 8') || grade.includes('grade 9');
+  }).length;
+
+  const activeLearnersList = learners.filter((l: any) => {
+    const status = String(l.status || l.enrollmentStatus || 'active').toLowerCase();
+    return status !== 'transferred' && status !== 'archived' && status !== 'deleted' && status !== 'left';
+  });
+
+  const totalStudents = activeLearnersList.length;
   const teachingStaffCount = teaching.length;
   const nonTeachingStaffCount = nonTeaching.length;
   const primaryCount = primary.length;
