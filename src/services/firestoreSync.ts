@@ -74,10 +74,15 @@ export interface MarksPayload {
 export function getActiveSchoolId(): string {
   try {
     const stored = localStorage.getItem("active_school_id") || localStorage.getItem("schoolId");
-    if (stored) return stored;
+    if (stored && stored.trim() !== "") return stored.trim();
   } catch (e) {
     // ignore
   }
+  // Ensure munyaka-primary-js is always set as the active schoolId even on brand-new browser with empty localStorage
+  try {
+    localStorage.setItem("active_school_id", "munyaka-primary-js");
+    localStorage.setItem("schoolId", "munyaka-primary-js");
+  } catch (e) {}
   return "munyaka-primary-js";
 }
 
@@ -268,6 +273,8 @@ export function subscribeSchoolAttendance(
               allRollCall[date] = records;
               localStorage.setItem(ROLL_CALL_KEY, JSON.stringify(allRollCall));
               localStorage.setItem(`submitted_${date}`, JSON.stringify(locks));
+              window.dispatchEvent(new CustomEvent('jamlyan:firestore-updated', { detail: { type: 'attendance', date, records } }));
+              window.dispatchEvent(new Event('munyaka_learners_updated'));
             } catch (e) {}
 
             onUpdate({ records, locks });
@@ -380,6 +387,10 @@ export function subscribeAssessmentSubmissions(onUpdate: (subs: any[]) => void):
           // Update localStorage cache with merged data
           localStorage.setItem(ASSESSMENT_SUBMISSIONS_KEY, JSON.stringify(merged));
           onUpdate(merged);
+          try {
+            window.dispatchEvent(new CustomEvent('jamlyan:firestore-updated', { detail: { type: 'assessment_submissions', count: merged.length } }));
+            window.dispatchEvent(new Event('munyaka_learners_updated'));
+          } catch (e) {}
         } catch (e) {
           // Fallback to cloud-only
           localStorage.setItem(ASSESSMENT_SUBMISSIONS_KEY, JSON.stringify(subs));
@@ -491,6 +502,12 @@ export function subscribeLearnerProfiles(onUpdate: (learners: any[]) => void): (
 
           // Update localStorage cache with merged data
           localStorage.setItem(LEARNER_PROFILES_KEY, JSON.stringify(merged));
+          localStorage.setItem('munyaka_learners', JSON.stringify(merged));
+          localStorage.setItem('munyaka_learners_directory', JSON.stringify(merged));
+          try {
+            window.dispatchEvent(new CustomEvent('jamlyan:firestore-updated', { detail: { type: 'learners', count: merged.length } }));
+            window.dispatchEvent(new Event('munyaka_learners_updated'));
+          } catch (e) {}
           onUpdate(merged);
         } catch (e) {
           // Fallback to cloud-only
@@ -603,6 +620,10 @@ export function subscribeMarks(onUpdate: (marks: any[]) => void): () => void {
 
           // Update localStorage cache with merged data
           localStorage.setItem(MARKS_KEY, JSON.stringify(merged));
+          try {
+            window.dispatchEvent(new CustomEvent('jamlyan:firestore-updated', { detail: { type: 'marks', count: merged.length } }));
+            window.dispatchEvent(new Event('munyaka_learners_updated'));
+          } catch (e) {}
           onUpdate(merged);
         } catch (e) {
           // Fallback to cloud-only
@@ -662,6 +683,12 @@ export async function pullOnceAttendanceAndSubmissions(date?: string): Promise<v
     learnerSnap.forEach((d) => learners.push(d.data()));
     if (learners.length > 0) {
       localStorage.setItem(LEARNER_PROFILES_KEY, JSON.stringify(learners));
+      localStorage.setItem('munyaka_learners', JSON.stringify(learners));
+      localStorage.setItem('munyaka_learners_directory', JSON.stringify(learners));
+      try {
+        window.dispatchEvent(new CustomEvent('jamlyan:firestore-updated', { detail: { type: 'learners', count: learners.length } }));
+        window.dispatchEvent(new Event('munyaka_learners_updated'));
+      } catch (e) {}
     }
 
     // Pull all marks

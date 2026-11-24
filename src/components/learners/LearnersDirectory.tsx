@@ -214,10 +214,12 @@ export default function LearnersDirectory() {
 
     window.addEventListener('storage', loadLearners);
     window.addEventListener('munyaka_learners_updated', loadLearners);
+    window.addEventListener('jamlyan:firestore-updated', loadLearners);
 
     return () => {
       window.removeEventListener('storage', loadLearners);
       window.removeEventListener('munyaka_learners_updated', loadLearners);
+      window.removeEventListener('jamlyan:firestore-updated', loadLearners);
     };
   }, []);
 

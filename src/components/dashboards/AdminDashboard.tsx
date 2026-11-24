@@ -35,6 +35,7 @@ export const AdminDashboardComponent: React.FC = () => {
     window.addEventListener('storage', handleSync);
     window.addEventListener('munyaka:data-changed', handleSync);
     window.addEventListener('munyaka_learners_updated', handleSync);
+    window.addEventListener('jamlyan:firestore-updated', handleSync);
     window.addEventListener('learners_updated', handleSync);
     window.addEventListener('roll_call_updated', handleSync);
     window.addEventListener('attendance_updated', handleSync);
@@ -51,6 +52,7 @@ export const AdminDashboardComponent: React.FC = () => {
       window.removeEventListener('storage', handleSync);
       window.removeEventListener('munyaka:data-changed', handleSync);
       window.removeEventListener('munyaka_learners_updated', handleSync);
+      window.removeEventListener('jamlyan:firestore-updated', handleSync);
       window.removeEventListener('learners_updated', handleSync);
       window.removeEventListener('roll_call_updated', handleSync);
       window.removeEventListener('attendance_updated', handleSync);
