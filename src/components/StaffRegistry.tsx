@@ -685,7 +685,7 @@ export default function StaffRegistry() {
       ? (email.includes('@') ? email.trim() : `${email.trim()}@munyaka.sc.ke`)
       : `${fullName.toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`;
 
-    const generatedMunId = editingStaff ? editingStaff.id : `staff-${Date.now()}`;
+    const generatedMunId = editingStaff ? (editingStaff.id || editingStaff.staffId) : `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
     const rbacRoleKey = mapRoleLabelToRbacKey(category);
     const title = category;
     

@@ -114,9 +114,12 @@ export function AddStaffModal({ isOpen, onClose, onStaffAdded }: AddStaffModalPr
       return;
     }
 
-    // Gathers all form inputs into a complete staff object payload
+    // Gathers all form inputs into a complete staff object payload with a standardized MUN-XXXX ID and accessCode
+    const staffIdCode = generateRandomCode();
     const newStaffMember = {
-      id: `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: staffIdCode,
+      staffId: staffIdCode,
+      accessCode: staffIdCode,
       fullName: fullName.trim(),
       name: fullName.trim(),
       phone: phone.trim(),
