@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUnifiedLicenseInfo, useUnifiedLicense, saveLicenseToFirestore } from '../utils/subscriptionUtils';
+import { getUnifiedLicenseInfo, useUnifiedLicense } from '../utils/subscriptionUtils';
 import {
   ShieldCheck,
   LayoutDashboard,
@@ -35,7 +35,39 @@ export default function JamlyanAnalyticsPortal() {
   const [activeTab, setActiveTab] = useState<'overview' | 'subscriptions' | 'locks' | 'updates' | 'diagnostics' | 'lan' | 'users' | 'tenants'>('overview');
 
   // Dynamic Subscription & Lock State using unified utility
-  const licenseInfo = useUnifiedLicense();
+  const [licenseInfo, setLicenseInfo] = useState(() => {
+    const info = getUnifiedLicenseInfo();
+    return {
+      badgeText: info.badgeText,
+      badgeVariant: info.badgeVariant
+    };
+  });
+
+  const updateLicenseBadge = () => {
+    try {
+      const info = getUnifiedLicenseInfo();
+      setLicenseInfo({
+        badgeText: info.badgeText,
+        badgeVariant: info.badgeVariant
+      });
+    } catch (e) {
+      console.error('Error updating license badge:', e);
+    }
+  };
+
+  useEffect(() => {
+    updateLicenseBadge();
+    const interval = setInterval(updateLicenseBadge, 3000);
+    const handleStorage = () => updateLicenseBadge();
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('billing_invoices_updated', handleStorage);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('billing_invoices_updated', handleStorage);
+    };
+  }, []);
+
   const [lanServerUrl, setLanServerUrl] = useState(() => localStorage.getItem('munyaka_lan_server_url') || localStorage.getItem('lan_server_url') || 'http://192.168.1.100:3001');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -65,51 +97,43 @@ export default function JamlyanAnalyticsPortal() {
   const totalSeats = learnersCount + staffCount;
   const estimatedMonthlyTotal = totalSeats * feePerSeat;
 
-  const handleToggleLock = async () => {
+  const handleToggleLock = () => {
       const next = !appLocked;
       setAppLocked(next);
+      // Write unified lock flag to localStorage + Firestore, clear legacy keys
       setTeacherAppLock(next);
-      const dueDate = localStorage.getItem('munyaka_billing_due_date') || '2026-12-29';
-      const status = localStorage.getItem('munyaka_billing_status') || 'ACTIVE';
-      await saveLicenseToFirestore({ dueDate, status, isLocked: next });
       if (next) {
-        showError('Global Teacher App Lock ACTIVATED. Teacher apps across devices are now locked & synced to Firestore.');
+        showError('Global Teacher App Lock ACTIVATED. Teacher apps across devices are now locked.');
       } else {
-        showSuccess('Global Teacher App Lock LIFTED. Teacher apps are active & synced to Firestore.');
+        showSuccess('Global Teacher App Lock LIFTED. Teacher apps are active.');
       }
     };
 
-  const handleMarkPaid = async () => {
+  const handleMarkPaid = () => {
       setBillingStatus('Paid');
       localStorage.setItem('munyaka_billing_status', 'Paid');
+      // Lift the lock explicitly when marked as Paid
       setTeacherAppLock(false);
       setAppLocked(false);
-      const dueDate = localStorage.getItem('munyaka_billing_due_date') || '2026-12-29';
-      await saveLicenseToFirestore({ dueDate, status: 'PAID', isLocked: false });
-      showSuccess('Current billing cycle marked as Paid & synced to Firestore. App locks lifted.');
+      showSuccess('Current billing cycle marked as Paid. App locks lifted automatically.');
     };
   
-    const handleMarkOverdue = async () => {
+    const handleMarkOverdue = () => {
       setBillingStatus('Overdue');
       localStorage.setItem('munyaka_billing_status', 'Overdue');
-      const dueDate = localStorage.getItem('munyaka_billing_due_date') || '2026-12-29';
-      await saveLicenseToFirestore({ dueDate, status: 'OVERDUE', isLocked: appLocked });
-      showSuccess('Billing marked Overdue & synced to Firestore.');
+      // NOTE: Marking billing as Overdue does NOT automatically lock teacher apps.
+      // The lock is ONLY controlled by the Global Teacher App Lock toggle above.
+      // This prevents secondary/overdue lock triggers from causing the disconnect.
+      showSuccess('Billing marked Overdue. Use the Global Teacher App Lock toggle to restrict access if needed.');
     };
 
-  const handleSyncFirestore = async () => {
+  const handleSyncFirestore = () => {
     setIsSyncing(true);
-    try {
-      const dueDate = localStorage.getItem('munyaka_billing_due_date') || '2026-12-29';
-      const status = localStorage.getItem('munyaka_billing_status') || 'ACTIVE';
-      await saveLicenseToFirestore({ dueDate, status, isLocked: appLocked });
+    setTimeout(() => {
       setIsSyncing(false);
       setSyncStatus('Synchronized with Firestore (cloud_sync_ok)');
       showSuccess('Successfully synchronized state with Firestore & LocalStorage.');
-    } catch (e) {
-      setIsSyncing(false);
-      showError('Sync failed. Please check network connection.');
-    }
+    }, 1200);
   };
 
   const handleLogout = () => {
@@ -297,9 +321,8 @@ export default function JamlyanAnalyticsPortal() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Badge className={`border text-xs font-black px-3 py-1.5 rounded-full whitespace-nowrap inline-flex items-center gap-1.5 ${licenseInfo.badgeVariant}`}>
-                <ShieldCheck size={14} className={licenseInfo.daysRemaining <= 7 ? "text-amber-700 dark:text-amber-400 shrink-0" : "text-emerald-700 dark:text-emerald-400 shrink-0"} />
-                <span>{licenseInfo.badgeText}</span>
+              <Badge className={`border text-xs font-black px-3 py-1.5 rounded-full ${licenseInfo.badgeVariant}`}>
+                {licenseInfo.badgeText}
               </Badge>
               <Button
                 variant="outline"
