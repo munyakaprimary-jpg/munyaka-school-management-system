@@ -17,24 +17,27 @@ let firestoreSubscribed = false;
 export function initFirestoreLicenseSync() {
   if (firestoreSubscribed) return;
   firestoreSubscribed = true;
-  try {
-    const schoolId = getActiveSchoolId();
-    const ref = doc(db, 'schools', schoolId, 'settings', 'subscription');
-    onSnapshot(ref, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data.dueDate) localStorage.setItem('munyaka_billing_due_date', data.dueDate);
-        if (data.status) localStorage.setItem('munyaka_billing_status', data.status);
-        if (data.isLocked !== undefined) localStorage.setItem('isTeacherAppLocked', String(data.isLocked));
-        window.dispatchEvent(new Event('storage'));
-        window.dispatchEvent(new Event('billing_invoices_updated'));
-      }
-    }, (err) => {
-      console.warn('Firestore subscription license sync snapshot error:', err);
-    });
-  } catch (e) {
-    // ignore
-  }
+  // Non-blocking background sync
+  setTimeout(() => {
+    try {
+      const schoolId = getActiveSchoolId();
+      const ref = doc(db, 'schools', schoolId, 'settings', 'subscription');
+      onSnapshot(ref, (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.dueDate) localStorage.setItem('munyaka_billing_due_date', data.dueDate);
+          if (data.status) localStorage.setItem('munyaka_billing_status', data.status);
+          if (data.isLocked !== undefined) localStorage.setItem('isTeacherAppLocked', String(data.isLocked));
+          window.dispatchEvent(new Event('storage'));
+          window.dispatchEvent(new Event('billing_invoices_updated'));
+        }
+      }, (err) => {
+        console.warn('Firestore subscription license sync snapshot error:', err);
+      });
+    } catch (e) {
+      // ignore
+    }
+  }, 100);
 }
 
 export async function saveLicenseToFirestore(licenseData: { dueDate: string; status: string; isLocked: boolean }) {
