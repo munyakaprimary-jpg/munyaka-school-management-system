@@ -46,11 +46,11 @@ export function getActiveLicenseSync(): ActiveLicensePayload {
 
   // Fallback defaults
   const status = localStorage.getItem('munyaka_billing_status') || 'ACTIVE';
-  const monthlyPaymentDueDate = localStorage.getItem('monthlyPaymentDueDate') || localStorage.getItem('munyaka_billing_due_date') || '2026-12-29';
+  const monthlyPaymentDueDate = localStorage.getItem('monthlyPaymentDueDate') || localStorage.getItem('munyaka_billing_due_date') || localStorage.getItem('munyaka_payment_due_date') || '2026-11-30';
   const activeSeats = Number(localStorage.getItem('munyaka_active_seats') || '480');
   const monthlyLicenseFeePerSeat = Number(localStorage.getItem('monthlyLicenseFeePerSeat') || localStorage.getItem('munyaka_fee_per_seat') || '150');
-  const billingDueDayOfMonth = Number(localStorage.getItem('billingDueDayOfMonth') || '5');
-  const gracePeriodDays = Number(localStorage.getItem('gracePeriodDays') || '7');
+  const billingDueDayOfMonth = Number(localStorage.getItem('billingDueDayOfMonth') || localStorage.getItem('munyaka_billing_due_day') || '5');
+  const gracePeriodDays = Number(localStorage.getItem('gracePeriodDays') || localStorage.getItem('munyaka_billing_grace_period') || '7');
   const isLocked = localStorage.getItem('isTeacherAppLocked') === 'true';
 
   // Compute days remaining from monthlyPaymentDueDate
@@ -71,7 +71,7 @@ export function getActiveLicenseSync(): ActiveLicensePayload {
     dueDateObj = new Date(monthlyPaymentDueDate);
   }
 
-  if (isNaN(dueDateObj.getTime())) dueDateObj = new Date(2026, 11, 29);
+  if (isNaN(dueDateObj.getTime())) dueDateObj = new Date(2026, 10, 30);
   const now = new Date();
   const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dueMidnight = new Date(dueDateObj.getFullYear(), dueDateObj.getMonth(), dueDateObj.getDate());
