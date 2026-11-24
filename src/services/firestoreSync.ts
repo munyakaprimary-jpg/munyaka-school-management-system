@@ -12,6 +12,8 @@ import {
 const OFFLINE_QUEUE_KEY = "jamlyan_firestore_sync_queue_v1";
 const ROLL_CALL_KEY = "roll_call";
 const ASSESSMENT_SUBMISSIONS_KEY = "assessment_submissions";
+const LEARNER_PROFILES_KEY = "munyaka_learners";
+const MARKS_KEY = "munyaka_marks";
 
 export interface AttendanceRecordNormalized {
   learnerId: string;
@@ -38,6 +40,34 @@ export interface AssessmentSubmissionPayload {
   score?: number;
   total?: number;
   submittedAt?: string;
+  [key: string]: any;
+}
+
+export interface LearnerProfilePayload {
+  id?: string;
+  admissionNumber?: string;
+  name?: string;
+  fullName?: string;
+  classGrade?: string;
+  stream?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  parentPhone?: string;
+  parentName?: string;
+  [key: string]: any;
+}
+
+export interface MarksPayload {
+  id?: string;
+  learnerId?: string;
+  studentId?: string;
+  examId?: string;
+  subject?: string;
+  marks?: number;
+  totalMarks?: number;
+  grade?: string;
+  term?: string;
+  year?: string;
   [key: string]: any;
 }
 
@@ -113,6 +143,17 @@ export async function flushOfflineQueue(): Promise<void> {
       } else if (item.type === "assessment_submission") {
         const subId = item.data.id || `${item.data.learnerId || item.data.studentId || "std"}_${Date.now()}`;
         const ref = doc(db, "schools", schoolId, "submissions", subId);
+        await setDoc(ref, item.data, { merge: true });
+      } else if (item.type === "learner_profile") {
+        const learnerId = item.data.id || item.data.admissionNumber || `learner_${Date.now()}`;
+        const ref = doc(db, "schools", schoolId, "learners", learnerId);
+        await setDoc(ref, item.data, { merge: true });
+      } else if (item.type === "marks") {
+        const marksId = item.data.id || `${item.data.learnerId || item.data.studentId || "std"}_${item.data.examId || "exam"}_${Date.now()}`;
+        const ref = doc(db, "schools", schoolId, "marks", marksId);
+        await setDoc(ref, item.data, { merge: true });
+      } else if (item.type === "quote_settings") {
+        const ref = doc(db, "schools", schoolId, "settings", "login_quote");
         await setDoc(ref, item.data, { merge: true });
       }
     } catch (e) {
@@ -287,15 +328,239 @@ export function subscribeAssessmentSubmissions(onUpdate: (subs: any[]) => void):
           subs.push(doc.data());
         });
 
-        // Update localStorage cache
+        // Merge with any unsynced local queue items (offline entries)
         try {
-          localStorage.setItem(ASSESSMENT_SUBMISSIONS_KEY, JSON.stringify(subs));
-        } catch (e) {}
+          const queue = getOfflineQueue();
+          const offlineSubs = queue
+            .filter((item) => item.type === "assessment_submission")
+            .map((item) => item.data);
+          
+          // Merge: offline entries take precedence (they're newer)
+          const merged = [...subs];
+          for (const offline of offlineSubs) {
+            const idx = merged.findIndex((s) => s.id === offline.id || (s.learnerId === offline.learnerId && s.assessmentId === offline.assessmentId));
+            if (idx >= 0) {
+              merged[idx] = offline;
+            } else {
+              merged.push(offline);
+            }
+          }
 
-        onUpdate(subs);
+          // Update localStorage cache with merged data
+          localStorage.setItem(ASSESSMENT_SUBMISSIONS_KEY, JSON.stringify(merged));
+          onUpdate(merged);
+        } catch (e) {
+          // Fallback to cloud-only
+          localStorage.setItem(ASSESSMENT_SUBMISSIONS_KEY, JSON.stringify(subs));
+          onUpdate(subs);
+        }
       },
       (err) => {
         console.error("Firestore submissions snapshot error:", err);
+      }
+    );
+    return () => unsubscribe();
+  } catch (e) {
+    return () => {};
+  }
+}
+
+// Learner Profiles sync
+export async function saveLearnerProfile(learner: LearnerProfilePayload): Promise<void> {
+  const schoolId = getActiveSchoolId();
+  const learnerId = learner.id || learner.admissionNumber || `learner_${Date.now()}`;
+  const enhancedLearner = {
+    ...learner,
+    id: learnerId,
+    updatedAt: new Date().toISOString(),
+  };
+
+  // 1. Save to localStorage
+  try {
+    const existingStr = localStorage.getItem(LEARNER_PROFILES_KEY);
+    let learners: any[] = [];
+    if (existingStr) {
+      try {
+        learners = JSON.parse(existingStr);
+      } catch (e) {}
+    }
+    const idx = learners.findIndex((l: any) => l.id === learnerId || l.admissionNumber === enhancedLearner.admissionNumber);
+    if (idx >= 0) {
+      learners[idx] = enhancedLearner;
+    } else {
+      learners.push(enhancedLearner);
+    }
+    localStorage.setItem(LEARNER_PROFILES_KEY, JSON.stringify(learners));
+  } catch (e) {
+    console.error("Error saving learner profile to localStorage:", e);
+  }
+
+  // 2. Save to Firestore or queue
+  try {
+    if (!navigator.onLine) {
+      throw new Error("Offline");
+    }
+    const ref = doc(db, "schools", schoolId, "learners", learnerId);
+    await setDoc(ref, enhancedLearner, { merge: true });
+  } catch (e) {
+    const queue = getOfflineQueue();
+    queue.push({ type: "learner_profile", data: enhancedLearner, timestamp: Date.now() });
+    saveOfflineQueue(queue);
+  }
+}
+
+export function subscribeLearnerProfiles(onUpdate: (learners: any[]) => void): () => void {
+  const schoolId = getActiveSchoolId();
+
+  // Load from localStorage first
+  try {
+    const existingStr = localStorage.getItem(LEARNER_PROFILES_KEY);
+    if (existingStr) {
+      onUpdate(JSON.parse(existingStr));
+    }
+  } catch (e) {}
+
+  try {
+    const colRef = collection(db, "schools", schoolId, "learners");
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snapshot) => {
+        const learners: any[] = [];
+        snapshot.forEach((doc) => {
+          learners.push(doc.data());
+        });
+
+        // Merge with any unsynced local queue items (offline entries)
+        try {
+          const queue = getOfflineQueue();
+          const offlineLearners = queue
+            .filter((item) => item.type === "learner_profile")
+            .map((item) => item.data);
+          
+          // Merge: offline entries take precedence (they're newer)
+          const merged = [...learners];
+          for (const offline of offlineLearners) {
+            const idx = merged.findIndex((l) => l.id === offline.id || l.admissionNumber === offline.admissionNumber);
+            if (idx >= 0) {
+              merged[idx] = offline;
+            } else {
+              merged.push(offline);
+            }
+          }
+
+          // Update localStorage cache with merged data
+          localStorage.setItem(LEARNER_PROFILES_KEY, JSON.stringify(merged));
+          onUpdate(merged);
+        } catch (e) {
+          // Fallback to cloud-only
+          localStorage.setItem(LEARNER_PROFILES_KEY, JSON.stringify(learners));
+          onUpdate(learners);
+        }
+      },
+      (err) => {
+        console.error("Firestore learners snapshot error:", err);
+      }
+    );
+    return () => unsubscribe();
+  } catch (e) {
+    return () => {};
+  }
+}
+
+// Marks sync
+export async function saveMarks(marks: MarksPayload): Promise<void> {
+  const schoolId = getActiveSchoolId();
+  const marksId = marks.id || `${marks.learnerId || marks.studentId || "std"}_${marks.examId || "exam"}_${Date.now()}`;
+  const enhancedMarks = {
+    ...marks,
+    id: marksId,
+    updatedAt: new Date().toISOString(),
+  };
+
+  // 1. Save to localStorage
+  try {
+    const existingStr = localStorage.getItem(MARKS_KEY);
+    let marksList: any[] = [];
+    if (existingStr) {
+      try {
+        marksList = JSON.parse(existingStr);
+      } catch (e) {}
+    }
+    const idx = marksList.findIndex((m: any) => m.id === marksId || (m.learnerId === enhancedMarks.learnerId && m.examId === enhancedMarks.examId && m.subject === enhancedMarks.subject));
+    if (idx >= 0) {
+      marksList[idx] = enhancedMarks;
+    } else {
+      marksList.push(enhancedMarks);
+    }
+    localStorage.setItem(MARKS_KEY, JSON.stringify(marksList));
+  } catch (e) {
+    console.error("Error saving marks to localStorage:", e);
+  }
+
+  // 2. Save to Firestore or queue
+  try {
+    if (!navigator.onLine) {
+      throw new Error("Offline");
+    }
+    const ref = doc(db, "schools", schoolId, "marks", marksId);
+    await setDoc(ref, enhancedMarks, { merge: true });
+  } catch (e) {
+    const queue = getOfflineQueue();
+    queue.push({ type: "marks", data: enhancedMarks, timestamp: Date.now() });
+    saveOfflineQueue(queue);
+  }
+}
+
+export function subscribeMarks(onUpdate: (marks: any[]) => void): () => void {
+  const schoolId = getActiveSchoolId();
+
+  // Load from localStorage first
+  try {
+    const existingStr = localStorage.getItem(MARKS_KEY);
+    if (existingStr) {
+      onUpdate(JSON.parse(existingStr));
+    }
+  } catch (e) {}
+
+  try {
+    const colRef = collection(db, "schools", schoolId, "marks");
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snapshot) => {
+        const marks: any[] = [];
+        snapshot.forEach((doc) => {
+          marks.push(doc.data());
+        });
+
+        // Merge with any unsynced local queue items (offline entries)
+        try {
+          const queue = getOfflineQueue();
+          const offlineMarks = queue
+            .filter((item) => item.type === "marks")
+            .map((item) => item.data);
+          
+          // Merge: offline entries take precedence (they're newer)
+          const merged = [...marks];
+          for (const offline of offlineMarks) {
+            const idx = merged.findIndex((m) => m.id === offline.id || (m.learnerId === offline.learnerId && m.examId === offline.examId && m.subject === offline.subject));
+            if (idx >= 0) {
+              merged[idx] = offline;
+            } else {
+              merged.push(offline);
+            }
+          }
+
+          // Update localStorage cache with merged data
+          localStorage.setItem(MARKS_KEY, JSON.stringify(merged));
+          onUpdate(merged);
+        } catch (e) {
+          // Fallback to cloud-only
+          localStorage.setItem(MARKS_KEY, JSON.stringify(marks));
+          onUpdate(marks);
+        }
+      },
+      (err) => {
+        console.error("Firestore marks snapshot error:", err);
       }
     );
     return () => unsubscribe();
@@ -335,6 +600,24 @@ export async function pullOnceAttendanceAndSubmissions(date?: string): Promise<v
       localStorage.setItem(ASSESSMENT_SUBMISSIONS_KEY, JSON.stringify(subs));
     }
 
+    // Pull all learners
+    const learnerColRef = collection(db, "schools", schoolId, "learners");
+    const learnerSnap = await getDocs(learnerColRef);
+    const learners: any[] = [];
+    learnerSnap.forEach((d) => learners.push(d.data()));
+    if (learners.length > 0) {
+      localStorage.setItem(LEARNER_PROFILES_KEY, JSON.stringify(learners));
+    }
+
+    // Pull all marks
+    const marksColRef = collection(db, "schools", schoolId, "marks");
+    const marksSnap = await getDocs(marksColRef);
+    const marks: any[] = [];
+    marksSnap.forEach((d) => marks.push(d.data()));
+    if (marks.length > 0) {
+      localStorage.setItem(MARKS_KEY, JSON.stringify(marks));
+    }
+
     // Pull quote / styling settings
     const quoteRef = doc(db, "schools", schoolId, "settings", "login_quote");
     const quoteSnap = await getDoc(quoteRef);
@@ -349,7 +632,7 @@ export async function pullOnceAttendanceAndSubmissions(date?: string): Promise<v
       }
     }
   } catch (e) {
-    console.error("Error pulling attendance, submissions & quote from Firestore:", e);
+    console.error("Error pulling attendance, submissions, learners, marks & quote from Firestore:", e);
   }
 }
 
@@ -365,7 +648,7 @@ export interface QuoteSettingsPayload {
 
 export async function saveQuoteSettings(payload: QuoteSettingsPayload): Promise<void> {
   const schoolId = getActiveSchoolId();
-  
+ 
   // Save to localStorage cache
   try {
     if (payload.quote !== undefined) localStorage.setItem("munyaka_login_quote", payload.quote);
@@ -435,4 +718,13 @@ export function subscribeQuoteSettings(onUpdate: (payload: QuoteSettingsPayload)
   } catch (e) {
     return () => {};
   }
+}
+
+// Sync status helpers
+export function getSyncQueueLength(): number {
+  return getOfflineQueue().length;
+}
+
+export function isOnline(): boolean {
+  return navigator.onLine;
 }
