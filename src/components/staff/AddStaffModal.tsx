@@ -119,12 +119,11 @@ export function AddStaffModal({ isOpen, onClose, onStaffAdded }: AddStaffModalPr
     const newStaffMember = {
       id: staffIdCode,
       staffId: staffIdCode,
-      accessCode: staffIdCode,
+      accessCode: accessCode,
       fullName: fullName.trim(),
       name: fullName.trim(),
       phone: phone.trim(),
       role: role,
-      accessCode: accessCode,
       code: accessCode,
       tempAccessCode: accessCode,
       assignedGrades: selectedGrades,
