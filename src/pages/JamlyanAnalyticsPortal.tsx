@@ -28,6 +28,8 @@ import { getStoredStaff } from '@/utils/storage';
 import { useSessionHeartbeat } from '@/utils/sessionHeartbeat';
 import { ConnectedActiveUsersMonitor } from '@/components/ConnectedActiveUsersMonitor';
 import { setTeacherAppLock, getTeacherAppLock } from '@/utils/teacherAppLock';
+import { db } from '@/config/firebase';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 export default function JamlyanAnalyticsPortal() {
   useSessionHeartbeat();
@@ -83,6 +85,70 @@ export default function JamlyanAnalyticsPortal() {
   const [staffCount, setStaffCount] = useState(35);
   const [feePerSeat, setFeePerSeat] = useState(150);
 
+  // Firestore live sync for Munyaka Primary & JS operator console settings
+  useEffect(() => {
+    const schoolId = 'munyaka-primary-js';
+    
+    // Initial read from localStorage
+    try {
+      const storedLock = localStorage.getItem('munyaka_teacher_app_locked');
+      if (storedLock !== null) setAppLocked(storedLock === 'true');
+      const storedBilling = localStorage.getItem('munyaka_billing_status');
+      if (storedBilling) setBillingStatus(storedBilling);
+      const storedLan = localStorage.getItem('munyaka_lan_server_url');
+      if (storedLan) setLanServerUrl(storedLan);
+    } catch (e) {}
+
+    // Live onSnapshot listener to Firestore operator_console / settings
+    try {
+      const ref = doc(db, 'schools', schoolId, 'settings', 'operator_console');
+      const unsubscribe = onSnapshot(ref, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data) {
+            if (typeof data.appLocked === 'boolean') {
+              setAppLocked(data.appLocked);
+              setTeacherAppLock(data.appLocked);
+            }
+            if (data.billingStatus) {
+              setBillingStatus(data.billingStatus);
+              localStorage.setItem('munyaka_billing_status', data.billingStatus);
+            }
+            if (data.lanServerUrl) {
+              setLanServerUrl(data.lanServerUrl);
+              localStorage.setItem('munyaka_lan_server_url', data.lanServerUrl);
+            }
+            if (typeof data.feePerSeat === 'number') {
+              setFeePerSeat(data.feePerSeat);
+            }
+          }
+        }
+      }, (err) => {
+        console.error('Operator console snapshot error:', err);
+      });
+      return () => unsubscribe();
+    } catch (e) {
+      console.error('Error setting up operator console listener:', e);
+    }
+  }, []);
+
+  // Helper to persist state to localStorage + Firestore with setDoc merge
+  const persistOperatorSetting = async (key: string, value: any) => {
+    try {
+      localStorage.setItem(key, String(value));
+      const schoolId = 'munyaka-primary-js';
+      const ref = doc(db, 'schools', schoolId, 'settings', 'operator_console');
+      await setDoc(ref, {
+        [key]: value,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      setSyncStatus('Synchronized with Firestore (cloud_sync_ok)');
+    } catch (e) {
+      console.error('Error syncing operator setting to Firestore:', e);
+      setSyncStatus('Saved locally (Firestore sync pending)');
+    }
+  };
+
   useEffect(() => {
     try {
       const learners = mergeStoredLearners();
@@ -97,35 +163,34 @@ export default function JamlyanAnalyticsPortal() {
   const totalSeats = learnersCount + staffCount;
   const estimatedMonthlyTotal = totalSeats * feePerSeat;
 
-  const handleToggleLock = () => {
-      const next = !appLocked;
-      setAppLocked(next);
-      // Write unified lock flag to localStorage + Firestore, clear legacy keys
-      setTeacherAppLock(next);
-      if (next) {
-        showError('Global Teacher App Lock ACTIVATED. Teacher apps across devices are now locked.');
-      } else {
-        showSuccess('Global Teacher App Lock LIFTED. Teacher apps are active.');
-      }
-    };
+  const handleToggleLock = async () => {
+    const next = !appLocked;
+    setAppLocked(next);
+    setTeacherAppLock(next);
+    await persistOperatorSetting('appLocked', next);
+    if (next) {
+      showError('Global Teacher App Lock ACTIVATED. Teacher apps across devices are now locked.');
+    } else {
+      showSuccess('Global Teacher App Lock LIFTED. Teacher apps are active.');
+    }
+  };
 
-  const handleMarkPaid = () => {
-      setBillingStatus('Paid');
-      localStorage.setItem('munyaka_billing_status', 'Paid');
-      // Lift the lock explicitly when marked as Paid
-      setTeacherAppLock(false);
-      setAppLocked(false);
-      showSuccess('Current billing cycle marked as Paid. App locks lifted automatically.');
-    };
-  
-    const handleMarkOverdue = () => {
-      setBillingStatus('Overdue');
-      localStorage.setItem('munyaka_billing_status', 'Overdue');
-      // NOTE: Marking billing as Overdue does NOT automatically lock teacher apps.
-      // The lock is ONLY controlled by the Global Teacher App Lock toggle above.
-      // This prevents secondary/overdue lock triggers from causing the disconnect.
-      showSuccess('Billing marked Overdue. Use the Global Teacher App Lock toggle to restrict access if needed.');
-    };
+  const handleMarkPaid = async () => {
+    setBillingStatus('Paid');
+    localStorage.setItem('munyaka_billing_status', 'Paid');
+    setTeacherAppLock(false);
+    setAppLocked(false);
+    await persistOperatorSetting('billingStatus', 'Paid');
+    await persistOperatorSetting('appLocked', false);
+    showSuccess('Current billing cycle marked as Paid. App locks lifted automatically.');
+  };
+
+  const handleMarkOverdue = async () => {
+    setBillingStatus('Overdue');
+    localStorage.setItem('munyaka_billing_status', 'Overdue');
+    await persistOperatorSetting('billingStatus', 'Overdue');
+    showSuccess('Billing marked Overdue. Use the Global Teacher App Lock toggle to restrict access if needed.');
+  };
 
   const handleSyncFirestore = () => {
     setIsSyncing(true);
