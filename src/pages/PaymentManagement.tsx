@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { showSuccess, showError } from '@/utils/toast';
 import { setTeacherAppLock, getTeacherAppLock } from '@/utils/teacherAppLock';
 import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
+import { saveActiveLicenseState } from '@/services/activeLicenseService';
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { mergeStoredLearners } from '@/utils/learnerStorageMerge';
@@ -351,7 +352,41 @@ export default function PaymentManagement() {
     setMonthlyFeePerStudent(newFee);
     setSummaryFeePerSeat(newFee);
     localStorage.setItem('munyaka_fee_per_seat', String(newFee));
+    localStorage.setItem('monthlyLicenseFeePerSeat', String(newFee));
     window.dispatchEvent(new Event('fee_per_seat_updated'));
+    saveActiveLicenseState({
+      monthlyLicenseFeePerSeat: newFee,
+      feePerSeat: newFee
+    });
+  };
+
+  const handlePaymentDueDateChange = (dateVal: string) => {
+    setPaymentDueDate(dateVal);
+    localStorage.setItem('munyaka_payment_due_date', dateVal);
+    localStorage.setItem('monthlyPaymentDueDate', dateVal);
+    localStorage.setItem('munyaka_billing_due_date', dateVal);
+    saveActiveLicenseState({
+      monthlyPaymentDueDate: dateVal,
+      expiresAt: dateVal
+    });
+  };
+
+  const handleBillingDueDayChange = (dayVal: number) => {
+    setBillingDueDay(dayVal);
+    localStorage.setItem('billingDueDayOfMonth', String(dayVal));
+    localStorage.setItem('munyaka_billing_due_day', String(dayVal));
+    saveActiveLicenseState({
+      billingDueDayOfMonth: dayVal
+    });
+  };
+
+  const handleBillingGracePeriodChange = (graceVal: number) => {
+    setBillingGracePeriod(graceVal);
+    localStorage.setItem('gracePeriodDays', String(graceVal));
+    localStorage.setItem('munyaka_billing_grace_period', String(graceVal));
+    saveActiveLicenseState({
+      gracePeriodDays: graceVal
+    });
   };
 
   const currentFee = Number(monthlyFeePerStudent) || 0;
@@ -909,7 +944,7 @@ export default function PaymentManagement() {
                             <Input
                               type="date"
                               value={paymentDueDate}
-                              onChange={(e) => setPaymentDueDate(e.target.value)}
+                              onChange={(e) => handlePaymentDueDateChange(e.target.value)}
                               className="h-12 bg-slate-50 border-slate-200 font-bold text-sm"
                             />
                           </div>
@@ -924,7 +959,7 @@ export default function PaymentManagement() {
                               min="1"
                               max="28"
                               value={billingDueDay}
-                              onChange={(e) => setBillingDueDay(Math.max(1, Math.min(28, Number(e.target.value))))}
+                              onChange={(e) => handleBillingDueDayChange(Math.max(1, Math.min(28, Number(e.target.value))))}
                               className="h-12 bg-slate-50 border-slate-200 font-bold text-lg"
                             />
                             <p className="text-[10px] text-slate-500">Day of month when payment is due (default: 5th)</p>
@@ -937,7 +972,7 @@ export default function PaymentManagement() {
                               min="0"
                               max="14"
                               value={billingGracePeriod}
-                              onChange={(e) => setBillingGracePeriod(Math.max(0, Math.min(14, Number(e.target.value))))}
+                              onChange={(e) => handleBillingGracePeriodChange(Math.max(0, Math.min(14, Number(e.target.value))))}
                               className="h-12 bg-slate-50 border-slate-200 font-bold text-lg"
                             />
                             <p className="text-[10px] text-slate-500">Days after due date before auto-lock triggers (default: 3 days)</p>

@@ -145,14 +145,14 @@ export function useUnifiedLicense() {
     window.addEventListener('storage', handleUpdate);
     window.addEventListener('billing_invoices_updated', handleUpdate);
     window.addEventListener('fee_per_seat_updated', handleUpdate);
-    window.addEventListener('munyaka_license_updated', handleUpdate as EventListener);
+    window.addEventListener('munyaka:active_license_updated', handleUpdate as EventListener);
     const interval = setInterval(handleUpdate, 3000);
 
     return () => {
       window.removeEventListener('storage', handleUpdate);
       window.removeEventListener('billing_invoices_updated', handleUpdate);
       window.removeEventListener('fee_per_seat_updated', handleUpdate);
-      window.removeEventListener('munyaka_license_updated', handleUpdate as EventListener);
+      window.removeEventListener('munyaka:active_license_updated', handleUpdate as EventListener);
       clearInterval(interval);
       if (typeof unsubscribeFirestore === 'function') {
         unsubscribeFirestore();

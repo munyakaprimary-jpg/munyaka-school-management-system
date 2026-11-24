@@ -27,19 +27,55 @@ const LOCAL_STORAGE_LICENSE_KEY = "munyaka_active_license_payload_v1";
 export function getActiveLicenseSync(): ActiveLicensePayload {
   try {
     const stored = localStorage.getItem(LOCAL_STORAGE_LICENSE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      const monthlyPaymentDueDate = localStorage.getItem('monthlyPaymentDueDate') || localStorage.getItem('munyaka_billing_due_date') || parsed.monthlyPaymentDueDate || parsed.expiresAt || '2026-12-29';
-      const monthlyLicenseFeePerSeat = Number(localStorage.getItem('monthlyLicenseFeePerSeat') || localStorage.getItem('munyaka_fee_per_seat') || parsed.monthlyLicenseFeePerSeat || parsed.feePerSeat || 150);
-      
-      return {
-        ...parsed,
-        monthlyPaymentDueDate,
-        expiresAt: monthlyPaymentDueDate,
-        monthlyLicenseFeePerSeat,
-        feePerSeat: monthlyLicenseFeePerSeat,
-      };
+    const monthlyPaymentDueDate = localStorage.getItem('monthlyPaymentDueDate') || localStorage.getItem('munyaka_billing_due_date') || localStorage.getItem('munyaka_payment_due_date') || (stored ? JSON.parse(stored).monthlyPaymentDueDate : null) || '2026-11-30';
+    const monthlyLicenseFeePerSeat = Number(localStorage.getItem('monthlyLicenseFeePerSeat') || localStorage.getItem('munyaka_fee_per_seat') || (stored ? (JSON.parse(stored).monthlyLicenseFeePerSeat ?? JSON.parse(stored).feePerSeat) : null) || 150);
+    const activeSeats = Number(localStorage.getItem('munyaka_active_seats') || (stored ? (JSON.parse(stored).activeSeats ?? JSON.parse(stored).totalSeats) : null) || 480);
+    const billingDueDayOfMonth = Number(localStorage.getItem('billingDueDayOfMonth') || localStorage.getItem('munyaka_billing_due_day') || (stored ? JSON.parse(stored).billingDueDayOfMonth : null) || 5);
+    const gracePeriodDays = Number(localStorage.getItem('gracePeriodDays') || localStorage.getItem('munyaka_billing_grace_period') || (stored ? JSON.parse(stored).gracePeriodDays : null) || 7);
+    const status = localStorage.getItem('munyaka_billing_status') || (stored ? JSON.parse(stored).status : null) || 'ACTIVE';
+    const isLocked = localStorage.getItem('isTeacherAppLocked') === 'true' || (stored ? Boolean(JSON.parse(stored).isLocked) : false);
+
+    // Compute days remaining from monthlyPaymentDueDate
+    let dueDateObj: Date;
+    if (monthlyPaymentDueDate.includes('/')) {
+      const parts = monthlyPaymentDueDate.split('/');
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          dueDateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        } else {
+          // DD/MM/YYYY
+          dueDateObj = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+        }
+      } else {
+        dueDateObj = new Date(monthlyPaymentDueDate);
+      }
+    } else {
+      dueDateObj = new Date(monthlyPaymentDueDate);
     }
+
+    if (isNaN(dueDateObj.getTime())) dueDateObj = new Date(2026, 10, 30);
+    const now = new Date();
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dueMidnight = new Date(dueDateObj.getFullYear(), dueDateObj.getMonth(), dueDateObj.getDate());
+    const daysRemaining = Math.ceil((dueMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
+    const computedStatus = daysRemaining < 0 ? 'EXPIRED' : (daysRemaining <= gracePeriodDays ? 'DUE' : status);
+
+    const parsed = stored ? JSON.parse(stored) : {};
+    return {
+      ...parsed,
+      schoolId: getActiveSchoolId(),
+      status: computedStatus,
+      monthlyPaymentDueDate,
+      expiresAt: monthlyPaymentDueDate,
+      monthlyLicenseFeePerSeat,
+      feePerSeat: monthlyLicenseFeePerSeat,
+      activeSeats,
+      billingDueDayOfMonth,
+      gracePeriodDays,
+      daysRemaining,
+      isLocked,
+      lastSyncedAt: new Date().toISOString()
+    };
   } catch (e) {
     console.error("Error reading active license sync from localStorage:", e);
   }
@@ -76,21 +112,6 @@ export function getActiveLicenseSync(): ActiveLicensePayload {
   const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dueMidnight = new Date(dueDateObj.getFullYear(), dueDateObj.getMonth(), dueDateObj.getDate());
   const daysRemaining = Math.ceil((dueMidnight.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24));
-
-  return {
-    schoolId: getActiveSchoolId(),
-    status,
-    expiresAt: monthlyPaymentDueDate,
-    monthlyPaymentDueDate,
-    daysRemaining,
-    activeSeats,
-    feePerSeat: monthlyLicenseFeePerSeat,
-    monthlyLicenseFeePerSeat,
-    billingDueDayOfMonth,
-    gracePeriodDays,
-    isLocked,
-    lastSyncedAt: new Date().toISOString()
-  };
 }
 
 /**
