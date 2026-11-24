@@ -6,9 +6,13 @@ export interface ActiveLicensePayload {
   schoolId: string;
   status: string;
   expiresAt: string;
+  monthlyPaymentDueDate: string;
   daysRemaining: number;
   activeSeats: number;
   feePerSeat: number;
+  monthlyLicenseFeePerSeat: number;
+  billingDueDayOfMonth: number;
+  gracePeriodDays: number;
   isLocked?: boolean;
   lastSyncedAt: string;
   [key: string]: any;
@@ -24,21 +28,49 @@ export function getActiveLicenseSync(): ActiveLicensePayload {
   try {
     const stored = localStorage.getItem(LOCAL_STORAGE_LICENSE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      const monthlyPaymentDueDate = localStorage.getItem('monthlyPaymentDueDate') || localStorage.getItem('munyaka_billing_due_date') || parsed.monthlyPaymentDueDate || parsed.expiresAt || '2026-12-29';
+      const monthlyLicenseFeePerSeat = Number(localStorage.getItem('monthlyLicenseFeePerSeat') || localStorage.getItem('munyaka_fee_per_seat') || parsed.monthlyLicenseFeePerSeat || parsed.feePerSeat || 150);
+      
+      return {
+        ...parsed,
+        monthlyPaymentDueDate,
+        expiresAt: monthlyPaymentDueDate,
+        monthlyLicenseFeePerSeat,
+        feePerSeat: monthlyLicenseFeePerSeat,
+      };
     }
   } catch (e) {
     console.error("Error reading active license sync from localStorage:", e);
   }
 
-  // Fallback defaults matching Munyaka Primary & JS subscription
+  // Fallback defaults
   const status = localStorage.getItem('munyaka_billing_status') || 'ACTIVE';
-  const expiresAt = localStorage.getItem('munyaka_billing_due_date') || '2026-12-29';
+  const monthlyPaymentDueDate = localStorage.getItem('monthlyPaymentDueDate') || localStorage.getItem('munyaka_billing_due_date') || '2026-12-29';
   const activeSeats = Number(localStorage.getItem('munyaka_active_seats') || '480');
-  const feePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat') || '150');
+  const monthlyLicenseFeePerSeat = Number(localStorage.getItem('monthlyLicenseFeePerSeat') || localStorage.getItem('munyaka_fee_per_seat') || '150');
+  const billingDueDayOfMonth = Number(localStorage.getItem('billingDueDayOfMonth') || '5');
+  const gracePeriodDays = Number(localStorage.getItem('gracePeriodDays') || '7');
   const isLocked = localStorage.getItem('isTeacherAppLocked') === 'true';
 
-  // Compute days remaining
-  let dueDateObj = new Date(expiresAt);
+  // Compute days remaining from monthlyPaymentDueDate
+  let dueDateObj: Date;
+  if (monthlyPaymentDueDate.includes('/')) {
+    const parts = monthlyPaymentDueDate.split('/');
+    if (parts.length === 3) {
+      // DD/MM/YYYY or YYYY/MM/DD
+      if (parts[0].length === 4) {
+        dueDateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      } else {
+        dueDateObj = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+      }
+    } else {
+      dueDateObj = new Date(monthlyPaymentDueDate);
+    }
+  } else {
+    dueDateObj = new Date(monthlyPaymentDueDate);
+  }
+
   if (isNaN(dueDateObj.getTime())) dueDateObj = new Date(2026, 11, 29);
   const now = new Date();
   const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -48,28 +80,51 @@ export function getActiveLicenseSync(): ActiveLicensePayload {
   return {
     schoolId: getActiveSchoolId(),
     status,
-    expiresAt,
+    expiresAt: monthlyPaymentDueDate,
+    monthlyPaymentDueDate,
     daysRemaining,
     activeSeats,
-    feePerSeat,
+    feePerSeat: monthlyLicenseFeePerSeat,
+    monthlyLicenseFeePerSeat,
+    billingDueDayOfMonth,
+    gracePeriodDays,
     isLocked,
     lastSyncedAt: new Date().toISOString()
   };
 }
 
 /**
- * Save and sync subscription active_license state to Firestore and localStorage:
- * - schools/munyaka-primary-js/subscriptions/active_license
- * - schools/munyaka-primary-js/system_settings/active_license
- * - system_settings/active_license
- * via setDoc(..., { merge: true }).
+ * Save and sync subscription active_license state to Firestore and localStorage
  */
 export async function saveActiveLicenseState(payload: Partial<ActiveLicensePayload>): Promise<void> {
   const schoolId = getActiveSchoolId();
   const current = getActiveLicenseSync();
 
-  const expiresAt = payload.expiresAt || payload.dueDate || current.expiresAt;
-  let dueDateObj = new Date(expiresAt);
+  const monthlyPaymentDueDate = payload.monthlyPaymentDueDate || payload.expiresAt || payload.dueDate || current.monthlyPaymentDueDate || current.expiresAt;
+  const monthlyLicenseFeePerSeat = payload.monthlyLicenseFeePerSeat ?? payload.feePerSeat ?? current.monthlyLicenseFeePerSeat ?? current.feePerSeat;
+  const activeSeats = payload.activeSeats ?? current.activeSeats;
+  const billingDueDayOfMonth = payload.billingDueDayOfMonth ?? current.billingDueDayOfMonth;
+  const gracePeriodDays = payload.gracePeriodDays ?? current.gracePeriodDays;
+  const status = payload.status || current.status;
+  const isLocked = payload.isLocked ?? current.isLocked;
+
+  // Compute days remaining from monthlyPaymentDueDate
+  let dueDateObj: Date;
+  if (monthlyPaymentDueDate.includes('/')) {
+    const parts = monthlyPaymentDueDate.split('/');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        dueDateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      } else {
+        dueDateObj = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+      }
+    } else {
+      dueDateObj = new Date(monthlyPaymentDueDate);
+    }
+  } else {
+    dueDateObj = new Date(monthlyPaymentDueDate);
+  }
+
   if (isNaN(dueDateObj.getTime())) dueDateObj = new Date(2026, 11, 29);
   const now = new Date();
   const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -80,32 +135,41 @@ export async function saveActiveLicenseState(payload: Partial<ActiveLicensePaylo
     ...current,
     ...payload,
     schoolId,
-    expiresAt,
+    monthlyPaymentDueDate,
+    expiresAt: monthlyPaymentDueDate,
     daysRemaining,
-    activeSeats: payload.activeSeats ?? current.activeSeats,
-    feePerSeat: payload.feePerSeat ?? current.feePerSeat,
-    status: payload.status || current.status,
-    isLocked: payload.isLocked ?? current.isLocked,
+    activeSeats,
+    monthlyLicenseFeePerSeat,
+    feePerSeat: monthlyLicenseFeePerSeat,
+    billingDueDayOfMonth,
+    gracePeriodDays,
+    status,
+    isLocked,
     lastSyncedAt: new Date().toISOString()
   };
 
   // 1. Immediate localStorage caching & event dispatch
   try {
     localStorage.setItem(LOCAL_STORAGE_LICENSE_KEY, JSON.stringify(enhanced));
-    localStorage.setItem('munyaka_billing_status', enhanced.status);
-    localStorage.setItem('munyaka_payment_status', enhanced.status);
-    localStorage.setItem('munyaka_billing_due_date', enhanced.expiresAt);
-    localStorage.setItem('munyaka_payment_due_date', enhanced.expiresAt);
-    localStorage.setItem('school_license_expiry', enhanced.expiresAt);
-    localStorage.setItem('munyaka_active_seats', String(enhanced.activeSeats));
-    localStorage.setItem('munyaka_fee_per_seat', String(enhanced.feePerSeat));
-    if (enhanced.isLocked !== undefined) {
-      localStorage.setItem('isTeacherAppLocked', String(enhanced.isLocked));
+    localStorage.setItem('monthlyPaymentDueDate', monthlyPaymentDueDate);
+    localStorage.setItem('munyaka_billing_due_date', monthlyPaymentDueDate);
+    localStorage.setItem('munyaka_payment_due_date', monthlyPaymentDueDate);
+    localStorage.setItem('school_license_expiry', monthlyPaymentDueDate);
+    localStorage.setItem('monthlyLicenseFeePerSeat', String(monthlyLicenseFeePerSeat));
+    localStorage.setItem('munyaka_fee_per_seat', String(monthlyLicenseFeePerSeat));
+    localStorage.setItem('billingDueDayOfMonth', String(billingDueDayOfMonth));
+    localStorage.setItem('gracePeriodDays', String(gracePeriodDays));
+    localStorage.setItem('munyaka_billing_status', status);
+    localStorage.setItem('munyaka_payment_status', status);
+    localStorage.setItem('munyaka_active_seats', String(activeSeats));
+    if (isLocked !== undefined) {
+      localStorage.setItem('isTeacherAppLocked', String(isLocked));
     }
 
     window.dispatchEvent(new CustomEvent('munyaka_license_updated', { detail: enhanced }));
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('billing_invoices_updated'));
+    window.dispatchEvent(new Event('fee_per_seat_updated'));
   } catch (e) {
     console.error("Error caching active license in localStorage:", e);
   }
@@ -129,8 +193,7 @@ export async function saveActiveLicenseState(payload: Partial<ActiveLicensePaylo
 }
 
 /**
- * Subscribe to schools/munyaka-primary-js/subscriptions/active_license via onSnapshot (wrapped in try/catch)
- * so Operator Console and admin headers stay in lockstep.
+ * Subscribe to schools/munyaka-primary-js/subscriptions/active_license via onSnapshot
  */
 export function subscribeActiveLicense(onUpdate: (payload: ActiveLicensePayload) => void): () => void {
   const schoolId = getActiveSchoolId();
@@ -151,18 +214,26 @@ export function subscribeActiveLicense(onUpdate: (payload: ActiveLicensePayload)
               const current = getActiveLicenseSync();
               const merged: ActiveLicensePayload = { ...current, ...data };
               localStorage.setItem(LOCAL_STORAGE_LICENSE_KEY, JSON.stringify(merged));
-              if (merged.status) localStorage.setItem('munyaka_billing_status', merged.status);
-              if (merged.expiresAt) {
-                localStorage.setItem('munyaka_billing_due_date', merged.expiresAt);
-                localStorage.setItem('school_license_expiry', merged.expiresAt);
+              
+              const dueDate = merged.monthlyPaymentDueDate || merged.expiresAt;
+              if (dueDate) {
+                localStorage.setItem('monthlyPaymentDueDate', dueDate);
+                localStorage.setItem('munyaka_billing_due_date', dueDate);
+                localStorage.setItem('school_license_expiry', dueDate);
               }
+              const fee = merged.monthlyLicenseFeePerSeat ?? merged.feePerSeat;
+              if (fee !== undefined) {
+                localStorage.setItem('monthlyLicenseFeePerSeat', String(fee));
+                localStorage.setItem('munyaka_fee_per_seat', String(fee));
+              }
+              if (merged.status) localStorage.setItem('munyaka_billing_status', merged.status);
               if (merged.activeSeats !== undefined) localStorage.setItem('munyaka_active_seats', String(merged.activeSeats));
-              if (merged.feePerSeat !== undefined) localStorage.setItem('munyaka_fee_per_seat', String(merged.feePerSeat));
               if (merged.isLocked !== undefined) localStorage.setItem('isTeacherAppLocked', String(merged.isLocked));
 
               window.dispatchEvent(new CustomEvent('munyaka_license_updated', { detail: merged }));
               window.dispatchEvent(new Event('storage'));
               window.dispatchEvent(new Event('billing_invoices_updated'));
+              window.dispatchEvent(new Event('fee_per_seat_updated'));
               onUpdate(merged);
             } catch (e) {
               onUpdate(data);

@@ -25,9 +25,24 @@ export function getUnifiedLicenseInfo(): LicenseBadgeInfo {
     const activeLicense = getActiveLicenseSync();
     const isLocked = !!activeLicense.isLocked || localStorage.getItem('isTeacherAppLocked') === 'true';
     let status = (activeLicense.status || localStorage.getItem('munyaka_billing_status') || 'ACTIVE').toUpperCase();
-    let dueDateStr = activeLicense.expiresAt || localStorage.getItem('munyaka_billing_due_date') || '2026-12-29';
+    let dueDateStr = activeLicense.monthlyPaymentDueDate || activeLicense.expiresAt || localStorage.getItem('monthlyPaymentDueDate') || localStorage.getItem('munyaka_billing_due_date') || '2026-12-29';
 
-    let dueDateObj = new Date(dueDateStr);
+    let dueDateObj: Date;
+    if (dueDateStr.includes('/')) {
+      const parts = dueDateStr.split('/');
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          dueDateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        } else {
+          dueDateObj = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+        }
+      } else {
+        dueDateObj = new Date(dueDateStr);
+      }
+    } else {
+      dueDateObj = new Date(dueDateStr);
+    }
+
     if (isNaN(dueDateObj.getTime())) {
       dueDateObj = new Date(2026, 11, 29);
     }

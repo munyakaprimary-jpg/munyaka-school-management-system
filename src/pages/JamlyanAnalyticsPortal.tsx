@@ -83,7 +83,9 @@ export default function JamlyanAnalyticsPortal() {
   // Seats & Billing data
   const [learnersCount, setLearnersCount] = useState(480);
   const [staffCount, setStaffCount] = useState(35);
-  const [feePerSeat, setFeePerSeat] = useState(150);
+  const [feePerSeat, setFeePerSeat] = useState(() => {
+    return Number(localStorage.getItem('monthlyLicenseFeePerSeat') || localStorage.getItem('munyaka_fee_per_seat') || 100);
+  });
 
   // Firestore live sync for Munyaka Primary & JS operator console & App Access Locks
   useEffect(() => {
