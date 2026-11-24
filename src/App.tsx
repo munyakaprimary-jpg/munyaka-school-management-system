@@ -549,8 +549,9 @@ const App = () => {
                         <CorruptedLearnerPurgeGuard />
                       <Routes>
                         {/* Public Routes */}
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/portal" element={<ParentPortal />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/cover" element={<Navigate to="/login" replace />} />
+                        <Route path="/portal" element={<ParentPortal />} />
                       <Route path="/reset-password" element={<PasswordResetCallback />} />
 
                       {/* Protected Routes */}
